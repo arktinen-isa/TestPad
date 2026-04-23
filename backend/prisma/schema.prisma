@@ -1,0 +1,242 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+enum QuestionType {
+  SINGLE
+  MULTI
+}
+
+enum TestStatus {
+  DRAFT
+  OPEN
+  CLOSED
+}
+
+enum SamplingMode {
+  FROM_BANK
+  BY_CATEGORY
+}
+
+enum ScoringMode {
+  SUM
+  PERCENTAGE
+}
+
+enum ShowResultMode {
+  AFTER_FINISH
+  ADMIN_ONLY
+  AFTER_TEST_CLOSED
+}
+
+enum MultiScoringMode {
+  ALL_OR_NOTHING
+  PARTIAL
+}
+
+enum FinishReason {
+  NORMAL
+  TIMEOUT
+  EXIT
+}
+
+enum SuspiciousEventType {
+  FULLSCREEN_EXIT
+  TAB_SWITCH
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role
+  createdAt    DateTime @default(now())
+
+  groups        UserGroup[]
+  createdTests  Test[]
+  attempts      Attempt[]
+  refreshTokens RefreshToken[]
+}
+
+model Group {
+  id   String  @id @default(uuid())
+  name String
+  year Int?
+
+  users     UserGroup[]
+  testGroups TestGroup[]
+}
+
+model UserGroup {
+  userId  String
+  groupId String
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([userId, groupId])
+}
+
+model QuestionCategory {
+  id           String  @id @default(uuid())
+  name         String
+  pointsWeight Float   @default(1.0)
+
+  questions      Question[]
+  testCategoryQuotas TestCategoryQuota[]
+}
+
+model Question {
+  id         String       @id @default(uuid())
+  text       String       @db.Text
+  type       QuestionType
+  categoryId String
+  imageUrl   String?
+  isActive   Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+
+  category         QuestionCategory  @relation(fields: [categoryId], references: [id])
+  answers          Answer[]
+  testQuestions    TestQuestion[]
+  attemptQuestions AttemptQuestion[]
+}
+
+model Answer {
+  id         String  @id @default(uuid())
+  questionId String
+  text       String
+  isCorrect  Boolean @default(false)
+
+  question        Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  attemptAnswers  AttemptAnswer[]
+}
+
+model Test {
+  id               String         @id @default(uuid())
+  title            String
+  subject          String?
+  createdById      String
+  timeLimitMin     Int            @default(0)
+  maxAttempts      Int            @default(1)
+  openFrom         DateTime?
+  openUntil        DateTime?
+  status           TestStatus     @default(DRAFT)
+  questionsCount   Int            @default(10)
+  samplingMode     SamplingMode   @default(FROM_BANK)
+  scoringMode      ScoringMode    @default(SUM)
+  passThreshold    Float?
+  showResultMode   ShowResultMode @default(AFTER_FINISH)
+  shuffleQuestions Boolean        @default(true)
+  multiScoringMode MultiScoringMode @default(ALL_OR_NOTHING)
+  createdAt        DateTime       @default(now())
+
+  createdBy       User              @relation(fields: [createdById], references: [id])
+  groups          TestGroup[]
+  questions       TestQuestion[]
+  categoryQuotas  TestCategoryQuota[]
+  attempts        Attempt[]
+}
+
+model TestGroup {
+  testId  String
+  groupId String
+
+  test  Test  @relation(fields: [testId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([testId, groupId])
+}
+
+model TestQuestion {
+  testId     String
+  questionId String
+
+  test     Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@id([testId, questionId])
+}
+
+model TestCategoryQuota {
+  testId     String
+  categoryId String
+  quota      Int
+
+  test     Test             @relation(fields: [testId], references: [id], onDelete: Cascade)
+  category QuestionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([testId, categoryId])
+}
+
+model Attempt {
+  id                    String        @id @default(uuid())
+  studentId             String
+  testId                String
+  startedAt             DateTime      @default(now())
+  finishedAt            DateTime?
+  finishReason          FinishReason?
+  score                 Float?
+  maxScore              Float?
+  suspiciousEventsCount Int           @default(0)
+  currentQuestionIndex  Int           @default(0)
+
+  student          User              @relation(fields: [studentId], references: [id])
+  test             Test              @relation(fields: [testId], references: [id])
+  attemptQuestions AttemptQuestion[]
+  suspiciousEvents SuspiciousEvent[]
+}
+
+model AttemptQuestion {
+  id           String    @id @default(uuid())
+  attemptId    String
+  questionId   String
+  orderIndex   Int
+  answerOrder  Json
+  answeredAt   DateTime?
+
+  attempt        Attempt         @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question       Question        @relation(fields: [questionId], references: [id])
+  attemptAnswers AttemptAnswer[]
+}
+
+model AttemptAnswer {
+  attemptQuestionId String
+  answerId          String
+  selected          Boolean @default(false)
+
+  attemptQuestion AttemptQuestion @relation(fields: [attemptQuestionId], references: [id], onDelete: Cascade)
+  answer          Answer          @relation(fields: [answerId], references: [id])
+
+  @@id([attemptQuestionId, answerId])
+}
+
+model SuspiciousEvent {
+  id         String              @id @default(uuid())
+  attemptId  String
+  eventType  SuspiciousEventType
+  occurredAt DateTime            @default(now())
+
+  attempt Attempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
