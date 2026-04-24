@@ -53,7 +53,7 @@ export default function AdminDashboard() {
   const { data: stats, isLoading } = useQuery<DashboardStats>({
     queryKey: ['admin-dashboard'],
     queryFn: async () => {
-      const res = await apiClient.get('/admin/dashboard')
+      const res = await apiClient.get('/dashboard/stats')
       return res.data
     },
   })

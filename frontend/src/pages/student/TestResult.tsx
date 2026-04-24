@@ -14,7 +14,7 @@ function formatDuration(seconds: number): string {
 }
 
 export default function TestResult() {
-  const { testId } = useParams<{ testId: string }>()
+  const { testId: _testId } = useParams<{ testId: string }>()
   const navigate = useNavigate()
   const location = useLocation()
   const { reset, score: storeScore, maxScore: storeMax, percentage: storePercent } = useTestStore()
