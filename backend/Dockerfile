@@ -42,4 +42,8 @@ RUN chmod +x start.sh
 
 EXPOSE 3000
 
+<<<<<<< HEAD
 CMD ["./start.sh"]
+=======
+CMD ["node", "dist/index.js"]
+>>>>>>> 63816764e25275de895bd9e76ec6b68a2c7b2f48
