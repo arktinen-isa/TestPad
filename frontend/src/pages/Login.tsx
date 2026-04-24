@@ -43,10 +43,10 @@ export default function Login() {
             </svg>
           </div>
           <h2 className="font-unbounded text-xl font-bold text-white mb-1">
-            ОМФК КНУ
+            Оптико-механічний фаховий коледж
           </h2>
           <p className="text-slate-400 text-sm">
-            імені Тараса Шевченка
+            Київського національного університету імені Тараса Шевченка
           </p>
         </div>
 
@@ -57,7 +57,7 @@ export default function Login() {
               Вхід до системи
             </h1>
             <p className="text-slate-400 text-sm">
-              Система тестування студентів
+              онлайн тестування студентів
             </p>
           </div>
 
