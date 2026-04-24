@@ -37,6 +37,9 @@ COPY --from=backend-builder /app/prisma          ./prisma
 # Frontend static files served by Express at /public
 COPY --from=frontend-builder /frontend/dist      ./public
 
+COPY --from=backend-builder /app/start.sh        ./start.sh
+RUN chmod +x start.sh
+
 EXPOSE 3000
 
-CMD ["sh", "-c", "node_modules/.bin/prisma db push --accept-data-loss && node dist/seed.js && node dist/index.js"]
+CMD ["./start.sh"]
