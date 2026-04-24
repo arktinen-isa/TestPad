@@ -64,10 +64,16 @@ export default function TestsPage() {
 
   const saveMutation = useMutation({
     mutationFn: async ({ data, id }: { data: TestFormData; id?: string }) => {
+      const payload = {
+        ...data,
+        openFrom: data.openFrom ? new Date(data.openFrom).toISOString() : undefined,
+        openUntil: data.openUntil ? new Date(data.openUntil).toISOString() : undefined,
+        passThreshold: data.passThreshold !== '' ? data.passThreshold : undefined,
+      }
       if (id) {
-        await apiClient.patch(`/tests/${id}`, data)
+        await apiClient.patch(`/tests/${id}`, payload)
       } else {
-        await apiClient.post('/tests', data)
+        await apiClient.post('/tests', payload)
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tests'] }),
@@ -82,13 +88,7 @@ export default function TestsPage() {
   })
 
   const handleSave = async (data: TestFormData, id?: string) => {
-    const payload = {
-      ...data,
-      openFrom: data.openFrom ? new Date(data.openFrom).toISOString() : undefined,
-      openUntil: data.openUntil ? new Date(data.openUntil).toISOString() : undefined,
-      passThreshold: data.passThreshold !== '' ? data.passThreshold : undefined,
-    }
-    await saveMutation.mutateAsync({ data: payload, id })
+    await saveMutation.mutateAsync({ data, id })
   }
 
   return (
