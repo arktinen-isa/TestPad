@@ -32,7 +32,6 @@ const updateQuestionSchema = z.object({
   type: z.enum(['SINGLE', 'MULTI']).optional(),
   categoryId: z.string().uuid().optional(),
   imageUrl: z.string().url().nullable().optional(),
-  isActive: z.boolean().optional(),
   answers: z.array(updateAnswerSchema).min(2).optional(),
 });
 
@@ -41,7 +40,7 @@ router.get(
   '/',
   authorize('ADMIN', 'TEACHER'),
   asyncHandler(async (req, res) => {
-    const { category, type, search, active } = req.query;
+    const { category, type, search } = req.query;
     const page = Math.max(1, parseInt(req.query['page'] as string) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query['limit'] as string) || 20));
     const skip = (page - 1) * limit;
@@ -52,9 +51,6 @@ router.get(
     if (type && (type === 'SINGLE' || type === 'MULTI')) where['type'] = type;
     if (search) {
       where['text'] = { contains: search as string };
-    }
-    if (active !== undefined) {
-      where['isActive'] = active === 'true';
     }
 
     const [questions, total] = await Promise.all([
@@ -92,7 +88,6 @@ router.post(
             text: q.text,
             type: q.type || 'SINGLE',
             categoryId: q.categoryId,
-            isActive: q.isActive ?? true,
             imageUrl: q.imageUrl,
             answers: {
               create: q.answers.map((a: any) => ({
@@ -123,7 +118,6 @@ router.patch(
       where: { id: { in: ids } },
       data: {
         ...(data.categoryId !== undefined && { categoryId: data.categoryId }),
-        ...(data.isActive !== undefined && { isActive: data.isActive }),
       },
     });
 
@@ -244,7 +238,6 @@ router.patch(
     if (data.type !== undefined) updatePayload['type'] = data.type;
     if (data.categoryId !== undefined) updatePayload['categoryId'] = data.categoryId;
     if (data.imageUrl !== undefined) updatePayload['imageUrl'] = data.imageUrl;
-    if (data.isActive !== undefined) updatePayload['isActive'] = data.isActive;
 
     // If answers provided, replace all answers
     if (data.answers !== undefined) {

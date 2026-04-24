@@ -13,7 +13,6 @@ interface QuestionFormData {
   text: string
   type: QuestionType
   categoryId: string
-  isActive: boolean
   imageUrl?: string
   answers: AnswerInput[]
 }
@@ -29,7 +28,6 @@ export default function QuestionFormModal({ initial, onClose, onSave }: Question
     text: initial?.text || '',
     type: initial?.type || 'SINGLE',
     categoryId: initial?.categoryId || '',
-    isActive: initial?.isActive ?? true,
     imageUrl: initial?.imageUrl || '',
     answers: initial?.answers?.map((a) => ({ id: a.id, text: a.text, isCorrect: a.isCorrect ?? false })) || [
       { text: '', isCorrect: false },
@@ -248,21 +246,6 @@ export default function QuestionFormModal({ initial, onClose, onSave }: Question
               )}
             </div>
           </div>
-
-          {/* Active toggle */}
-          <label className="flex items-center gap-3 cursor-pointer">
-            <div
-              onClick={() => setForm({ ...form, isActive: !form.isActive })}
-              className={`relative w-10 h-6 rounded-full transition-all duration-200 ${
-                form.isActive ? 'bg-purple-accent' : 'bg-white/20'
-              }`}
-            >
-              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-200 ${
-                form.isActive ? 'left-5' : 'left-1'
-              }`} />
-            </div>
-            <span className="text-sm text-slate-300">Активне питання</span>
-          </label>
 
           {/* Answers */}
           <div>

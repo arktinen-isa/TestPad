@@ -82,7 +82,13 @@ export default function TestsPage() {
   })
 
   const handleSave = async (data: TestFormData, id?: string) => {
-    await saveMutation.mutateAsync({ data, id })
+    const payload = {
+      ...data,
+      openFrom: data.openFrom ? new Date(data.openFrom).toISOString() : undefined,
+      openUntil: data.openUntil ? new Date(data.openUntil).toISOString() : undefined,
+      passThreshold: data.passThreshold !== '' ? data.passThreshold : undefined,
+    }
+    await saveMutation.mutateAsync({ data: payload, id })
   }
 
   return (

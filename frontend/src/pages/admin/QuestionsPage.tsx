@@ -10,7 +10,6 @@ interface QuestionFormData {
   text: string
   type: QuestionType
   categoryId: string
-  isActive: boolean
   answers: { id?: string; text: string; isCorrect: boolean }[]
 }
 
@@ -30,7 +29,6 @@ export default function QuestionsPage() {
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState<QuestionType | ''>('')
-  const [activeFilter, setActiveFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL')
   const [showModal, setShowModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -41,7 +39,7 @@ export default function QuestionsPage() {
 
   useEffect(() => {
     setPage(1)
-  }, [search, categoryFilter, typeFilter, activeFilter])
+  }, [search, categoryFilter, typeFilter])
 
   const { data: categories } = useQuery<Category[]>({
     queryKey: ['categories'],
@@ -52,14 +50,12 @@ export default function QuestionsPage() {
   })
 
   const { data: queryData, isLoading } = useQuery<{data: Question[], totalPages: number}>({
-    queryKey: ['questions', search, categoryFilter, typeFilter, activeFilter, page],
+    queryKey: ['questions', search, categoryFilter, typeFilter, page],
     queryFn: async () => {
       const params: Record<string, string> = { page: String(page), limit: '20' }
       if (search) params.search = search
       if (categoryFilter) params.category = categoryFilter
       if (typeFilter) params.type = typeFilter
-      if (activeFilter === 'ACTIVE') params.active = 'true'
-      if (activeFilter === 'INACTIVE') params.active = 'false'
       const res = await apiClient.get('/questions', { params })
       return res.data
     },
@@ -262,20 +258,6 @@ export default function QuestionsPage() {
           <option value="MULTI" className="bg-gray-900">Декілька відповідей</option>
         </select>
 
-        <div className="flex gap-1.5">
-          {(['ALL', 'ACTIVE', 'INACTIVE'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setActiveFilter(f)}
-              className={`px-3 py-2 rounded-xl text-xs font-medium transition-all border ${activeFilter === f
-                  ? 'bg-purple-accent/30 text-white border-purple-accent/50'
-                  : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'
-                }`}
-            >
-              {f === 'ALL' ? 'Всі' : f === 'ACTIVE' ? 'Активні' : 'Архів'}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Table */}
@@ -301,7 +283,6 @@ export default function QuestionsPage() {
                   <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Тип</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Категорія</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Вага</th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Статус</th>
                   <th className="px-5 py-4 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">Дії</th>
                 </tr>
               </thead>
@@ -330,14 +311,6 @@ export default function QuestionsPage() {
                     </td>
                     <td className="px-5 py-4 text-slate-400 text-sm">
                       {q.category?.pointsWeight ?? '—'} б.
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className={`status-badge border ${q.isActive
-                          ? 'status-open'
-                          : 'bg-slate-500/20 text-slate-400 border-slate-500/30'
-                        }`}>
-                        {q.isActive ? 'Активне' : 'Архів'}
-                      </span>
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-end gap-2">

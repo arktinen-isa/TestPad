@@ -105,7 +105,6 @@ model Question {
   type       QuestionType
   categoryId String
   imageUrl   String?
-  isActive   Boolean      @default(true)
   createdAt  DateTime     @default(now())
 
   category         QuestionCategory  @relation(fields: [categoryId], references: [id])

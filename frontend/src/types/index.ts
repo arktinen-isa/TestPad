@@ -40,7 +40,6 @@ export interface Question {
   categoryId: string
   category?: Category
   imageUrl?: string
-  isActive: boolean
   answers: Answer[]
 }
 
