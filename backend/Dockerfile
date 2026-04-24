@@ -39,4 +39,4 @@ COPY --from=frontend-builder /frontend/dist      ./public
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "node_modules/.bin/prisma db push --accept-data-loss && node dist/index.js"]
+CMD ["sh", "-c", "node_modules/.bin/prisma db push --accept-data-loss && node dist/seed.js && node dist/index.js"]
