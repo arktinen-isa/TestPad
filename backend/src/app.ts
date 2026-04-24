@@ -14,6 +14,7 @@ import questionsRouter from './routes/questions';
 import testsRouter from './routes/tests';
 import attemptsRouter from './routes/attempts';
 import eventsRouter from './routes/events';
+import dashboardRouter from './routes/dashboard';
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use('/api/questions', questionsRouter);
 app.use('/api/tests', testsRouter);
 app.use('/api/attempts', attemptsRouter);
 app.use('/api/events', eventsRouter);
+app.use('/api/dashboard', dashboardRouter);
 
 // Global error handler — must be last
 app.use(errorHandler);
