@@ -270,7 +270,7 @@ router.patch(
   })
 );
 
-// DELETE /api/questions/:id — ADMIN only (soft delete)
+// DELETE /api/questions/:id — ADMIN only (hard delete)
 router.delete(
   '/:id',
   authorize('ADMIN'),
@@ -283,9 +283,8 @@ router.delete(
       return;
     }
 
-    await prisma.question.update({
+    await prisma.question.delete({
       where: { id },
-      data: { isActive: false },
     });
 
     res.status(204).send();

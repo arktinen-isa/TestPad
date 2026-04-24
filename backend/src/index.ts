@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import app from './app';
 import { config } from './config';
+import prisma from './lib/prisma';
 
 const server = app.listen(config.port, () => {
   console.log(
@@ -9,20 +10,21 @@ const server = app.listen(config.port, () => {
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('[server] SIGTERM received. Shutting down gracefully...');
+async function gracefulShutdown(signal: string) {
+  console.log(`[server] ${signal} received. Shutting down gracefully...`);
+  try {
+    await prisma.$disconnect();
+    console.log('[server] Prisma disconnected.');
+  } catch (err) {
+    console.error('[server] Error during Prisma disconnect:', err);
+  }
   server.close(() => {
     console.log('[server] Server closed.');
     process.exit(0);
   });
-});
+}
 
-process.on('SIGINT', () => {
-  console.log('[server] SIGINT received. Shutting down gracefully...');
-  server.close(() => {
-    console.log('[server] Server closed.');
-    process.exit(0);
-  });
-});
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 export default server;
