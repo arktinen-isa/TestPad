@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTestStore } from '../../store/testStore'
 import apiClient from '../../api/client'
+import QuestionText from '../../components/QuestionText'
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60)
@@ -239,10 +240,22 @@ export default function TestTake() {
                 </span>
               </div>
 
-              {/* Question text */}
-              <h2 className="font-inter text-xl font-semibold text-white mb-8 leading-relaxed">
-                {currentQuestion.text}
-              </h2>
+              {/* Question image */}
+              {currentQuestion.imageUrl && (
+                <div className="mb-6">
+                  <img
+                    src={currentQuestion.imageUrl}
+                    alt="Зображення до питання"
+                    className="max-w-full max-h-64 rounded-2xl border border-white/10 object-contain"
+                  />
+                </div>
+              )}
+
+              {/* Question text with code highlighting */}
+              <QuestionText
+                text={currentQuestion.text}
+                className="text-xl font-semibold text-white mb-8 leading-relaxed"
+              />
 
               {/* Answers */}
               <div className="space-y-3">

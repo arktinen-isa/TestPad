@@ -1,0 +1,61 @@
+version: '3.9'
+
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: omfc_testing
+      MYSQL_USER: omfc_app
+      MYSQL_PASSWORD: omfc_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: mysql://omfc_app:omfc_password@mysql:3306/omfc_testing
+      JWT_SECRET: dev-secret-change-in-production-64chars-minimum
+      JWT_REFRESH_SECRET: dev-refresh-secret-change-in-production-64chars
+      JWT_EXPIRES_IN: 15m
+      REDIS_URL: redis://redis:6379
+      FRONTEND_URL: http://localhost:5173
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - ./backend/src:/app/src
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
+  redis_data:

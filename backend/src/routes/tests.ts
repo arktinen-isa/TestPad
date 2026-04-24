@@ -327,4 +327,198 @@ router.get(
   })
 );
 
+// GET /api/tests/:id/results/export — ADMIN+TEACHER, CSV export of all attempt results
+router.get(
+  '/:id/results/export',
+  authorize('ADMIN', 'TEACHER'),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const groupId = req.query['groupId'] as string | undefined;
+
+    const test = await prisma.test.findUnique({ where: { id } });
+    if (!test) {
+      res.status(404).json({ error: 'Test not found' });
+      return;
+    }
+
+    // Build attempt filter
+    const attemptWhere: Record<string, unknown> = {
+      testId: id,
+      finishedAt: { not: null },
+    };
+
+    // If groupId filter provided, only include students belonging to that group
+    if (groupId) {
+      attemptWhere['student'] = {
+        groups: { some: { groupId } },
+      };
+    }
+
+    const attempts = await prisma.attempt.findMany({
+      where: attemptWhere,
+      include: {
+        student: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            groups: {
+              select: {
+                group: { select: { name: true } },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { startedAt: 'desc' },
+    });
+
+    // CSV helpers
+    const escapeCsv = (value: string | number | null | undefined): string => {
+      const str = value === null || value === undefined ? '' : String(value);
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const headers = ['Студент', 'Email', 'Група', 'Дата', 'Бал', 'Макс.бал', 'Відсоток', 'Час(хв)', 'Підозрілих подій'];
+
+    const rows = attempts.map((a) => {
+      const groupName = a.student.groups.map((ug) => ug.group.name).join('; ');
+      const date = a.finishedAt ? a.finishedAt.toISOString().replace('T', ' ').substring(0, 19) : '';
+      const score = a.score !== null ? a.score : '';
+      const maxScore = a.maxScore !== null ? a.maxScore : '';
+      const percentage =
+        a.score !== null && a.maxScore !== null && a.maxScore > 0
+          ? Math.round((a.score / a.maxScore) * 100)
+          : '';
+      const timeSpentMin =
+        a.finishedAt !== null && a.startedAt !== null
+          ? Math.round((a.finishedAt.getTime() - a.startedAt.getTime()) / 60000)
+          : '';
+
+      return [
+        escapeCsv(a.student.name),
+        escapeCsv(a.student.email),
+        escapeCsv(groupName),
+        escapeCsv(date),
+        escapeCsv(score),
+        escapeCsv(maxScore),
+        escapeCsv(percentage),
+        escapeCsv(timeSpentMin),
+        escapeCsv(a.suspiciousEventsCount),
+      ].join(',');
+    });
+
+    const csv = [headers.map(escapeCsv).join(','), ...rows].join('\r\n');
+
+    // Prepend UTF-8 BOM for Excel compatibility
+    const bom = '﻿';
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="results_${id}.csv"`);
+    res.send(bom + csv);
+  })
+);
+
+// GET /api/tests/:id/stats/questions — ADMIN+TEACHER, per-question correctness statistics
+router.get(
+  '/:id/stats/questions',
+  authorize('ADMIN', 'TEACHER'),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const test = await prisma.test.findUnique({
+      where: { id },
+      include: {
+        questions: {
+          include: {
+            question: {
+              include: {
+                answers: { select: { id: true, isCorrect: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!test) {
+      res.status(404).json({ error: 'Test not found' });
+      return;
+    }
+
+    // Fetch all AttemptQuestions for this test's questions, with their answers
+    const questionIds = test.questions.map((tq) => tq.questionId);
+
+    const attemptQuestions = await prisma.attemptQuestion.findMany({
+      where: {
+        questionId: { in: questionIds },
+        attempt: { testId: id, finishedAt: { not: null } },
+      },
+      include: {
+        attemptAnswers: { select: { answerId: true, selected: true } },
+      },
+    });
+
+    // Group AttemptQuestions by questionId for efficient processing
+    const aqByQuestion = new Map<string, typeof attemptQuestions>();
+    for (const aq of attemptQuestions) {
+      if (!aqByQuestion.has(aq.questionId)) {
+        aqByQuestion.set(aq.questionId, []);
+      }
+      aqByQuestion.get(aq.questionId)!.push(aq);
+    }
+
+    const stats = test.questions.map((tq) => {
+      const q = tq.question;
+      const aqs = aqByQuestion.get(q.id) ?? [];
+
+      // Only count answered questions
+      const answered = aqs.filter((aq) => aq.answeredAt !== null);
+      const totalAnswered = answered.length;
+
+      const correctAnswerIds = new Set(q.answers.filter((a) => a.isCorrect).map((a) => a.id));
+
+      let correctCount = 0;
+
+      for (const aq of answered) {
+        const selectedIds = new Set(aq.attemptAnswers.filter((aa) => aa.selected).map((aa) => aa.answerId));
+
+        if (q.type === 'SINGLE') {
+          // Correct if the student selected the single correct answer
+          const [correctId] = [...correctAnswerIds];
+          if (correctId && selectedIds.has(correctId) && selectedIds.size === 1) {
+            correctCount++;
+          }
+        } else {
+          // MULTI — ALL_OR_NOTHING: all correct selected and no wrong selected
+          const allCorrectSelected = [...correctAnswerIds].every((cid) => selectedIds.has(cid));
+          const noWrongSelected = [...selectedIds].every((sid) => correctAnswerIds.has(sid));
+          if (allCorrectSelected && noWrongSelected) {
+            correctCount++;
+          }
+        }
+      }
+
+      const correctPct = totalAnswered > 0 ? (correctCount / totalAnswered) * 100 : 0;
+
+      return {
+        questionId: q.id,
+        questionText: q.text.substring(0, 80),
+        questionType: q.type,
+        totalAnswered,
+        correctCount,
+        correctPct: Math.round(correctPct * 100) / 100,
+      };
+    });
+
+    // Sort by correctPct ascending (hardest first)
+    stats.sort((a, b) => a.correctPct - b.correctPct);
+
+    res.json(stats);
+  })
+);
+
 export default router;
