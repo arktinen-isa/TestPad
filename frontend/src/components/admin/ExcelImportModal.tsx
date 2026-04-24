@@ -13,6 +13,7 @@ export default function ExcelImportModal({ categories, onClose, onImport }: Exce
   const [loading, setLoading] = useState(false)
   const [preview, setPreview] = useState<any[]>([])
   const [skipped, setSkipped] = useState<{ row: number; text: string; reason: string }[]>([])
+  const [activeTab, setActiveTab] = useState<'VALID' | 'SKIPPED'>('VALID')
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -119,41 +120,72 @@ export default function ExcelImportModal({ categories, onClose, onImport }: Exce
 
         {error && <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">{error}</div>}
 
-        {preview.length > 0 && (
-          <div className="flex-1 overflow-y-auto mb-6 pr-2 custom-scrollbar">
-            <h3 className="text-sm font-semibold text-slate-300 mb-3">Попередній перегляд ({preview.length} питань)</h3>
-            <div className="space-y-3">
-              {preview.map((q, i) => (
-                <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/10">
-                  <p className="text-white text-sm font-medium mb-2">{q.text}</p>
-                  <div className="flex gap-2">
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">{q.type}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-white/10 text-slate-300 border border-white/10">
-                      {categories.find(c => c.id === q.categoryId)?.name || 'Без категорії'}
-                    </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-green-500/20 text-green-300 border border-green-500/30">{q.answers.length} відп.</span>
-                  </div>
-                </div>
-              ))}
+        {(preview.length > 0 || skipped.length > 0) && (
+          <>
+            {/* Tabs Navigation */}
+            <div className="flex gap-2 mb-4 p-1 rounded-xl bg-white/5 border border-white/10 w-fit">
+              <button
+                onClick={() => setActiveTab('VALID')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  activeTab === 'VALID'
+                    ? 'bg-purple-accent text-white shadow-lg shadow-purple-accent/20'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                Для імпорту ({preview.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('SKIPPED')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  activeTab === 'SKIPPED'
+                    ? 'bg-red-500 text-white shadow-lg shadow-red-500/20'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                Помилки ({skipped.length})
+              </button>
             </div>
-          </div>
-        )}
 
-        {skipped.length > 0 && (
-          <div className={`${preview.length > 0 ? 'h-32' : 'flex-1'} overflow-y-auto mb-6 pr-2 custom-scrollbar p-4 rounded-xl bg-red-500/5 border border-red-500/20`}>
-            <h3 className="text-sm font-semibold text-red-400 mb-2 flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-              Пропущено рядків: {skipped.length}
-            </h3>
-            <div className="space-y-2">
-              {skipped.map((s, i) => (
-                <div key={i} className="text-[11px] text-slate-400 flex justify-between border-b border-white/5 pb-1">
-                  <span>Рядок {s.row}: <span className="text-slate-300">{s.text}</span></span>
-                  <span className="text-red-400/70">{s.reason}</span>
+            <div className="flex-1 overflow-y-auto mb-6 pr-2 custom-scrollbar">
+              {activeTab === 'VALID' ? (
+                <div className="space-y-3">
+                  {preview.length > 0 ? (
+                    preview.map((q, i) => (
+                      <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/10">
+                        <p className="text-white text-sm font-medium mb-2">{q.text}</p>
+                        <div className="flex gap-2">
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">{q.type}</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-white/10 text-slate-300 border border-white/10">
+                            {categories.find(c => c.id === q.categoryId)?.name || 'Без категорії'}
+                          </span>
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-green-500/20 text-green-300 border border-green-500/30">{q.answers.length} відп.</span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-10 text-slate-500">Валідних питань не знайдено</div>
+                  )}
                 </div>
-              ))}
+              ) : (
+                <div className="space-y-2">
+                  {skipped.length > 0 ? (
+                    skipped.map((s, i) => (
+                      <div key={i} className="p-4 rounded-xl bg-red-500/5 border border-red-500/10 flex justify-between items-start gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-slate-300 truncate">Рядок {s.row}: {s.text}</p>
+                        </div>
+                        <span className="text-[10px] font-bold text-red-400 bg-red-500/10 px-2 py-1 rounded-md border border-red-500/20 uppercase tracking-wider shrink-0">
+                          {s.reason}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-10 text-slate-500">Помилок не виявлено</div>
+                  )}
+                </div>
+              )}
             </div>
-          </div>
+          </>
         )}
 
         <div className="flex gap-3 pt-5 border-t border-white/10">

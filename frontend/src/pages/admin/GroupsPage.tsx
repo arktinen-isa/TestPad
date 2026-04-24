@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../../api/client'
 import { Group, User } from '../../types'
+import StudentImportModal from '../../components/admin/StudentImportModal'
 
 interface GroupFormData {
   name: string
@@ -105,6 +106,7 @@ function StudentsModal({ group, onClose }: StudentsModalProps) {
   const [addEmail, setAddEmail] = useState('')
   const [addError, setAddError] = useState<string | null>(null)
   const [addLoading, setAddLoading] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
 
   const { data: students, isLoading } = useQuery<User[]>({
     queryKey: ['group-students', group.id],
@@ -159,6 +161,12 @@ function StudentsModal({ group, onClose }: StudentsModalProps) {
     }
   }
 
+  const handleImportStudents = async (users: any[]) => {
+    await apiClient.post('/users/import', { groupId: group.id, users })
+    qc.invalidateQueries({ queryKey: ['group-students', group.id] })
+    qc.invalidateQueries({ queryKey: ['groups'] })
+  }
+
   return (
     <div className="modal-overlay">
       <div className="modal-card max-w-2xl">
@@ -170,6 +178,16 @@ function StudentsModal({ group, onClose }: StudentsModalProps) {
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
+          </button>
+        </div>
+
+        <div className="mb-6 flex justify-end">
+          <button 
+            onClick={() => setShowImportModal(true)}
+            className="text-xs font-medium text-purple-400 hover:text-purple-300 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-purple-500/20 bg-purple-500/5 transition-all"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+            Імпорт з Excel
           </button>
         </div>
 
@@ -262,6 +280,15 @@ function StudentsModal({ group, onClose }: StudentsModalProps) {
         <div className="mt-8 flex justify-end">
           <button onClick={onClose} className="btn-ghost">Закрити</button>
         </div>
+
+        {showImportModal && (
+          <StudentImportModal
+            groupId={group.id}
+            groupName={group.name}
+            onClose={() => setShowImportModal(false)}
+            onImport={handleImportStudents}
+          />
+        )}
       </div>
     </div>
   )

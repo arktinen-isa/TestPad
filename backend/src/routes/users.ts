@@ -58,6 +58,38 @@ router.get(
   })
 );
 
+// POST /api/users/import — ADMIN only
+router.post(
+  '/import',
+  authorize('ADMIN'),
+  asyncHandler(async (req, res) => {
+    const { groupId, users } = req.body;
+    if (!groupId || !Array.isArray(users)) {
+      return res.status(400).json({ error: 'groupId and users array are required' });
+    }
+
+    const createdUsers = await Promise.all(
+      users.map(async (u) => {
+        const passwordHash = await hashPassword(u.password);
+        return prisma.user.create({
+          data: {
+            name: u.name,
+            email: u.email,
+            passwordHash,
+            role: 'STUDENT',
+            groups: {
+              create: { groupId },
+            },
+          },
+          select: { id: true, email: true },
+        });
+      })
+    );
+
+    res.status(201).json({ count: createdUsers.length });
+  })
+);
+
 // POST /api/users — ADMIN only
 router.post(
   '/',
