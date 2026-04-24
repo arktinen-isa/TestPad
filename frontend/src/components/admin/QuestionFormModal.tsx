@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import apiClient from '../../api/client'
 import { Question, Category, QuestionType } from '../../types'
@@ -14,6 +14,7 @@ interface QuestionFormData {
   type: QuestionType
   categoryId: string
   isActive: boolean
+  imageUrl?: string
   answers: AnswerInput[]
 }
 
@@ -29,13 +30,16 @@ export default function QuestionFormModal({ initial, onClose, onSave }: Question
     type: initial?.type || 'SINGLE',
     categoryId: initial?.categoryId || '',
     isActive: initial?.isActive ?? true,
+    imageUrl: initial?.imageUrl || '',
     answers: initial?.answers?.map((a) => ({ id: a.id, text: a.text, isCorrect: a.isCorrect ?? false })) || [
       { text: '', isCorrect: false },
       { text: '', isCorrect: false },
     ],
   })
   const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const { data: categories } = useQuery<Category[]>({
     queryKey: ['categories'],
@@ -44,6 +48,22 @@ export default function QuestionFormModal({ initial, onClose, onSave }: Question
       return res.data
     },
   })
+
+  const handleImageUpload = async (file: File) => {
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('image', file)
+      const res = await apiClient.post('/upload/image', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      setForm((f) => ({ ...f, imageUrl: res.data.imageUrl }))
+    } catch {
+      setError('Помилка завантаження зображення')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const addAnswer = () => {
     if (form.answers.length >= 8) return
@@ -58,7 +78,6 @@ export default function QuestionFormModal({ initial, onClose, onSave }: Question
   const updateAnswer = (idx: number, field: keyof AnswerInput, value: string | boolean) => {
     const updated = form.answers.map((a, i) => {
       if (i !== idx) {
-        // For SINGLE type, uncheck others if this one is being checked
         if (field === 'isCorrect' && value === true && form.type === 'SINGLE') {
           return { ...a, isCorrect: false }
         }
@@ -70,41 +89,24 @@ export default function QuestionFormModal({ initial, onClose, onSave }: Question
   }
 
   const handleTypeChange = (type: QuestionType) => {
-    // When switching to SINGLE, ensure only one answer is correct
     let answers = form.answers
     if (type === 'SINGLE') {
       const firstCorrectIdx = answers.findIndex((a) => a.isCorrect)
-      answers = answers.map((a, i) => ({
-        ...a,
-        isCorrect: i === firstCorrectIdx ? true : false,
-      }))
+      answers = answers.map((a, i) => ({ ...a, isCorrect: i === firstCorrectIdx }))
     }
     setForm({ ...form, type, answers })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    // Validation
-    if (!form.categoryId) {
-      setError('Оберіть категорію')
-      return
-    }
-    const hasCorrect = form.answers.some((a) => a.isCorrect)
-    if (!hasCorrect) {
-      setError('Позначте хоча б одну правильну відповідь')
-      return
-    }
-    const emptyAnswers = form.answers.some((a) => !a.text.trim())
-    if (emptyAnswers) {
-      setError('Заповніть текст усіх відповідей')
-      return
-    }
+    if (!form.categoryId) { setError('Оберіть категорію'); return }
+    if (!form.answers.some((a) => a.isCorrect)) { setError('Позначте хоча б одну правильну відповідь'); return }
+    if (form.answers.some((a) => !a.text.trim())) { setError('Заповніть текст усіх відповідей'); return }
 
     setLoading(true)
     setError(null)
     try {
-      await onSave(form, initial?.id)
+      await onSave({ ...form, imageUrl: form.imageUrl || undefined }, initial?.id)
       onClose()
     } catch (err: unknown) {
       setError(
@@ -139,14 +141,19 @@ export default function QuestionFormModal({ initial, onClose, onSave }: Question
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Question text */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Текст питання</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              Текст питання
+              <span className="text-slate-500 font-normal ml-2">
+                (для коду огорніть у ```мова\n...\n```)
+              </span>
+            </label>
             <textarea
               required
               value={form.text}
               onChange={(e) => setForm({ ...form, text: e.target.value })}
-              className="glass-input resize-none"
-              rows={3}
-              placeholder="Введіть текст питання..."
+              className="glass-input resize-none font-mono text-sm"
+              rows={4}
+              placeholder="Введіть текст питання або код..."
             />
           </div>
 
@@ -181,7 +188,68 @@ export default function QuestionFormModal({ initial, onClose, onSave }: Question
             </div>
           </div>
 
-          {/* Active status */}
+          {/* Image upload */}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              Зображення
+              <span className="text-slate-500 font-normal ml-2">(необов'язково, до 5 МБ)</span>
+            </label>
+            <input
+              type="file"
+              ref={fileRef}
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                if (f) handleImageUpload(f)
+                e.target.value = ''
+              }}
+            />
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-300 bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white disabled:opacity-50 transition-all"
+              >
+                {uploading ? (
+                  <>
+                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                    Завантаження...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Завантажити зображення
+                  </>
+                )}
+              </button>
+              {form.imageUrl && (
+                <div className="flex items-center gap-2">
+                  <img
+                    src={form.imageUrl}
+                    alt="Прев'ю"
+                    className="h-10 w-10 object-cover rounded-lg border border-white/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, imageUrl: '' })}
+                    className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                  >
+                    Видалити
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Active toggle */}
           <label className="flex items-center gap-3 cursor-pointer">
             <div
               onClick={() => setForm({ ...form, isActive: !form.isActive })}
@@ -221,13 +289,11 @@ export default function QuestionFormModal({ initial, onClose, onSave }: Question
             <div className="space-y-2.5">
               {form.answers.map((answer, idx) => (
                 <div key={idx} className="flex items-center gap-3">
-                  {/* Correct indicator */}
                   <button
                     type="button"
                     onClick={() => {
                       if (form.type === 'SINGLE') {
-                        const updated = form.answers.map((a, i) => ({ ...a, isCorrect: i === idx }))
-                        setForm({ ...form, answers: updated })
+                        setForm({ ...form, answers: form.answers.map((a, i) => ({ ...a, isCorrect: i === idx })) })
                       } else {
                         updateAnswer(idx, 'isCorrect', !answer.isCorrect)
                       }
@@ -245,8 +311,6 @@ export default function QuestionFormModal({ initial, onClose, onSave }: Question
                       </svg>
                     )}
                   </button>
-
-                  {/* Answer text */}
                   <input
                     type="text"
                     required
@@ -257,8 +321,6 @@ export default function QuestionFormModal({ initial, onClose, onSave }: Question
                     }`}
                     placeholder={`Варіант ${idx + 1}`}
                   />
-
-                  {/* Remove */}
                   <button
                     type="button"
                     onClick={() => removeAnswer(idx)}
@@ -274,10 +336,9 @@ export default function QuestionFormModal({ initial, onClose, onSave }: Question
             </div>
           </div>
 
-          {/* Actions */}
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="flex-1 btn-ghost">Скасувати</button>
-            <button type="submit" disabled={loading} className="flex-1 btn-secondary disabled:opacity-50">
+            <button type="submit" disabled={loading || uploading} className="flex-1 btn-secondary disabled:opacity-50">
               {loading ? 'Збереження...' : 'Зберегти питання'}
             </button>
           </div>

@@ -15,6 +15,8 @@ import testsRouter from './routes/tests';
 import attemptsRouter from './routes/attempts';
 import eventsRouter from './routes/events';
 import dashboardRouter from './routes/dashboard';
+import uploadRouter from './routes/upload';
+import suspiciousRouter from './routes/suspicious';
 
 const app = express();
 
@@ -32,6 +34,9 @@ app.use(
 // Body parsing
 app.use(express.json());
 
+// Static uploads
+app.use('/uploads', express.static('uploads'));
+
 // Rate limiting
 app.use('/api/auth', authLimiter);
 app.use('/api', apiLimiter);
@@ -47,6 +52,8 @@ app.use('/api/tests', testsRouter);
 app.use('/api/attempts', attemptsRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/upload', uploadRouter);
+app.use('/api/suspicious', suspiciousRouter);
 
 // Global error handler — must be last
 app.use(errorHandler);
