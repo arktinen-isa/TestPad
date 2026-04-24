@@ -39,7 +39,7 @@ const SLOGANS = [
   { e: '🚂', t: 'Потяг знань відправляється. Квиток — твоя голова.' },
   { e: '🎮', t: 'Save point не передбачений. Грай обережно.' },
   { e: '🌵', t: 'Навіть кактус виживає. І ти здаш.' },
-  { e: 'FOX', t: 'Хитрість без знань — як Chrome без інтернету.' },
+  { e: '🦊', t: 'Хитрість без знань — як Chrome без інтернету.' },
   { e: '🍀', t: 'Чотирилисник знайдеш після тесту. Зараз — питання.' },
   { e: '🐧', t: 'Пінгвін не вміє літати, але Linux запустить.' },
   { e: '🌍', t: 'Земля крутиться. Питання теж. Відповідай!' },
@@ -64,7 +64,7 @@ export default function Login() {
 
   useEffect(() => {
     const getRandomSlogan = () => SLOGANS[Math.floor(Math.random() * SLOGANS.length)]
-    
+
     // Set initial slogan
     setSlogan(getRandomSlogan())
 
@@ -106,8 +106,8 @@ export default function Login() {
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-purple-accent/20 border border-purple-accent/30 mb-4">
             <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-              <path d="M16 3L3 10v12l13 7 13-7V10L16 3z" stroke="#a855f7" strokeWidth="1.5" fill="none"/>
-              <path d="M16 3v19M3 10l13 7 13-7" stroke="#a855f7" strokeWidth="1.5"/>
+              <path d="M16 3L3 10v12l13 7 13-7V10L16 3z" stroke="#a855f7" strokeWidth="1.5" fill="none" />
+              <path d="M16 3v19M3 10l13 7 13-7" stroke="#a855f7" strokeWidth="1.5" />
             </svg>
           </div>
           <h2 className="font-unbounded text-3xl font-bold text-white mb-1">
@@ -177,8 +177,8 @@ export default function Login() {
               {isLoading ? (
                 <>
                   <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
                   Вхід...
                 </>

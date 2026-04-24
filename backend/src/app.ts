@@ -21,6 +21,9 @@ import suspiciousRouter from './routes/suspicious';
 
 const app = express();
 
+// Trust proxy for rate-limiting
+app.set('trust proxy', 1);
+
 // Security headers
 app.use(helmet());
 

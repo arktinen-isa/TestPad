@@ -4,6 +4,7 @@ import apiClient from '../../api/client'
 import { Question, Category, QuestionType } from '../../types'
 import QuestionFormModal from '../../components/admin/QuestionFormModal'
 import ExcelImportModal from '../../components/admin/ExcelImportModal'
+import * as XLSX from 'xlsx'
 
 interface QuestionFormData {
   text: string
@@ -108,6 +109,18 @@ export default function QuestionsPage() {
     }
   }
 
+  const downloadTemplate = () => {
+    const data = [
+      ['Текст питання', 'Назва категорії', 'Тип (SINGLE/MULTI)', 'Варіант 1', 'Вірний (1/0)', 'Варіант 2', 'Вірний (1/0)', 'Варіант 3', 'Вірний (1/0)'],
+      ['Приклад питання з однією відповіддю', 'Загальні', 'SINGLE', 'Правильна відповідь', 1, 'Неправильна', 0, 'Ще одна неправильна', 0],
+      ['Приклад питання з кількома відповідями', 'Математика', 'MULTI', 'Перша правильна', 1, 'Друга правильна', 1, 'Неправильна', 0]
+    ]
+    const ws = XLSX.utils.aoa_to_sheet(data)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Template')
+    XLSX.writeFile(wb, 'GradeX_Import_Template.xlsx')
+  }
+
   const handleBulkCategory = async () => {
     if (!targetCategoryId || selectedIds.length === 0) return
     await bulkUpdateMutation.mutateAsync({ ids: selectedIds, data: { categoryId: targetCategoryId } })
@@ -126,18 +139,20 @@ export default function QuestionsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-unbounded text-2xl font-bold text-white mb-1">Банк питань</h1>
-          <p className="text-slate-400 text-sm">Управління питаннями для тестів</p>
+          <div className="flex items-center gap-3">
+            <p className="text-slate-400 text-sm">Управління питаннями для тестів</p>
+            <button 
+              onClick={downloadTemplate}
+              className="text-purple-400 hover:text-purple-300 text-xs font-medium underline flex items-center gap-1"
+            >
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Шаблон імпорту
+            </button>
+          </div>
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="btn-ghost flex items-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-            Імпорт Excel
-          </button>
           <button
             onClick={() => { setEditQuestion(null); setShowModal(true) }}
             className="btn-secondary flex items-center gap-2"
@@ -146,6 +161,15 @@ export default function QuestionsPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             Додати питання
+          </button>
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="btn-ghost flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            Імпорт Excel
           </button>
         </div>
       </div>
