@@ -14,7 +14,7 @@ export default function TestStart() {
   const { data: test, isLoading } = useQuery<StudentTest>({
     queryKey: ['student-test', testId],
     queryFn: async () => {
-      const res = await apiClient.get(`/student/tests/${testId}`)
+      const res = await apiClient.get(`/tests/${testId}`)
       return res.data
     },
     enabled: !!testId,

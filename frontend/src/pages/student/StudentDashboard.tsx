@@ -131,8 +131,8 @@ export default function StudentDashboard() {
   const { data: tests, isLoading, error } = useQuery<StudentTest[]>({
     queryKey: ['student-tests'],
     queryFn: async () => {
-      const res = await apiClient.get('/student/tests')
-      return res.data
+      const res = await apiClient.get('/tests')
+      return res.data.data
     },
   })
 

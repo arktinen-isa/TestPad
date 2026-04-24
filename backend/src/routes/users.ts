@@ -28,13 +28,19 @@ router.get(
   authorize('ADMIN'),
   asyncHandler(async (req, res) => {
     const role = req.query['role'] as string;
+    const unassigned = req.query['unassigned'] === 'true';
     const page = Math.max(1, parseInt(req.query['page'] as string) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query['limit'] as string) || 20));
     const skip = (page - 1) * limit;
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, any> = {};
     if (role && ['ADMIN', 'TEACHER', 'STUDENT'].includes(role)) {
       where['role'] = role;
+    }
+    
+    if (unassigned) {
+      where['role'] = 'STUDENT';
+      where['groups'] = { none: {} };
     }
 
     const [users, total] = await Promise.all([
