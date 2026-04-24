@@ -68,25 +68,53 @@ router.post(
       return res.status(400).json({ error: 'groupId and users array are required' });
     }
 
-    const createdUsers = await Promise.all(
-      users.map(async (u) => {
-        const passwordHash = await hashPassword(u.password);
-        return prisma.user.create({
-          data: {
-            name: u.name,
-            email: u.email,
-            passwordHash,
-            role: 'STUDENT',
-            groups: {
-              create: { groupId },
-            },
-          },
-          select: { id: true, email: true },
-        });
-      })
-    );
+    let createdCount = 0;
+    const errors: string[] = [];
 
-    res.status(201).json({ count: createdUsers.length });
+    for (const u of users) {
+      try {
+        const passwordHash = await hashPassword(u.password);
+        
+        // Check if user exists
+        const existingUser = await prisma.user.findUnique({ where: { email: u.email } });
+        
+        if (existingUser) {
+          // If exists, just link to group if not already linked
+          const isLinked = await prisma.userGroup.findUnique({
+            where: { userId_groupId: { userId: existingUser.id, groupId } }
+          });
+          
+          if (!isLinked) {
+            await prisma.userGroup.create({
+              data: { userId: existingUser.id, groupId }
+            });
+          }
+          createdCount++; // Count as success since they are now in the group
+        } else {
+          // Create new user
+          await prisma.user.create({
+            data: {
+              name: u.name,
+              email: u.email,
+              passwordHash,
+              role: 'STUDENT',
+              groups: {
+                create: { groupId },
+              },
+            },
+          });
+          createdCount++;
+        }
+      } catch (err: any) {
+        errors.push(`Помилка для ${u.email}: ${err.message || 'Невідома помилка'}`);
+      }
+    }
+
+    if (createdCount === 0 && errors.length > 0) {
+      return res.status(400).json({ error: `Не вдалося імпортувати студентів: ${errors[0]}` });
+    }
+
+    res.status(201).json({ count: createdCount, errors: errors.length > 0 ? errors : undefined });
   })
 );
 

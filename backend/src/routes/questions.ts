@@ -131,6 +131,25 @@ router.patch(
   })
 );
 
+// DELETE /api/questions/bulk — ADMIN+TEACHER
+router.delete(
+  '/bulk',
+  authorize('ADMIN', 'TEACHER'),
+  asyncHandler(async (req, res) => {
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+
+    await prisma.question.deleteMany({
+      where: { id: { in: ids } },
+    });
+
+    res.status(204).send();
+  })
+);
+
 // POST /api/questions — ADMIN+TEACHER
 router.post(
   '/',

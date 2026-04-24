@@ -89,6 +89,16 @@ export default function QuestionsPage() {
     },
   })
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await apiClient.delete('/questions/bulk', { data: { ids } })
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['questions'] })
+      setSelectedIds([])
+    },
+  })
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => apiClient.delete(`/questions/${id}`),
     onSuccess: () => {
@@ -179,13 +189,24 @@ export default function QuestionsPage() {
         <div className="glass-card p-3 bg-purple-accent/10 border-purple-accent/30 flex items-center justify-between animate-slide-in">
           <p className="text-sm text-white font-medium">Вибрано: {selectedIds.length}</p>
           <div className="flex gap-2">
-            <button
+            <button 
               onClick={() => setShowBulkCategoryModal(true)}
               className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white hover:bg-white/10 transition-all"
             >
               Змінити категорію
             </button>
-            <button
+            <button 
+              onClick={() => {
+                if (confirm(`Ви впевнені, що хочете видалити ${selectedIds.length} питань?`)) {
+                  bulkDeleteMutation.mutate(selectedIds)
+                }
+              }}
+              disabled={bulkDeleteMutation.isPending}
+              className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400 hover:bg-red-500/20 transition-all disabled:opacity-50"
+            >
+              {bulkDeleteMutation.isPending ? 'Видалення...' : 'Видалити обрані'}
+            </button>
+            <button 
               onClick={() => setSelectedIds([])}
               className="px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white"
             >
