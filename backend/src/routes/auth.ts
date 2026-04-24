@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma';
 import { asyncHandler } from '../middleware/errorHandler';
 import {
@@ -69,7 +70,6 @@ router.post(
   asyncHandler(async (req, res) => {
     const { refreshToken } = refreshSchema.parse(req.body);
 
-    // Check token exists in DB and is not expired
     const storedToken = await prisma.refreshToken.findUnique({
       where: { token: refreshToken },
     });
@@ -80,12 +80,23 @@ router.post(
     }
 
     const payload = verifyRefreshToken(refreshToken);
-    const accessToken = generateAccessToken({
-      userId: payload.userId,
-      role: payload.role,
-    });
+    const accessToken = generateAccessToken({ userId: payload.userId, role: payload.role });
+    const newRefreshToken = generateRefreshToken({ userId: payload.userId, role: payload.role });
 
-    res.json({ accessToken });
+    const decoded = jwt.decode(newRefreshToken) as { exp?: number } | null;
+    const expiresAt = decoded?.exp
+      ? new Date(decoded.exp * 1000)
+      : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    // Rotate: revoke old token, issue new one
+    await prisma.$transaction([
+      prisma.refreshToken.delete({ where: { token: refreshToken } }),
+      prisma.refreshToken.create({
+        data: { userId: payload.userId, token: newRefreshToken, expiresAt },
+      }),
+    ]);
+
+    res.json({ accessToken, refreshToken: newRefreshToken });
   })
 );
 

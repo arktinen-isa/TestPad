@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import apiClient from '../../api/client'
+import { getApiError } from '../../api/errors'
 import { Question, Category, QuestionType } from '../../types'
 
 interface AnswerInput {
@@ -108,8 +109,7 @@ export default function QuestionFormModal({ initial, onClose, onSave }: Question
       onClose()
     } catch (err: unknown) {
       setError(
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        'Помилка збереження'
+        getApiError(err, 'Помилка збереження')
       )
     } finally {
       setLoading(false)

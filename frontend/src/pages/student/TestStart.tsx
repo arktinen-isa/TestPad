@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import apiClient from '../../api/client'
+import { getApiError } from '../../api/errors'
 import { useTestStore } from '../../store/testStore'
 import { StudentTest } from '../../types'
 
@@ -35,8 +36,7 @@ export default function TestStart() {
 
       navigate(`/student/test/${testId}/take`, { replace: true })
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })
-        ?.response?.data?.message || 'Помилка при старті тесту'
+      const msg = getApiError(err, 'Помилка при старті тесту')
       setStartError(msg)
     }
   }

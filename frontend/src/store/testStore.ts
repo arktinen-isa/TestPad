@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import apiClient from '../api/client'
+import { getApiError } from '../api/errors'
 import { CurrentQuestion } from '../types'
 
 interface TestState {
@@ -63,8 +64,7 @@ export const useTestStore = create<TestStore>((set, get) => ({
       return attemptId as string
     } catch (error: unknown) {
       const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        'Помилка при старті тесту'
+        getApiError(error, 'Помилка при старті тесту')
       set({ isLoading: false, error: message })
       throw error
     }
@@ -94,9 +94,7 @@ export const useTestStore = create<TestStore>((set, get) => ({
         })
       }
     } catch (error: unknown) {
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        'Помилка при відправці відповіді'
+      const message = getApiError(error, 'Помилка при відправці відповіді')
       set({ isLoading: false, error: message })
       throw error
     }
@@ -117,9 +115,7 @@ export const useTestStore = create<TestStore>((set, get) => ({
         isLoading: false,
       })
     } catch (error: unknown) {
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        'Помилка при завершенні тесту'
+      const message = getApiError(error, 'Помилка при завершенні тесту')
       set({ isLoading: false, error: message })
       throw error
     }

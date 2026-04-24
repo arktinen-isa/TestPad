@@ -26,7 +26,6 @@ const createTestSchema = z.object({
   scoringMode: z.enum(['SUM', 'PERCENTAGE']).default('SUM'),
   passThreshold: z.number().min(0).max(100).optional(),
   showResultMode: z.enum(['AFTER_FINISH', 'ADMIN_ONLY', 'AFTER_TEST_CLOSED']).default('AFTER_FINISH'),
-  shuffleQuestions: z.boolean().default(true),
   multiScoringMode: z.enum(['ALL_OR_NOTHING', 'PARTIAL']).default('ALL_OR_NOTHING'),
   groupIds: z.array(z.string().uuid()).optional(),
   questionIds: z.array(z.string().uuid()).optional(),
@@ -105,7 +104,6 @@ router.post(
         scoringMode: data.scoringMode,
         passThreshold: data.passThreshold,
         showResultMode: data.showResultMode,
-        shuffleQuestions: data.shuffleQuestions,
         multiScoringMode: data.multiScoringMode,
         groups: data.groupIds
           ? { create: data.groupIds.map((groupId) => ({ groupId })) }
@@ -212,7 +210,6 @@ router.patch(
     if (data.scoringMode !== undefined) updatePayload['scoringMode'] = data.scoringMode;
     if (data.passThreshold !== undefined) updatePayload['passThreshold'] = data.passThreshold;
     if (data.showResultMode !== undefined) updatePayload['showResultMode'] = data.showResultMode;
-    if (data.shuffleQuestions !== undefined) updatePayload['shuffleQuestions'] = data.shuffleQuestions;
     if (data.multiScoringMode !== undefined) updatePayload['multiScoringMode'] = data.multiScoringMode;
 
     // Handle relationship updates

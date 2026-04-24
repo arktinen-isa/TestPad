@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import apiClient from '../../api/client'
+import { getApiError } from '../../api/errors'
 import { Test, TestStatus, Category, Group } from '../../types'
 
 interface CategoryQuotaInput {
@@ -23,7 +24,6 @@ interface TestFormData {
   multiScoringMode: string
   passThreshold: number | ''
   showResultMode: string
-  shuffleQuestions: boolean
   status: TestStatus
 }
 
@@ -52,7 +52,6 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
     multiScoringMode: initial?.multiScoringMode || 'ALL_OR_NOTHING',
     passThreshold: initial?.passThreshold ?? 60,
     showResultMode: initial?.showResultMode || 'AFTER_FINISH',
-    shuffleQuestions: initial?.shuffleQuestions ?? true,
     status: initial?.status || 'DRAFT',
   })
   const [loading, setLoading] = useState(false)
@@ -117,8 +116,7 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
       onClose()
     } catch (err: unknown) {
       setError(
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        'Помилка збереження'
+        getApiError(err, 'Помилка збереження')
       )
     } finally {
       setLoading(false)
@@ -355,19 +353,6 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
                 </div>
               )}
 
-              <label className="flex items-center gap-3 cursor-pointer">
-                <div
-                  onClick={() => setForm({ ...form, shuffleQuestions: !form.shuffleQuestions })}
-                  className={`relative w-10 h-6 rounded-full transition-all duration-200 ${
-                    form.shuffleQuestions ? 'bg-purple-accent' : 'bg-white/20'
-                  }`}
-                >
-                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all duration-200 ${
-                    form.shuffleQuestions ? 'left-5' : 'left-1'
-                  }`} />
-                </div>
-                <span className="text-sm text-slate-300">Перемішувати питання</span>
-              </label>
             </div>
           )}
 

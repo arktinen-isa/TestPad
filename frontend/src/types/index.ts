@@ -62,7 +62,6 @@ export interface Test {
   scoringMode: string
   passThreshold?: number
   showResultMode: string
-  shuffleQuestions: boolean
   multiScoringMode: string
   createdAt: string
   groups?: Group[]

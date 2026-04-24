@@ -138,7 +138,6 @@ model Test {
   scoringMode      ScoringMode    @default(SUM)
   passThreshold    Float?
   showResultMode   ShowResultMode @default(AFTER_FINISH)
-  shuffleQuestions Boolean        @default(true)
   multiScoringMode MultiScoringMode @default(ALL_OR_NOTHING)
   createdAt        DateTime       @default(now())
 

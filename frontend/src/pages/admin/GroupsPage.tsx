@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../../api/client'
+import { getApiError } from '../../api/errors'
 import { Group, User } from '../../types'
 import StudentImportModal from '../../components/admin/StudentImportModal'
 
@@ -32,8 +33,7 @@ function GroupModal({ initial, onClose, onSave }: GroupModalProps) {
       onClose()
     } catch (err: unknown) {
       setError(
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        'Помилка збереження'
+        getApiError(err, 'Помилка збереження')
       )
     } finally {
       setLoading(false)

@@ -20,7 +20,6 @@ interface TestFormData {
   multiScoringMode: string
   passThreshold: number | ''
   showResultMode: string
-  shuffleQuestions: boolean
   status: TestStatus
 }
 

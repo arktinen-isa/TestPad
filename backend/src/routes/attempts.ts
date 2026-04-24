@@ -186,11 +186,6 @@ router.post(
       sampledQuestionIds = sampleFromBank(testQuestionIds, test.questionsCount);
     }
 
-    // Optionally shuffle question order
-    if (test.shuffleQuestions) {
-      // already shuffled by sampling, keep as-is
-    }
-
     // Create attempt with AttemptQuestion records
     const attempt = await prisma.attempt.create({
       data: {

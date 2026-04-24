@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import apiClient from '../api/client'
+import { getApiError } from '../api/errors'
 import { User } from '../types'
 
 interface AuthState {
@@ -58,8 +59,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
       set({ user, accessToken, isLoading: false, error: null })
     } catch (error: unknown) {
       const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        'Невірний email або пароль'
+        getApiError(error, 'Невірний email або пароль')
       set({ isLoading: false, error: message })
       throw error
     }
