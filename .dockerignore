@@ -4,4 +4,4 @@
 **/.env
 **/coverage
 **/*.log
-frontend/
+frontend/public

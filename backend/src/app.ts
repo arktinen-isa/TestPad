@@ -1,6 +1,7 @@
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
+import path from 'path';
 import { config } from './config';
 import { authLimiter, apiLimiter } from './middleware/rateLimiter';
 import { errorHandler } from './middleware/errorHandler';
@@ -54,6 +55,13 @@ app.use('/api/events', eventsRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/upload', uploadRouter);
 app.use('/api/suspicious', suspiciousRouter);
+
+// Serve React SPA — must be after all API routes
+const frontendDist = path.join(__dirname, '..', 'public');
+app.use(express.static(frontendDist));
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(frontendDist, 'index.html'));
+});
 
 // Global error handler — must be last
 app.use(errorHandler);
