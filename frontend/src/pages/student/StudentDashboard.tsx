@@ -141,7 +141,7 @@ export default function StudentDashboard() {
       {/* Welcome header */}
       <div className="mb-8">
         <h1 className="font-unbounded text-2xl sm:text-3xl font-bold text-white mb-2">
-          Вітаємо, {user?.name?.split(' ')[0] || 'Студент'} 👋
+          Вітаємо, {user?.name ? (user.name.split(' ').length > 1 ? user.name.split(' ')[1] : user.name) : 'Студент'} 👋
         </h1>
         <p className="text-slate-400">
           Ваші доступні тести та результати

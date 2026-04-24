@@ -75,6 +75,62 @@ router.get(
   })
 );
 
+// POST /api/questions/bulk — ADMIN+TEACHER
+router.post(
+  '/bulk',
+  authorize('ADMIN', 'TEACHER'),
+  asyncHandler(async (req, res) => {
+    const questions = req.body; 
+    if (!Array.isArray(questions)) {
+      return res.status(400).json({ error: 'Expected an array of questions' });
+    }
+
+    const created = await Promise.all(
+      questions.map((q) =>
+        prisma.question.create({
+          data: {
+            text: q.text,
+            type: q.type || 'SINGLE',
+            categoryId: q.categoryId,
+            isActive: q.isActive ?? true,
+            imageUrl: q.imageUrl,
+            answers: {
+              create: q.answers.map((a: any) => ({
+                text: a.text,
+                isCorrect: !!a.isCorrect,
+              })),
+            },
+          },
+        })
+      )
+    );
+
+    res.status(201).json({ count: created.length });
+  })
+);
+
+// PATCH /api/questions/bulk — ADMIN+TEACHER (Bulk update)
+router.patch(
+  '/bulk',
+  authorize('ADMIN', 'TEACHER'),
+  asyncHandler(async (req, res) => {
+    const { ids, data } = req.body;
+    if (!Array.isArray(ids)) {
+      return res.status(400).json({ error: 'Expected an array of IDs' });
+    }
+
+    await prisma.question.updateMany({
+      where: { id: { in: ids } },
+      data: {
+        ...(data.categoryId !== undefined && { categoryId: data.categoryId }),
+        ...(data.isActive !== undefined && { isActive: data.isActive }),
+      },
+    });
+
+    res.json({ success: true });
+  })
+);
+
 // POST /api/questions — ADMIN+TEACHER
 router.post(
   '/',

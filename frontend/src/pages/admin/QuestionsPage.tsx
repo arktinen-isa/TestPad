@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../../api/client'
 import { Question, Category, QuestionType } from '../../types'
 import QuestionFormModal from '../../components/admin/QuestionFormModal'
+import ExcelImportModal from '../../components/admin/ExcelImportModal'
 
 interface QuestionFormData {
   text: string
@@ -29,6 +30,10 @@ export default function QuestionsPage() {
   const [typeFilter, setTypeFilter] = useState<QuestionType | ''>('')
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL')
   const [showModal, setShowModal] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [showBulkCategoryModal, setShowBulkCategoryModal] = useState(false)
+  const [targetCategoryId, setTargetCategoryId] = useState('')
   const [editQuestion, setEditQuestion] = useState<Question | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<Question | null>(null)
 
@@ -45,10 +50,10 @@ export default function QuestionsPage() {
     queryFn: async () => {
       const params: Record<string, string> = {}
       if (search) params.search = search
-      if (categoryFilter) params.categoryId = categoryFilter
+      if (categoryFilter) params.category = categoryFilter
       if (typeFilter) params.type = typeFilter
-      if (activeFilter === 'ACTIVE') params.isActive = 'true'
-      if (activeFilter === 'INACTIVE') params.isActive = 'false'
+      if (activeFilter === 'ACTIVE') params.active = 'true'
+      if (activeFilter === 'INACTIVE') params.active = 'false'
       const res = await apiClient.get('/questions', { params })
       return res.data.data
     },
@@ -65,6 +70,24 @@ export default function QuestionsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['questions'] }),
   })
 
+  const bulkSaveMutation = useMutation({
+    mutationFn: async (questions: any[]) => {
+      await apiClient.post('/questions/bulk', questions)
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['questions'] }),
+  })
+
+  const bulkUpdateMutation = useMutation({
+    mutationFn: async ({ ids, data }: { ids: string[], data: any }) => {
+      await apiClient.patch('/questions/bulk', { ids, data })
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['questions'] })
+      setSelectedIds([])
+      setShowBulkCategoryModal(false)
+    },
+  })
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => apiClient.delete(`/questions/${id}`),
     onSuccess: () => {
@@ -72,6 +95,23 @@ export default function QuestionsPage() {
       setDeleteConfirm(null)
     },
   })
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === (questions?.length || 0)) {
+      setSelectedIds([])
+    } else {
+      setSelectedIds(questions?.map(q => q.id) || [])
+    }
+  }
+
+  const handleBulkCategory = async () => {
+    if (!targetCategoryId || selectedIds.length === 0) return
+    await bulkUpdateMutation.mutateAsync({ ids: selectedIds, data: { categoryId: targetCategoryId } })
+  }
 
   const handleSave = async (data: QuestionFormData, id?: string) => {
     await saveMutation.mutateAsync({ data, id })
@@ -88,16 +128,48 @@ export default function QuestionsPage() {
           <h1 className="font-unbounded text-2xl font-bold text-white mb-1">Банк питань</h1>
           <p className="text-slate-400 text-sm">Управління питаннями для тестів</p>
         </div>
-        <button
-          onClick={() => { setEditQuestion(null); setShowModal(true) }}
-          className="btn-secondary flex items-center gap-2"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Додати питання
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="btn-ghost flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            Імпорт Excel
+          </button>
+          <button
+            onClick={() => { setEditQuestion(null); setShowModal(true) }}
+            className="btn-secondary flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Додати питання
+          </button>
+        </div>
       </div>
+
+      {/* Bulk Actions Bar */}
+      {selectedIds.length > 0 && (
+        <div className="glass-card p-3 bg-purple-accent/10 border-purple-accent/30 flex items-center justify-between animate-slide-in">
+          <p className="text-sm text-white font-medium">Вибрано: {selectedIds.length}</p>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setShowBulkCategoryModal(true)}
+              className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white hover:bg-white/10 transition-all"
+            >
+              Змінити категорію
+            </button>
+            <button 
+              onClick={() => setSelectedIds([])}
+              className="px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white"
+            >
+              Скасувати
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="glass-card p-4 flex flex-wrap gap-3">
@@ -165,6 +237,14 @@ export default function QuestionsPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-white/10">
+                  <th className="px-5 py-4 text-left">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-white/20 bg-white/5 text-purple-accent"
+                      checked={selectedIds.length > 0 && selectedIds.length === questions?.length}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
                   <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Питання</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Тип</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Категорія</th>
@@ -175,7 +255,15 @@ export default function QuestionsPage() {
               </thead>
               <tbody>
                 {questions?.map((q) => (
-                  <tr key={q.id} className="table-row">
+                  <tr key={q.id} className={`table-row ${selectedIds.includes(q.id) ? 'bg-purple-accent/5' : ''}`}>
+                    <td className="px-5 py-4">
+                      <input 
+                        type="checkbox" 
+                        className="rounded border-white/20 bg-white/5 text-purple-accent"
+                        checked={selectedIds.includes(q.id)}
+                        onChange={() => toggleSelect(q.id)}
+                      />
+                    </td>
                     <td className="px-5 py-4 max-w-xs">
                       <p className="text-white text-sm">{truncateText(q.text)}</p>
                       <p className="text-slate-500 text-xs mt-0.5">{q.answers.length} відповідей</p>
@@ -224,13 +312,6 @@ export default function QuestionsPage() {
                     </td>
                   </tr>
                 ))}
-                {(!questions || questions.length === 0) && (
-                  <tr>
-                    <td colSpan={6} className="px-5 py-10 text-center text-slate-400">
-                      Питань не знайдено
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
@@ -243,6 +324,42 @@ export default function QuestionsPage() {
           onClose={() => { setShowModal(false); setEditQuestion(null) }}
           onSave={handleSave}
         />
+      )}
+
+      {showImportModal && (
+        <ExcelImportModal
+          categories={categories || []}
+          onClose={() => setShowImportModal(false)}
+          onImport={async (q) => { await bulkSaveMutation.mutateAsync(q) }}
+        />
+      )}
+
+      {showBulkCategoryModal && (
+        <div className="modal-overlay">
+          <div className="modal-card max-w-sm">
+            <h2 className="font-unbounded text-lg font-bold text-white mb-6 text-center">Змінити категорію ({selectedIds.length})</h2>
+            <select
+              value={targetCategoryId}
+              onChange={(e) => setTargetCategoryId(e.target.value)}
+              className="glass-input mb-6"
+            >
+              <option value="" className="bg-gray-900">Оберіть категорію...</option>
+              {categories?.map((c) => (
+                <option key={c.id} value={c.id} className="bg-gray-900">{c.name}</option>
+              ))}
+            </select>
+            <div className="flex gap-3">
+              <button onClick={() => setShowBulkCategoryModal(false)} className="flex-1 btn-ghost">Скасувати</button>
+              <button 
+                onClick={handleBulkCategory} 
+                disabled={bulkUpdateMutation.isPending || !targetCategoryId}
+                className="flex-1 btn-secondary"
+              >
+                Зберегти
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {deleteConfirm && (
