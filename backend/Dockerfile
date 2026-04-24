@@ -3,6 +3,8 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+RUN apk add --no-cache openssl
+
 COPY backend/package*.json ./
 RUN npm ci
 
@@ -14,6 +16,8 @@ RUN npm run build
 FROM node:20-alpine
 WORKDIR /app
 
+RUN apk add --no-cache openssl
+
 COPY --from=builder /app/package*.json ./
 RUN npm ci --omit=dev
 
@@ -23,5 +27,4 @@ COPY --from=builder /app/prisma          ./prisma
 
 EXPOSE 3000
 
-# prisma is now in dependencies so ./node_modules/.bin/prisma is available
 CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node dist/index.js"]
