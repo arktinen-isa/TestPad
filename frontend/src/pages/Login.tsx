@@ -127,7 +127,7 @@ export default function Login() {
         </div>
 
         <p className="text-center text-slate-500 text-xs mt-6">
-          © {new Date().getFullYear()} ОМФК КНУ імені Тараса Шевченка
+          © {new Date().getFullYear()} Оптико-механічний фаховий коледж Київського національного університету імені Тараса Шевченка
         </p>
       </div>
     </div>
