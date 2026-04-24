@@ -24,7 +24,7 @@ export default function StudentLayout() {
               </svg>
             </div>
             <span className="font-unbounded text-sm font-bold text-white">
-              ОМФК Тестування
+              GradeX
             </span>
           </div>
 
@@ -41,6 +41,15 @@ export default function StudentLayout() {
                 <p className="text-xs text-slate-400 mt-0.5">Студент</p>
               </div>
             </div>
+            <button
+              onClick={() => navigate('/student/profile')}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition-all duration-200 text-sm font-medium"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <span className="hidden sm:inline">Профіль</span>
+            </button>
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition-all duration-200 text-sm font-medium"

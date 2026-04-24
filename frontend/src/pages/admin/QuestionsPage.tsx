@@ -50,7 +50,7 @@ export default function QuestionsPage() {
       if (activeFilter === 'ACTIVE') params.isActive = 'true'
       if (activeFilter === 'INACTIVE') params.isActive = 'false'
       const res = await apiClient.get('/questions', { params })
-      return res.data
+      return res.data.data
     },
   })
 

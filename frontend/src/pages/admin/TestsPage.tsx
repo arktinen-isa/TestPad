@@ -58,7 +58,7 @@ export default function TestsPage() {
       const params: Record<string, string> = {}
       if (statusFilter !== 'ALL') params.status = statusFilter
       const res = await apiClient.get('/tests', { params })
-      return res.data
+      return res.data.data
     },
   })
 

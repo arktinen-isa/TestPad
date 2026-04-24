@@ -82,7 +82,7 @@ export default function AdminLayout() {
               </svg>
             </div>
             <div>
-              <p className="font-unbounded text-sm font-bold text-white leading-tight">ОМФК КНУ</p>
+              <p className="font-unbounded text-sm font-bold text-white leading-tight">GradeX</p>
               <p className="text-xs text-slate-400">Адмін панель</p>
             </div>
           </div>
@@ -122,16 +122,27 @@ export default function AdminLayout() {
               <span className={`status-badge border text-xs ${roleColor}`}>
                 {roleLabel}
               </span>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-red-400 transition-colors duration-200"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                Вийти
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => navigate('/admin/profile')}
+                  className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors duration-200"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Профіль
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-red-400 transition-colors duration-200"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Вийти
+                </button>
+              </div>
             </div>
           </div>
         </div>

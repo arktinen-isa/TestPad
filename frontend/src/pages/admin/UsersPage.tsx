@@ -150,7 +150,7 @@ export default function UsersPage() {
     queryFn: async () => {
       const params = roleFilter !== 'ALL' ? { role: roleFilter } : {}
       const res = await apiClient.get('/users', { params })
-      return res.data
+      return res.data.data
     },
   })
 

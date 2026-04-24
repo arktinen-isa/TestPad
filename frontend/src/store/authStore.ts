@@ -6,6 +6,7 @@ interface AuthState {
   user: User | null
   accessToken: string | null
   isLoading: boolean
+  isInitialized: boolean
   error: string | null
 }
 
@@ -23,6 +24,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
   user: null,
   accessToken: null,
   isLoading: false,
+  isInitialized: false,
   error: null,
 
   init: () => {
@@ -31,12 +33,15 @@ export const useAuthStore = create<AuthStore>((set) => ({
     if (accessToken && userStr) {
       try {
         const user = JSON.parse(userStr) as User
-        set({ user, accessToken })
+        set({ user, accessToken, isInitialized: true })
       } catch {
         localStorage.removeItem('accessToken')
         localStorage.removeItem('refreshToken')
         localStorage.removeItem('user')
+        set({ isInitialized: true })
       }
+    } else {
+      set({ isInitialized: true })
     }
   },
 

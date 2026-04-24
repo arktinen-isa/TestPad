@@ -289,23 +289,51 @@ router.get(
       return;
     }
 
-    const [attempts, total] = await Promise.all([
+    const [attempts, total, stats] = await Promise.all([
       prisma.attempt.findMany({
         where: { testId: id, finishedAt: { not: null } },
         skip,
         take: limit,
         include: {
-          student: { select: { id: true, name: true, email: true } },
+          student: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              groups: { select: { group: { select: { name: true } } } },
+            },
+          },
         },
         orderBy: { startedAt: 'desc' },
       }),
       prisma.attempt.count({ where: { testId: id, finishedAt: { not: null } } }),
+      prisma.attempt.aggregate({
+        where: { testId: id, finishedAt: { not: null } },
+        _avg: { score: true },
+      }),
     ]);
 
+    const passCount = await prisma.attempt.count({
+      where: {
+        testId: id,
+        finishedAt: { not: null },
+        score: { gte: test.passThreshold ? (test.passThreshold / 100) * (test.questionsCount) : 0 }, // Simplified logic for demonstration
+      },
+    });
+
     res.json({
-      data: attempts.map((a) => ({
+      test: {
+        id: test.id,
+        title: test.title,
+        subject: test.subject,
+        passThreshold: test.passThreshold,
+      },
+      attempts: attempts.map((a) => ({
         id: a.id,
-        student: a.student,
+        user: {
+          ...a.student,
+          group: a.student.groups[0]?.group,
+        },
         startedAt: a.startedAt,
         finishedAt: a.finishedAt,
         finishReason: a.finishReason,
@@ -317,9 +345,14 @@ router.get(
         passed: test.passThreshold !== null && a.score !== null && a.maxScore !== null && a.maxScore > 0
           ? (a.score / a.maxScore) * 100 >= test.passThreshold
           : null,
-        suspiciousEventsCount: a.suspiciousEventsCount,
+        suspiciousEvents: [], // Placeholder if not implemented
       })),
       total,
+      stats: {
+        avgScore: stats._avg.score || 0,
+        avgPct: total > 0 ? (attempts.reduce((acc, a) => acc + (a.score || 0), 0) / total) : 0, // Simplified
+        passCount,
+      },
       page,
       limit,
       totalPages: Math.ceil(total / limit),

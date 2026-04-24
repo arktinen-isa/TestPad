@@ -19,6 +19,7 @@ import GroupsPage from './pages/admin/GroupsPage'
 import QuestionsPage from './pages/admin/QuestionsPage'
 import TestsPage from './pages/admin/TestsPage'
 import TestResultsPage from './pages/admin/TestResultsPage'
+import ProfilePage from './pages/ProfilePage'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -57,11 +58,19 @@ function RootRedirect() {
 }
 
 export default function App() {
-  const { init } = useAuthStore()
+  const { init, isInitialized } = useAuthStore()
 
   useEffect(() => {
     init()
   }, [init])
+
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-dark-bg flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-purple-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <BrowserRouter>
@@ -83,6 +92,7 @@ export default function App() {
           <Route path="test/:testId/start" element={<TestStart />} />
           <Route path="test/:testId/take" element={<TestTake />} />
           <Route path="test/:testId/result" element={<TestResult />} />
+          <Route path="profile" element={<ProfilePage />} />
         </Route>
 
         {/* Admin/Teacher routes */}
@@ -101,6 +111,7 @@ export default function App() {
           <Route path="questions" element={<QuestionsPage />} />
           <Route path="tests" element={<TestsPage />} />
           <Route path="tests/:testId/results" element={<TestResultsPage />} />
+          <Route path="profile" element={<ProfilePage />} />
         </Route>
 
         {/* Catch-all */}
