@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../../api/client'
 import { Question, Category, QuestionType } from '../../types'
@@ -26,6 +26,7 @@ const TYPE_COLORS: Record<QuestionType, string> = {
 
 export default function QuestionsPage() {
   const qc = useQueryClient()
+  const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState<QuestionType | ''>('')
@@ -38,6 +39,10 @@ export default function QuestionsPage() {
   const [editQuestion, setEditQuestion] = useState<Question | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<Question | null>(null)
 
+  useEffect(() => {
+    setPage(1)
+  }, [search, categoryFilter, typeFilter, activeFilter])
+
   const { data: categories } = useQuery<Category[]>({
     queryKey: ['categories'],
     queryFn: async () => {
@@ -46,19 +51,22 @@ export default function QuestionsPage() {
     },
   })
 
-  const { data: questions, isLoading } = useQuery<Question[]>({
-    queryKey: ['questions', search, categoryFilter, typeFilter, activeFilter],
+  const { data: queryData, isLoading } = useQuery<{data: Question[], totalPages: number}>({
+    queryKey: ['questions', search, categoryFilter, typeFilter, activeFilter, page],
     queryFn: async () => {
-      const params: Record<string, string> = {}
+      const params: Record<string, string> = { page: String(page), limit: '20' }
       if (search) params.search = search
       if (categoryFilter) params.category = categoryFilter
       if (typeFilter) params.type = typeFilter
       if (activeFilter === 'ACTIVE') params.active = 'true'
       if (activeFilter === 'INACTIVE') params.active = 'false'
       const res = await apiClient.get('/questions', { params })
-      return res.data.data
+      return res.data
     },
   })
+
+  const questions = queryData?.data
+  const totalPages = queryData?.totalPages || 1
 
   const saveMutation = useMutation({
     mutationFn: async ({ data, id }: { data: QuestionFormData; id?: string }) => {
@@ -360,6 +368,29 @@ export default function QuestionsPage() {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {!isLoading && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="px-4 py-2 rounded-xl text-sm font-medium transition-all bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10 hover:text-white disabled:opacity-50"
+          >
+            Попередня
+          </button>
+          <span className="text-slate-400 text-sm font-medium px-4">
+            Сторінка {page} з {totalPages}
+          </span>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="px-4 py-2 rounded-xl text-sm font-medium transition-all bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10 hover:text-white disabled:opacity-50"
+          >
+            Наступна
+          </button>
+        </div>
+      )}
 
       {showModal && (
         <QuestionFormModal
