@@ -92,6 +92,7 @@ export default function CategoriesPage() {
           <thead>
             <tr className="border-b border-white/10">
               <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Назва</th>
+              <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Питань</th>
               <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Вага (балів)</th>
               <th className="px-5 py-4 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">Дії</th>
             </tr>
@@ -102,12 +103,20 @@ export default function CategoriesPage() {
                 <tr key={i} className="animate-pulse">
                   <td className="px-5 py-4"><div className="h-4 bg-white/10 rounded w-1/2" /></td>
                   <td className="px-5 py-4"><div className="h-4 bg-white/10 rounded w-1/4" /></td>
+                  <td className="px-5 py-4"><div className="h-4 bg-white/10 rounded w-1/4" /></td>
                   <td className="px-5 py-4 text-right"><div className="h-4 bg-white/10 rounded w-1/4 ml-auto" /></td>
                 </tr>
               ))
             ) : categories?.map((cat) => (
               <tr key={cat.id} className="table-row">
-                <td className="px-5 py-4 text-white font-medium">{cat.name}</td>
+                <td className="px-5 py-4">
+                  <div className="text-white font-medium">{cat.name}</div>
+                </td>
+                <td className="px-5 py-4">
+                  <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-xs text-slate-300">
+                    {cat.questionCount || 0}
+                  </span>
+                </td>
                 <td className="px-5 py-4 text-slate-300">{cat.pointsWeight}</td>
                 <td className="px-5 py-4 text-right">
                   <div className="flex items-center justify-end gap-2">

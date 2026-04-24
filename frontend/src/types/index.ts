@@ -24,6 +24,7 @@ export interface Category {
   id: string
   name: string
   pointsWeight: number
+  questionCount?: number
 }
 
 export interface Answer {

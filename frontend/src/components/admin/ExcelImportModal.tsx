@@ -12,6 +12,7 @@ export default function ExcelImportModal({ categories, onClose, onImport }: Exce
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [preview, setPreview] = useState<any[]>([])
+  const [skipped, setSkipped] = useState<{ row: number; text: string; reason: string }[]>([])
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -33,9 +34,15 @@ export default function ExcelImportModal({ categories, onClose, onImport }: Exce
         const sheet = workbook.Sheets[sheetName]
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][]
 
-        // Expected format: Text | Category | Type | A1 | C1 | A2 | C2 ...
-        const questions = rows.slice(1).map(row => {
-          if (!row[0]) return null
+        const validQuestions: any[] = []
+        const skippedRows: any[] = []
+
+        rows.slice(1).forEach((row, index) => {
+          const rowNum = index + 2 // 1-based, +1 for header
+          if (!row[0] || String(row[0]).trim() === '') {
+            skippedRows.push({ row: rowNum, text: '—', reason: 'Порожній текст питання' })
+            return
+          }
           
           const text = String(row[0])
           const catName = row[1] ? String(row[1]).trim() : ''
@@ -45,7 +52,7 @@ export default function ExcelImportModal({ categories, onClose, onImport }: Exce
           
           const answers = []
           for (let i = 3; i < row.length; i += 2) {
-            if (row[i]) {
+            if (row[i] && String(row[i]).trim() !== '') {
               answers.push({
                 text: String(row[i]),
                 isCorrect: !!row[i+1]
@@ -53,18 +60,22 @@ export default function ExcelImportModal({ categories, onClose, onImport }: Exce
             }
           }
 
-          if (answers.length < 2) return null
+          if (answers.length < 2) {
+            skippedRows.push({ row: rowNum, text: text.slice(0, 30) + '...', reason: 'Менше 2-х варіантів відповіді' })
+            return
+          }
 
-          return {
+          validQuestions.push({
             text,
             categoryId: category?.id || categories[0]?.id,
             type,
             answers,
             isActive: true
-          }
-        }).filter(Boolean)
+          })
+        })
 
-        setPreview(questions)
+        setPreview(validQuestions)
+        setSkipped(skippedRows)
         setError(null)
       } catch (err) {
         setError('Помилка при читанні файлу. Перевірте формат.')
@@ -122,6 +133,23 @@ export default function ExcelImportModal({ categories, onClose, onImport }: Exce
                     </span>
                     <span className="text-[10px] px-2 py-0.5 rounded bg-green-500/20 text-green-300 border border-green-500/30">{q.answers.length} відп.</span>
                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {skipped.length > 0 && (
+          <div className={`${preview.length > 0 ? 'h-32' : 'flex-1'} overflow-y-auto mb-6 pr-2 custom-scrollbar p-4 rounded-xl bg-red-500/5 border border-red-500/20`}>
+            <h3 className="text-sm font-semibold text-red-400 mb-2 flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+              Пропущено рядків: {skipped.length}
+            </h3>
+            <div className="space-y-2">
+              {skipped.map((s, i) => (
+                <div key={i} className="text-[11px] text-slate-400 flex justify-between border-b border-white/5 pb-1">
+                  <span>Рядок {s.row}: <span className="text-slate-300">{s.text}</span></span>
+                  <span className="text-red-400/70">{s.reason}</span>
                 </div>
               ))}
             </div>

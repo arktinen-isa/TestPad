@@ -36,11 +36,10 @@ export default function StudentLayout() {
                   {user?.name?.charAt(0).toUpperCase() || 'S'}
                 </span>
               </div>
-              <div className="text-right">
-                <p className="text-sm font-medium text-white leading-none">
+              <div className="flex flex-col justify-center">
+                <p className="text-sm font-medium text-white">
                   {user?.name ? (user.name.split(' ').length > 1 ? user.name.split(' ')[1] : user.name) : 'Студент'}
                 </p>
-                <p className="text-xs text-slate-400 mt-0.5">Студент</p>
               </div>
             </div>
             <button
