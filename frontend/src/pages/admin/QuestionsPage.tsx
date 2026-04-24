@@ -141,7 +141,7 @@ export default function QuestionsPage() {
           <h1 className="font-unbounded text-2xl font-bold text-white mb-1">Банк питань</h1>
           <div className="flex items-center gap-3">
             <p className="text-slate-400 text-sm">Управління питаннями для тестів</p>
-            <button 
+            <button
               onClick={downloadTemplate}
               className="text-purple-400 hover:text-purple-300 text-xs font-medium underline flex items-center gap-1"
             >
@@ -179,13 +179,13 @@ export default function QuestionsPage() {
         <div className="glass-card p-3 bg-purple-accent/10 border-purple-accent/30 flex items-center justify-between animate-slide-in">
           <p className="text-sm text-white font-medium">Вибрано: {selectedIds.length}</p>
           <div className="flex gap-2">
-            <button 
+            <button
               onClick={() => setShowBulkCategoryModal(true)}
               className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-white hover:bg-white/10 transition-all"
             >
               Змінити категорію
             </button>
-            <button 
+            <button
               onClick={() => setSelectedIds([])}
               className="px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white"
             >
@@ -238,11 +238,10 @@ export default function QuestionsPage() {
             <button
               key={f}
               onClick={() => setActiveFilter(f)}
-              className={`px-3 py-2 rounded-xl text-xs font-medium transition-all border ${
-                activeFilter === f
+              className={`px-3 py-2 rounded-xl text-xs font-medium transition-all border ${activeFilter === f
                   ? 'bg-purple-accent/30 text-white border-purple-accent/50'
                   : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'
-              }`}
+                }`}
             >
               {f === 'ALL' ? 'Всі' : f === 'ACTIVE' ? 'Активні' : 'Архів'}
             </button>
@@ -262,8 +261,8 @@ export default function QuestionsPage() {
               <thead>
                 <tr className="border-b border-white/10">
                   <th className="px-5 py-4 text-left">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       className="rounded border-white/20 bg-white/5 text-purple-accent"
                       checked={selectedIds.length > 0 && selectedIds.length === questions?.length}
                       onChange={toggleSelectAll}
@@ -281,8 +280,8 @@ export default function QuestionsPage() {
                 {questions?.map((q) => (
                   <tr key={q.id} className={`table-row ${selectedIds.includes(q.id) ? 'bg-purple-accent/5' : ''}`}>
                     <td className="px-5 py-4">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         className="rounded border-white/20 bg-white/5 text-purple-accent"
                         checked={selectedIds.includes(q.id)}
                         onChange={() => toggleSelect(q.id)}
@@ -304,11 +303,10 @@ export default function QuestionsPage() {
                       {q.category?.pointsWeight ?? '—'} б.
                     </td>
                     <td className="px-5 py-4">
-                      <span className={`status-badge border ${
-                        q.isActive
+                      <span className={`status-badge border ${q.isActive
                           ? 'status-open'
                           : 'bg-slate-500/20 text-slate-400 border-slate-500/30'
-                      }`}>
+                        }`}>
                         {q.isActive ? 'Активне' : 'Архів'}
                       </span>
                     </td>
@@ -374,8 +372,8 @@ export default function QuestionsPage() {
             </select>
             <div className="flex gap-3">
               <button onClick={() => setShowBulkCategoryModal(false)} className="flex-1 btn-ghost">Скасувати</button>
-              <button 
-                onClick={handleBulkCategory} 
+              <button
+                onClick={handleBulkCategory}
                 disabled={bulkUpdateMutation.isPending || !targetCategoryId}
                 className="flex-1 btn-secondary"
               >
