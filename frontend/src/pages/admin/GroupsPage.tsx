@@ -109,8 +109,8 @@ function StudentsModal({ group, onClose }: StudentsModalProps) {
   const { data: students, isLoading } = useQuery<User[]>({
     queryKey: ['group-students', group.id],
     queryFn: async () => {
-      const res = await apiClient.get(`/groups/${group.id}/students`)
-      return res.data
+      const res = await apiClient.get(`/groups/${group.id}`)
+      return res.data.students
     },
   })
 

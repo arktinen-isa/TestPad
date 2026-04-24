@@ -19,6 +19,7 @@ import GroupsPage from './pages/admin/GroupsPage'
 import QuestionsPage from './pages/admin/QuestionsPage'
 import TestsPage from './pages/admin/TestsPage'
 import TestResultsPage from './pages/admin/TestResultsPage'
+import CategoriesPage from './pages/admin/CategoriesPage'
 import ProfilePage from './pages/ProfilePage'
 
 interface ProtectedRouteProps {
@@ -109,6 +110,7 @@ export default function App() {
           <Route path="users" element={<UsersPage />} />
           <Route path="groups" element={<GroupsPage />} />
           <Route path="questions" element={<QuestionsPage />} />
+          <Route path="categories" element={<CategoriesPage />} />
           <Route path="tests" element={<TestsPage />} />
           <Route path="tests/:testId/results" element={<TestResultsPage />} />
           <Route path="profile" element={<ProfilePage />} />

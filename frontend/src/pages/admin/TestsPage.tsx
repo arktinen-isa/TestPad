@@ -159,7 +159,7 @@ export default function TestsPage() {
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          onClick={() => navigate(`/tests/${t.id}/results`)}
+                          onClick={() => navigate(`/admin/tests/${t.id}/results`)}
                           className="p-2 rounded-lg text-slate-400 hover:text-green-400 hover:bg-green-500/10 transition-all"
                           title="Результати"
                         >

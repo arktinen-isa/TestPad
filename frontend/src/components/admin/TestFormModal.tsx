@@ -48,8 +48,8 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
       categoryId: cq.categoryId,
       quota: cq.quota,
     })) || [],
-    scoringMode: initial?.scoringMode || 'PER_QUESTION',
-    multiScoringMode: initial?.multiScoringMode || 'ALL_CORRECT',
+    scoringMode: initial?.scoringMode || 'SUM',
+    multiScoringMode: initial?.multiScoringMode || 'ALL_OR_NOTHING',
     passThreshold: initial?.passThreshold ?? 60,
     showResultMode: initial?.showResultMode || 'AFTER_FINISH',
     shuffleQuestions: initial?.shuffleQuestions ?? true,
@@ -381,8 +381,8 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
                   onChange={(e) => setForm({ ...form, scoringMode: e.target.value })}
                   className="glass-input"
                 >
-                  <option value="PER_QUESTION" className="bg-gray-900">За кожне питання</option>
-                  <option value="PERCENTAGE" className="bg-gray-900">Відсоткова шкала</option>
+                  <option value="SUM" className="bg-gray-900">Сума балів за питання</option>
+                  <option value="PERCENTAGE" className="bg-gray-900">Відсоткова шкала (0-100)</option>
                 </select>
               </div>
 
@@ -393,9 +393,8 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
                   onChange={(e) => setForm({ ...form, multiScoringMode: e.target.value })}
                   className="glass-input"
                 >
-                  <option value="ALL_CORRECT" className="bg-gray-900">Тільки всі правильні</option>
-                  <option value="PARTIAL" className="bg-gray-900">Часткове (пропорційно)</option>
-                  <option value="NO_PENALTY" className="bg-gray-900">Без штрафу</option>
+                  <option value="ALL_OR_NOTHING" className="bg-gray-900">Тільки всі правильні (Все або нічого)</option>
+                  <option value="PARTIAL" className="bg-gray-900">Часткове (пропорційно правильним)</option>
                 </select>
               </div>
 
@@ -423,8 +422,8 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
                   className="glass-input"
                 >
                   <option value="AFTER_FINISH" className="bg-gray-900">Одразу після здачі</option>
-                  <option value="AFTER_CLOSE" className="bg-gray-900">Після закриття тесту</option>
-                  <option value="NEVER" className="bg-gray-900">Не показувати</option>
+                  <option value="AFTER_TEST_CLOSED" className="bg-gray-900">Після закриття тесту</option>
+                  <option value="ADMIN_ONLY" className="bg-gray-900">Тільки адміністратору</option>
                 </select>
               </div>
             </div>

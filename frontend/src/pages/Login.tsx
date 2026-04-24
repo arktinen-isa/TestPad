@@ -63,8 +63,17 @@ export default function Login() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const randomSlogan = SLOGANS[Math.floor(Math.random() * SLOGANS.length)]
-    setSlogan(randomSlogan)
+    const getRandomSlogan = () => SLOGANS[Math.floor(Math.random() * SLOGANS.length)]
+    
+    // Set initial slogan
+    setSlogan(getRandomSlogan())
+
+    // Update slogan every 7 seconds
+    const interval = setInterval(() => {
+      setSlogan(getRandomSlogan())
+    }, 7000)
+
+    return () => clearInterval(interval)
   }, [])
 
   const handleSubmit = async (e: FormEvent) => {
@@ -115,7 +124,7 @@ export default function Login() {
             <h1 className="font-unbounded text-2xl font-bold text-white mb-2">
               Вхід до системи
             </h1>
-            <p className="text-slate-400 text-sm flex items-center gap-2">
+            <p key={slogan.t} className="text-slate-400 text-sm flex items-center gap-2 animate-fade-in">
               <span className="text-lg">{slogan.e}</span> {slogan.t}
             </p>
           </div>

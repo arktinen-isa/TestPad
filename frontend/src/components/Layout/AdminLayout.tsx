@@ -43,6 +43,16 @@ const navLinks = [
     ),
   },
   {
+    to: '/admin/categories',
+    label: 'Категорії',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          d="M7 7h.01M7 12h.01M7 17h.01M10 7h10M10 12h10M10 17h10" />
+      </svg>
+    ),
+  },
+  {
     to: '/admin/tests',
     label: 'Тести',
     icon: (
@@ -118,14 +128,11 @@ export default function AdminLayout() {
                 <p className="text-xs text-slate-400 mt-0.5 truncate">{user?.email}</p>
               </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span className={`status-badge border text-xs ${roleColor}`}>
-                {roleLabel}
-              </span>
+            <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => navigate('/admin/profile')}
-                  className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors duration-200"
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-white/5 text-xs text-slate-300 hover:text-white hover:bg-white/10 transition-all duration-200 border border-white/5"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -134,7 +141,7 @@ export default function AdminLayout() {
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-red-400 transition-colors duration-200"
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-red-500/10 text-xs text-red-400 hover:bg-red-500/20 transition-all duration-200 border border-red-500/20"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}

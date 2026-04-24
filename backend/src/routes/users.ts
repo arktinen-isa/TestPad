@@ -27,18 +27,25 @@ router.get(
   '/',
   authorize('ADMIN'),
   asyncHandler(async (req, res) => {
+    const role = req.query['role'] as string;
     const page = Math.max(1, parseInt(req.query['page'] as string) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query['limit'] as string) || 20));
     const skip = (page - 1) * limit;
 
+    const where: Record<string, unknown> = {};
+    if (role && ['ADMIN', 'TEACHER', 'STUDENT'].includes(role)) {
+      where['role'] = role;
+    }
+
     const [users, total] = await Promise.all([
       prisma.user.findMany({
+        where,
         skip,
         take: limit,
         select: { id: true, name: true, email: true, role: true, createdAt: true },
         orderBy: { createdAt: 'desc' },
       }),
-      prisma.user.count(),
+      prisma.user.count({ where }),
     ]);
 
     res.json({ data: users, total, page, limit, totalPages: Math.ceil(total / limit) });

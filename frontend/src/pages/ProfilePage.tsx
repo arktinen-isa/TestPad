@@ -5,6 +5,12 @@ import apiClient from '../api/client'
 export default function ProfilePage() {
   const { user } = useAuthStore()
   const [password, setPassword] = useState('')
+
+  const ROLE_LABELS: Record<string, string> = {
+    ADMIN: 'Адміністратор',
+    TEACHER: 'Викладач',
+    STUDENT: 'Студент',
+  }
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -58,7 +64,7 @@ export default function ProfilePage() {
           <div>
             <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Роль</label>
             <span className="status-badge bg-purple-500/20 text-purple-400 border border-purple-500/30">
-              {user?.role}
+              {ROLE_LABELS[user?.role || ''] || user?.role}
             </span>
           </div>
         </div>
