@@ -20,7 +20,7 @@ router.get(
     const [totalTests, totalStudents, totalQuestions, activeTests] = await Promise.all([
       prisma.test.count({ where: whereTests }),
       prisma.user.count({ where: { role: 'STUDENT' } }),
-      prisma.question.count({ where: { isActive: true } }),
+      prisma.question.count(),
       prisma.test.findMany({
         where: { ...whereTests, status: 'OPEN' },
         take: 5,

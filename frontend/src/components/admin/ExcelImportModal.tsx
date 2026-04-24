@@ -71,7 +71,6 @@ export default function ExcelImportModal({ categories, onClose, onImport }: Exce
             categoryId: category?.id || categories[0]?.id,
             type,
             answers,
-            isActive: true
           })
         })
 

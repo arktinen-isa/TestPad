@@ -44,7 +44,6 @@ export async function sampleByCategory(
     const questions = await db.question.findMany({
       where: {
         categoryId,
-        isActive: true,
         id: { in: testQuestionIds },
       },
       select: { id: true },
