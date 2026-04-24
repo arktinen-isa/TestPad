@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import * as XLSX from 'xlsx'
-import { Category, QuestionType } from '../../types'
+import { Category } from '../../types'
 
 interface ExcelImportModalProps {
   categories: Category[]
