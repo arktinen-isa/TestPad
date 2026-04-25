@@ -64,8 +64,8 @@ export interface Test {
   showResultMode: string
   multiScoringMode: string
   createdAt: string
-  groups?: Group[]
-  categoryQuotas?: CategoryQuota[]
+  groups?: { groupId: string; group: Group }[]
+  categoryQuotas?: (CategoryQuota & { category?: Category })[]
 }
 
 export interface AttemptResult {
@@ -77,6 +77,8 @@ export interface AttemptResult {
   finishedAt: string
   timeSpentSec?: number
   testTitle?: string
+  passThreshold?: number
+  scoringMode?: string
 }
 
 export interface CurrentQuestion {

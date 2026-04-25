@@ -160,6 +160,11 @@ export default function TestResult() {
                 </>
               )}
             </div>
+            {passThreshold !== undefined && scoringMode && (
+              <p className="mt-2 text-xs text-slate-500">
+                Прохідний поріг: {passThreshold}{scoringMode === 'PERCENTAGE' ? '%' : ' балів'}
+              </p>
+            )}
           )}
         </div>
 

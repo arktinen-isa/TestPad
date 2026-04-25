@@ -95,7 +95,7 @@ async function finishAttempt(
     },
   });
 
-  return { score, maxScore };
+  return { score, maxScore, scoringMode: attempt.test.scoringMode };
 }
 
 // POST /api/attempts — STUDENT only
@@ -405,8 +405,8 @@ router.post(
     const isComplete = nextIndex >= attempt.attemptQuestions.length;
 
     if (isComplete) {
-      const { score, maxScore } = await finishAttempt(id, 'NORMAL');
-      res.json({ done: true, score, maxScore });
+      const { score, maxScore, scoringMode } = await finishAttempt(id, 'NORMAL');
+      res.json({ done: true, score, maxScore, scoringMode });
       return;
     }
 
@@ -443,8 +443,8 @@ router.post(
       return;
     }
 
-    const { score, maxScore } = await finishAttempt(id, 'EXIT');
-    res.json({ done: true, score, maxScore });
+    const { score, maxScore, scoringMode } = await finishAttempt(id, 'EXIT');
+    res.json({ done: true, score, maxScore, scoringMode });
   })
 );
 
@@ -512,6 +512,7 @@ router.get(
       percentage,
       passed,
       passThreshold: attempt.test.passThreshold,
+      scoringMode: attempt.test.scoringMode,
       suspiciousEventsCount: attempt.suspiciousEventsCount,
     });
   })

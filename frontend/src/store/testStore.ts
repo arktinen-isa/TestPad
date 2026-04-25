@@ -46,7 +46,7 @@ export const useTestStore = create<TestStore>((set, get) => ({
   startAttempt: async (testId: string) => {
     set({ isLoading: true, error: null })
     try {
-      const response = await apiClient.post(`/tests/${testId}/attempts`)
+      const response = await apiClient.post('/attempts', { testId })
       const { attemptId, firstQuestion, timeLimitSec } = response.data
 
       set({

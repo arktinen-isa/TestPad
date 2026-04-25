@@ -71,6 +71,8 @@ router.get(
         include: {
           createdBy: { select: { id: true, name: true } },
           _count: { select: { questions: true } },
+          groups: { select: { groupId: true } },
+          categoryQuotas: true,
           attempts: {
             where: user.role === 'STUDENT' ? { studentId: user.userId } : undefined,
             orderBy: { startedAt: 'desc' },

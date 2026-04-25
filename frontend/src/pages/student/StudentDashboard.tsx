@@ -4,25 +4,20 @@ import apiClient from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
 import { StudentTest } from '../../types'
 
-function SkeletonCard() {
-  return (
-    <div className="glass-card p-6 animate-pulse">
-      <div className="h-4 bg-white/10 rounded-lg w-3/4 mb-3" />
-      <div className="h-3 bg-white/5 rounded-lg w-1/2 mb-6" />
-      <div className="flex gap-3 mb-6">
-        <div className="h-6 bg-white/10 rounded-full w-20" />
-        <div className="h-6 bg-white/10 rounded-full w-24" />
-      </div>
-      <div className="h-10 bg-white/10 rounded-xl w-full" />
-    </div>
-  )
+function getPlural(n: number, one: string, few: string, many: string) {
+  const lastDigit = n % 10;
+  const lastTwoDigits = n % 100;
+  if (lastDigit === 1 && lastTwoDigits !== 11) return one;
+  if (lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 10 || lastTwoDigits >= 20)) return few;
+  return many;
 }
 
 function getTestStatusInfo(test: StudentTest) {
   const now = new Date()
   const from = test.openFrom ? new Date(test.openFrom) : null
   const until = test.openUntil ? new Date(test.openUntil) : null
-  const attemptsLeft = test.maxAttempts - test.attemptsUsed
+  const attemptsUsed = test.attemptsUsed || 0
+  const attemptsLeft = test.maxAttempts - attemptsUsed
 
   if (test.status === 'DRAFT') {
     return { label: 'Чернетка', color: 'status-badge status-draft', available: false }
@@ -42,10 +37,25 @@ function getTestStatusInfo(test: StudentTest) {
   return { label: 'Доступний', color: 'status-badge status-open', available: true }
 }
 
+function SkeletonCard() {
+  return (
+    <div className="glass-card p-6 animate-pulse">
+      <div className="h-4 bg-white/10 rounded-lg w-3/4 mb-3" />
+      <div className="h-3 bg-white/5 rounded-lg w-1/2 mb-6" />
+      <div className="flex gap-3 mb-6">
+        <div className="h-6 bg-white/10 rounded-full w-20" />
+        <div className="h-6 bg-white/10 rounded-full w-24" />
+      </div>
+      <div className="h-10 bg-white/10 rounded-xl w-full" />
+    </div>
+  )
+}
+
 function TestCard({ test }: { test: StudentTest }) {
   const navigate = useNavigate()
   const status = getTestStatusInfo(test)
-  const attemptsLeft = test.maxAttempts - test.attemptsUsed
+  const attemptsUsed = test.attemptsUsed || 0
+  const attemptsLeft = test.maxAttempts - attemptsUsed
 
   return (
     <div className="glass-card p-6 flex flex-col gap-4 hover:border-purple-accent/30 transition-all duration-300 group">
@@ -69,21 +79,23 @@ function TestCard({ test }: { test: StudentTest }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          {test.timeLimitMin} хв
+          {test.timeLimitMin} {getPlural(test.timeLimitMin, 'хвилина', 'хвилини', 'хвилин')}
         </div>
         <div className="flex items-center gap-1.5 text-sm text-slate-400">
           <svg className="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          {test.questionsCount} питань
+          {test.questionsCount} {getPlural(test.questionsCount, 'питання', 'питання', 'питань')}
         </div>
         <div className={`flex items-center gap-1.5 text-sm ${attemptsLeft > 0 ? 'text-slate-400' : 'text-red-400'}`}>
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          {attemptsLeft <= 0 ? 'Спроб немає' : `${attemptsLeft} спроб залишилось`}
+          {attemptsLeft <= 0 
+            ? 'Спроб немає' 
+            : `${attemptsLeft} ${getPlural(attemptsLeft, 'спроба залишилась', 'спроби залишилось', 'спроб залишилось')}`}
         </div>
       </div>
 
