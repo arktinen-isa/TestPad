@@ -32,6 +32,8 @@ export default function TestTake() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const attemptIdRef = useRef(attemptId)
   attemptIdRef.current = attemptId
+  const isTimeLow = timeLeft !== null && timeLeft > 0 && timeLeft < 120;
+  const mountTimeRef = useRef(Date.now());
 
   const handleFinish = useCallback(async (auto = false) => {
     if (!attemptIdRef.current || isSubmitting) return
@@ -55,6 +57,9 @@ export default function TestTake() {
 
   // Fullscreen management
   const handleFullscreenChange = useCallback(() => {
+    // Give some time for the initial fullscreen transition (3 seconds)
+    if (Date.now() - mountTimeRef.current < 3000) return;
+
     if (!document.fullscreenElement && !isFinished && attemptIdRef.current) {
       // Log suspicious event
       apiClient.post('/events', {
@@ -204,18 +209,21 @@ export default function TestTake() {
 
           {/* Timer */}
           {timeLeft !== null && (
-            <div className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-2xl border ${
+            <div className={`flex-shrink-0 flex items-center gap-3 px-5 py-2.5 rounded-2xl border transition-all duration-300 ${
               isTimeLow
-                ? 'bg-red-500/10 border-red-500/30 text-red-400 animate-pulse'
+                ? 'bg-red-500/20 border-red-500/50 text-red-400 animate-pulse'
                 : 'bg-white/5 border-white/10 text-white'
             }`}>
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="flex flex-col items-end">
+                <span className="text-[10px] uppercase tracking-widest font-bold opacity-50 mb-0.5">Залишилось</span>
+                <span className="font-unbounded text-2xl font-bold tabular-nums leading-none">
+                  {formatTime(timeLeft)}
+                </span>
+              </div>
+              <svg className={`w-6 h-6 ${isTimeLow ? 'text-red-400' : 'text-purple-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className="font-unbounded text-lg font-bold tabular-nums">
-                {formatTime(timeLeft)}
-              </span>
             </div>
           )}
           {timeLeft === null && (

@@ -390,7 +390,7 @@ router.post(
     const attempt = await prisma.attempt.findUnique({
       where: { id },
       include: {
-        test: { select: { id: true, timeLimitMin: true } },
+        test: { select: { id: true, timeLimitMin: true, showResultMode: true } },
         _count: { select: { attemptQuestions: true } }
       },
     });
@@ -478,9 +478,16 @@ router.post(
     ]);
 
     // Check timeout AFTER saving (so the last answer is counted)
-    if (isTimedOut(attempt.startedAt, attempt.test.timeLimitMin)) {
+    const showResultMode = (attempt.test as any).showResultMode;
+
+    if (isTimedOut(attempt.startedAt, (attempt.test as any).timeLimitMin)) {
       const { score, maxScore } = await finishAttempt(id, 'TIMEOUT');
-      res.json({ done: true, reason: 'TIMEOUT', score, maxScore });
+      
+      if (showResultMode === 'ADMIN_ONLY') {
+        res.json({ finished: true, reason: 'TIMEOUT', showResultMode: 'ADMIN_ONLY' });
+      } else {
+        res.json({ finished: true, reason: 'TIMEOUT', score, maxScore });
+      }
       return;
     }
 
@@ -490,7 +497,12 @@ router.post(
 
     if (isComplete) {
       const result = await finishAttempt(id, 'NORMAL');
-      res.json({ finished: true, ...result });
+      
+      if (showResultMode === 'ADMIN_ONLY') {
+        res.json({ finished: true, showResultMode: 'ADMIN_ONLY' });
+      } else {
+        res.json({ finished: true, ...result });
+      }
       return;
     }
 
@@ -517,7 +529,12 @@ router.post(
     const { id } = req.params;
     const userId = req.user!.userId;
 
-    const attempt = await prisma.attempt.findUnique({ where: { id } });
+    const attempt = await prisma.attempt.findUnique({
+      where: { id },
+      include: {
+        test: { select: { showResultMode: true } }
+      }
+    });
 
     if (!attempt) {
       res.status(404).json({ error: 'Attempt not found' });
@@ -535,7 +552,12 @@ router.post(
     }
 
     const result = await finishAttempt(id, 'EXIT');
-    res.json({ done: true, ...result });
+    
+    if (attempt.test.showResultMode === 'ADMIN_ONLY') {
+      res.json({ done: true, showResultMode: 'ADMIN_ONLY' });
+    } else {
+      res.json({ done: true, ...result });
+    }
   })
 );
 

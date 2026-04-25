@@ -65,11 +65,12 @@ function TestCard({ test }: { test: StudentTest }) {
       try {
         await resumeAttempt(activeAttemptId)
         
-        // Request fullscreen on resume
+        // Request fullscreen on resume (REQUIRED)
         try {
           await document.documentElement.requestFullscreen()
         } catch {
-          // ignore
+          alert("Для продовження тесту необхідно уйти в повноекранний режим. Дозвольте його у браузері.");
+          return;
         }
         
         navigate(`/student/test/${test.id}/take`)

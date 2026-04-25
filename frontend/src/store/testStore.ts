@@ -126,18 +126,31 @@ export const useTestStore = create<TestStore>((set, get) => ({
         answerIds,
       })
 
-      const { nextQuestion, finished, timeLeft, score, maxScore, percentage, passed } = response.data
+      const { nextQuestion, finished, timeLeft, score, maxScore, percentage, passed, showResultMode } = response.data
 
       if (finished) {
-        set({
-          currentQuestion: null,
-          isFinished: true,
-          isLoading: false,
-          score,
-          maxScore,
-          percentage,
-          passed
-        })
+        if (showResultMode === 'ADMIN_ONLY') {
+          set({
+            currentQuestion: null,
+            isFinished: true,
+            isLoading: false,
+            score: null,
+            maxScore: null,
+            percentage: 0,
+            passed: undefined,
+            showResultMode: 'ADMIN_ONLY'
+          })
+        } else {
+          set({
+            currentQuestion: null,
+            isFinished: true,
+            isLoading: false,
+            score,
+            maxScore,
+            percentage,
+            passed
+          })
+        }
       } else {
         set({
           currentQuestion: nextQuestion,

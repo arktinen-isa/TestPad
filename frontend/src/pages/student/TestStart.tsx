@@ -27,11 +27,12 @@ export default function TestStart() {
     try {
       await startAttempt(testId)
 
-      // Request fullscreen before navigating
+      // Request fullscreen before navigating (REQUIRED for proctoring)
       try {
         await document.documentElement.requestFullscreen()
-      } catch {
-        // Fullscreen might be denied, continue anyway
+      } catch (err) {
+        setStartError("Для проходження цього тесту ОБОВ'ЯЗКОВО потрібен повноекранний режим. Будь ласка, дозвольте його у браузері.");
+        return;
       }
 
       navigate(`/student/test/${testId}/take`, { replace: true })
