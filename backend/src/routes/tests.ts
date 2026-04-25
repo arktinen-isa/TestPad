@@ -24,8 +24,8 @@ const createTestSchema = z.object({
   questionsCount: z.number().int().positive().default(10),
   samplingMode: z.enum(['FROM_BANK', 'BY_CATEGORY']).default('FROM_BANK'),
   scoringMode: z.enum(['SUM', 'PERCENTAGE']).default('SUM'),
-  passThreshold: z.number().min(0).max(100).optional(),
-  showResultMode: z.enum(['AFTER_FINISH', 'ADMIN_ONLY', 'AFTER_TEST_CLOSED']).default('AFTER_FINISH'),
+  passThreshold: z.number().min(0).max(1000).optional(),
+  showResultMode: z.enum(['AFTER_FINISH', 'ADMIN_ONLY']).default('AFTER_FINISH'),
   multiScoringMode: z.enum(['ALL_OR_NOTHING', 'PARTIAL']).default('ALL_OR_NOTHING'),
   groupIds: z.array(z.string().uuid()).optional(),
   questionIds: z.array(z.string().uuid()).optional(),
@@ -63,19 +63,52 @@ router.get(
       };
     }
 
-    const [tests, total] = await Promise.all([
+    const [rawTests, total] = await Promise.all([
       prisma.test.findMany({
         where,
         skip,
         take: limit,
         include: {
           createdBy: { select: { id: true, name: true } },
-          _count: { select: { questions: true, attempts: true } },
+          _count: { select: { questions: true } },
+          attempts: {
+            where: user.role === 'STUDENT' ? { studentId: user.userId } : undefined,
+            orderBy: { startedAt: 'desc' },
+            take: 1,
+          },
         },
         orderBy: { createdAt: 'desc' },
       }),
       prisma.test.count({ where }),
     ]);
+
+    const tests = await Promise.all(rawTests.map(async (t) => {
+      if (user.role !== 'STUDENT') return t;
+      
+      const attemptsUsed = await prisma.attempt.count({
+        where: { testId: t.id, studentId: user.userId, finishedAt: { not: null } }
+      });
+
+      const lastAttempt = t.attempts[0];
+      const lastAttemptMapped = lastAttempt ? {
+        score: lastAttempt.score,
+        maxScore: lastAttempt.maxScore,
+        percentage: lastAttempt.maxScore && lastAttempt.maxScore > 0 
+          ? Math.round(((lastAttempt.score || 0) / lastAttempt.maxScore) * 100) 
+          : 0,
+        passed: t.passThreshold !== null && lastAttempt.score !== null && lastAttempt.maxScore !== null
+          ? (t.scoringMode === 'PERCENTAGE' 
+              ? ((lastAttempt.score / lastAttempt.maxScore) * 100 >= t.passThreshold)
+              : (lastAttempt.score >= t.passThreshold))
+          : null,
+      } : null;
+
+      return {
+        ...t,
+        attemptsUsed,
+        lastAttempt: lastAttemptMapped,
+      };
+    }));
 
     res.json({ data: tests, total, page, limit, totalPages: Math.ceil(total / limit) });
   })
@@ -176,10 +209,19 @@ router.get(
       }
     }
 
-    res.json({
+    const responseData: Record<string, any> = {
       ...test,
       questionsInBankCount: test.questions.length,
-    });
+    };
+
+    if (user.role === 'STUDENT') {
+      const attemptsUsed = await prisma.attempt.count({
+        where: { testId: id, studentId: user.userId, finishedAt: { not: null } },
+      });
+      responseData['attemptsUsed'] = attemptsUsed;
+    }
+
+    res.json(responseData);
   })
 );
 

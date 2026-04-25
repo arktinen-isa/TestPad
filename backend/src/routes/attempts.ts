@@ -487,11 +487,6 @@ router.get(
         res.status(403).json({ error: 'Results are not available to students' });
         return;
       }
-
-      if (showResultMode === 'AFTER_TEST_CLOSED' && attempt.test.status !== 'CLOSED') {
-        res.status(403).json({ error: 'Results will be available after the test closes' });
-        return;
-      }
     }
 
     const score = attempt.score ?? 0;
@@ -499,7 +494,9 @@ router.get(
     const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100 * 100) / 100 : 0;
     const passed =
       attempt.test.passThreshold !== null
-        ? percentage >= attempt.test.passThreshold
+        ? (attempt.test.scoringMode === 'PERCENTAGE'
+          ? percentage >= attempt.test.passThreshold
+          : score >= attempt.test.passThreshold)
         : null;
 
     res.json({

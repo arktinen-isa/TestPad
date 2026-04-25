@@ -170,19 +170,25 @@ export default function QuestionFormModal({ initial, onClose, onSave }: Question
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">Категорія</label>
-              <select
-                required
-                value={form.categoryId}
-                onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-                className="glass-input"
-              >
-                <option value="" className="bg-gray-900">Оберіть категорію</option>
+              <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-white/10">
                 {categories?.map((c) => (
-                  <option key={c.id} value={c.id} className="bg-gray-900">
-                    {c.name} ({c.pointsWeight} б.)
-                  </option>
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setForm({ ...form, categoryId: c.id })}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all border ${
+                      form.categoryId === c.id
+                        ? 'bg-purple-accent/30 text-white border-purple-accent/60 ring-1 ring-purple-accent/30'
+                        : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    {c.name}
+                  </button>
                 ))}
-              </select>
+                {(!categories || categories.length === 0) && (
+                  <p className="text-slate-500 text-xs py-2">Категорій не знайдено</p>
+                )}
+              </div>
             </div>
           </div>
 

@@ -37,7 +37,7 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
   const [form, setForm] = useState<TestFormData>({
     title: initial?.title || '',
     subject: initial?.subject || '',
-    groupIds: initial?.groups?.map((g) => g.id) || [],
+    groupIds: initial?.groups?.map((g: any) => g.groupId) || [],
     openFrom: initial?.openFrom ? initial.openFrom.slice(0, 16) : '',
     openUntil: initial?.openUntil ? initial.openUntil.slice(0, 16) : '',
     timeLimitMin: initial?.timeLimitMin || 60,
@@ -385,10 +385,10 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
 
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                  Прохідний бал (%)
+                  Прохідний бал {form.scoringMode === 'PERCENTAGE' ? '(%)' : '(бали)'}
                 </label>
                 <input
-                  type="number" min="0" max="100"
+                  type="number" min="0" max="1000"
                   value={form.passThreshold}
                   onChange={(e) => setForm({
                     ...form,
@@ -407,7 +407,6 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
                   className="glass-input"
                 >
                   <option value="AFTER_FINISH" className="bg-gray-900">Одразу після здачі</option>
-                  <option value="AFTER_TEST_CLOSED" className="bg-gray-900">Після закриття тесту</option>
                   <option value="ADMIN_ONLY" className="bg-gray-900">Тільки адміністратору</option>
                 </select>
               </div>

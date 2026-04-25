@@ -48,7 +48,6 @@ export type ScoringMode = (typeof ScoringMode)[keyof typeof ScoringMode];
 export const ShowResultMode = {
   AFTER_FINISH: 'AFTER_FINISH',
   ADMIN_ONLY: 'ADMIN_ONLY',
-  AFTER_TEST_CLOSED: 'AFTER_TEST_CLOSED',
 } as const;
 export type ShowResultMode = (typeof ShowResultMode)[keyof typeof ShowResultMode];
 

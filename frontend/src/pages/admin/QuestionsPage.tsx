@@ -237,16 +237,31 @@ export default function QuestionsPage() {
           </div>
         </div>
 
-        <select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          className="glass-input py-2 text-sm w-auto min-w-40"
-        >
-          <option value="" className="bg-gray-900">Всі категорії</option>
+        <div className="flex-1 flex gap-2 overflow-x-auto pb-1 scrollbar-hide no-scrollbar">
+          <button
+            onClick={() => setCategoryFilter('')}
+            className={`px-4 py-2 rounded-xl text-xs font-medium transition-all border whitespace-nowrap ${
+              categoryFilter === ''
+                ? 'bg-purple-accent/30 text-white border-purple-accent/60'
+                : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            Всі категорії
+          </button>
           {categories?.map((c) => (
-            <option key={c.id} value={c.id} className="bg-gray-900">{c.name}</option>
+            <button
+              key={c.id}
+              onClick={() => setCategoryFilter(c.id)}
+              className={`px-4 py-2 rounded-xl text-xs font-medium transition-all border whitespace-nowrap ${
+                categoryFilter === c.id
+                  ? 'bg-purple-accent/30 text-white border-purple-accent/60'
+                  : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              {c.name}
+            </button>
           ))}
-        </select>
+        </div>
 
         <select
           value={typeFilter}
@@ -385,16 +400,25 @@ export default function QuestionsPage() {
         <div className="modal-overlay">
           <div className="modal-card max-w-sm">
             <h2 className="font-unbounded text-lg font-bold text-white mb-6 text-center">Змінити категорію ({selectedIds.length})</h2>
-            <select
-              value={targetCategoryId}
-              onChange={(e) => setTargetCategoryId(e.target.value)}
-              className="glass-input mb-6"
-            >
-              <option value="" className="bg-gray-900">Оберіть категорію...</option>
+            <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1 mb-6">
               {categories?.map((c) => (
-                <option key={c.id} value={c.id} className="bg-gray-900">{c.name}</option>
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setTargetCategoryId(c.id)}
+                  className={`px-3 py-2 rounded-xl text-xs font-medium transition-all border ${
+                    targetCategoryId === c.id
+                      ? 'bg-purple-accent/30 text-white border-purple-accent/60 ring-1 ring-purple-accent/30'
+                      : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  {c.name}
+                </button>
               ))}
-            </select>
+              {(!categories || categories.length === 0) && (
+                <p className="text-slate-500 text-xs py-2 w-full text-center">Категорій не знайдено</p>
+              )}
+            </div>
             <div className="flex gap-3">
               <button onClick={() => setShowBulkCategoryModal(false)} className="flex-1 btn-ghost">Скасувати</button>
               <button
