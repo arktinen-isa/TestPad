@@ -150,7 +150,8 @@ export const useTestStore = create<TestStore>((set, get) => ({
             score,
             maxScore,
             percentage,
-            passed
+            passed,
+            showResultMode: 'IMMEDIATE'
           })
         }
       } else {
@@ -192,6 +193,7 @@ export const useTestStore = create<TestStore>((set, get) => ({
         passed,
         passThreshold,
         scoringMode,
+        showResultMode: response.data.showResultMode || (score !== null ? 'IMMEDIATE' : 'ADMIN_ONLY'),
         currentQuestion: null,
         isLoading: false,
       })

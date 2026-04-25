@@ -130,7 +130,7 @@ export default function TestTake() {
   }
 
   const handleNext = async () => {
-    if (!attemptId || !currentQuestion || selectedAnswers.length === 0 || isSubmitting) return
+    if (!attemptId || !currentQuestion || isSubmitting) return
     setIsSubmitting(true)
     try {
       await submitAnswer(attemptId, currentQuestion.id, selectedAnswers)
@@ -169,9 +169,9 @@ export default function TestTake() {
   }
 
   return (
-    <div className="fixed inset-0 bg-dark-bg flex flex-col overflow-hidden">
+    <div className="flex flex-col min-h-[60vh]">
       {/* Top bar (Always visible) */}
-      <div className="flex-shrink-0 border-b border-white/10 bg-dark-bg/90 backdrop-blur-md px-6 py-4 z-50">
+      <div className="flex-shrink-0 border-b border-white/10 bg-dark-bg/60 backdrop-blur-md px-6 py-3 z-30 sticky top-0">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
           {/* Test title */}
           <div className="flex-1 min-w-0">
@@ -189,8 +189,8 @@ export default function TestTake() {
                 : 'bg-white/5 border-white/10 text-white'
             }`}>
               <div className="flex flex-col items-end">
-                <span className="text-[10px] uppercase tracking-widest font-bold opacity-50 mb-0.5">Залишилось</span>
-                <span className="font-unbounded text-2xl font-bold tabular-nums leading-none">
+                <span className="text-[10px] uppercase tracking-widest font-bold opacity-50 mb-0.5">Час</span>
+                <span className="font-unbounded text-lg font-bold tabular-nums leading-none">
                   {formatTime(timeLeft)}
                 </span>
               </div>
@@ -346,7 +346,7 @@ export default function TestTake() {
 
           <button
             onClick={handleNext}
-            disabled={selectedAnswers.length === 0 || isSubmitting || isLoading}
+            disabled={isSubmitting || isLoading}
             className="btn-primary px-8 py-3 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none flex items-center gap-2"
           >
             {isSubmitting ? (

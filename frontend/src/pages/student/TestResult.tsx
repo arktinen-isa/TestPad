@@ -71,6 +71,11 @@ export default function TestResult() {
   }
 
   useEffect(() => {
+    // Invalidate dashboard tests query as soon as we arrive at results
+    queryClient.invalidateQueries({ queryKey: ['student-tests'] })
+  }, [queryClient])
+
+  useEffect(() => {
     if (!isLoading && !result && !attemptId && storeScore === null) {
       navigate('/student/dashboard')
     }
