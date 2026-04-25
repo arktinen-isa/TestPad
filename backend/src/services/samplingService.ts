@@ -40,16 +40,17 @@ export async function sampleByCategory(
   const sampled: string[] = [];
 
   for (const { categoryId, quota } of categoryQuotas) {
-    // Find active questions in this category that are also in the test bank
+    // Find active questions in this category. 
+    // Filter by test bank ONLY if the test bank actually has questions.
     const questions = await db.question.findMany({
       where: {
         categoryId,
-        id: { in: testQuestionIds },
+        ...(testQuestionIds.length > 0 ? { id: { in: testQuestionIds } } : {}),
       },
       select: { id: true },
     });
 
-    const eligible = questions.map((q) => q.id).filter((id) => testQuestionSet.has(id));
+    const eligible = questions.map((q) => q.id);
     const picked = sampleFromBank(eligible, quota);
     sampled.push(...picked);
   }
