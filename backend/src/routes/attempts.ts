@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import prisma from '../lib/prisma';
+import prisma, { withDbRetry } from '../lib/prisma';
 import { asyncHandler } from '../middleware/errorHandler';
 import { authenticate, authorize } from '../middleware/auth';
 import { sampleFromBank, sampleByCategory } from '../services/samplingService';
@@ -53,50 +53,34 @@ async function finishAttempt(
   passThreshold: number | null; 
   scoringMode: string; 
 }> {
-  // Use a retry block for MySQL-specific transient errors like 1615
-  let attempt: any = null;
-  let retries = 2;
-  
-  while (retries > 0) {
-    try {
-      attempt = await prisma.attempt.findUnique({
-        where: { id: attemptId },
+  const attempt = await withDbRetry(() => prisma.attempt.findUnique({
+    where: { id: attemptId },
+    select: {
+      id: true,
+      startedAt: true,
+      test: {
         select: {
-          id: true,
-          startedAt: true,
-          test: {
+          multiScoringMode: true,
+          passThreshold: true,
+          scoringMode: true,
+        }
+      },
+      attemptQuestions: {
+        select: {
+          question: {
             select: {
-              multiScoringMode: true,
-              passThreshold: true,
-              scoringMode: true,
+              type: true,
+              category: { select: { pointsWeight: true } },
+              answers: { select: { id: true, isCorrect: true } },
             }
           },
-          attemptQuestions: {
-            select: {
-              question: {
-                select: {
-                  type: true,
-                  category: { select: { pointsWeight: true } },
-                  answers: { select: { id: true, isCorrect: true } },
-                }
-              },
-              attemptAnswers: {
-                select: { answerId: true, selected: true }
-              }
-            }
+          attemptAnswers: {
+            select: { answerId: true, selected: true }
           }
         }
-      });
-      break;
-    } catch (err: any) {
-      if (err.message?.includes('1615') && retries > 1) {
-        retries--;
-        await new Promise(r => setTimeout(r, 200));
-        continue;
       }
-      throw err;
     }
-  }
+  }));
 
   if (!attempt) throw new Error('Attempt not found');
 
@@ -114,29 +98,15 @@ async function finishAttempt(
     attempt.test.multiScoringMode as 'ALL_OR_NOTHING' | 'PARTIAL'
   );
 
-  // Retry the update as well
-  retries = 2;
-  while (retries > 0) {
-    try {
-      await prisma.attempt.update({
-        where: { id: attemptId },
-        data: {
-          finishedAt: new Date(),
-          finishReason: reason,
-          score,
-          maxScore,
-        },
-      });
-      break;
-    } catch (err: any) {
-      if (err.message?.includes('1615') && retries > 1) {
-        retries--;
-        await new Promise(r => setTimeout(r, 200));
-        continue;
-      }
-      throw err;
-    }
-  }
+  await withDbRetry(() => prisma.attempt.update({
+    where: { id: attemptId },
+    data: {
+      finishedAt: new Date(),
+      finishReason: reason,
+      score,
+      maxScore,
+    },
+  }));
 
   const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100 * 100) / 100 : 0;
   const passed =

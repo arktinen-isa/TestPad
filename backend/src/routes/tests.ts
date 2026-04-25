@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import prisma from '../lib/prisma';
+import prisma, { withDbRetry } from '../lib/prisma';
 import { asyncHandler } from '../middleware/errorHandler';
 import { authenticate, authorize } from '../middleware/auth';
 
@@ -292,7 +292,7 @@ router.patch(
       };
     }
 
-    const test = await prisma.test.update({
+    const test = await withDbRetry(() => prisma.test.update({
       where: { id },
       data: updatePayload,
       include: {
@@ -301,7 +301,7 @@ router.patch(
         questions: { select: { questionId: true } },
         categoryQuotas: true,
       },
-    });
+    }));
 
     res.json(test);
   })
@@ -320,14 +320,46 @@ router.delete(
       return;
     }
 
-    // Cascade manually since DB-level cascade might not be set or push failed
-    await prisma.$transaction([
-      prisma.attempt.deleteMany({ where: { testId: id } }),
-      prisma.testQuestion.deleteMany({ where: { testId: id } }),
-      prisma.testGroup.deleteMany({ where: { testId: id } }),
-      prisma.testCategoryQuota.deleteMany({ where: { testId: id } }),
-      prisma.test.delete({ where: { id } }),
-    ]);
+    // Deep cascade delete to ensure all relations are cleared
+    await withDbRetry(async () => {
+      await prisma.$transaction(async (tx) => {
+        // 1. Delete deeply nested attempt data
+        const attemptIds = (await tx.attempt.findMany({
+          where: { testId: id },
+          select: { id: true }
+        })).map(a => a.id);
+
+        if (attemptIds.length > 0) {
+          // Delete suspicious events
+          await tx.suspiciousEvent.deleteMany({
+            where: { attemptId: { in: attemptIds } }
+          });
+          
+          // Delete attempt answers
+          await tx.attemptAnswer.deleteMany({
+            where: { attemptQuestion: { attemptId: { in: attemptIds } } }
+          });
+
+          // Delete attempt questions
+          await tx.attemptQuestion.deleteMany({
+            where: { attemptId: { in: attemptIds } }
+          });
+
+          // Delete attempts
+          await tx.attempt.deleteMany({
+            where: { id: { in: attemptIds } }
+          });
+        }
+
+        // 2. Delete test relations
+        await tx.testQuestion.deleteMany({ where: { testId: id } });
+        await tx.testGroup.deleteMany({ where: { testId: id } });
+        await tx.testCategoryQuota.deleteMany({ where: { testId: id } });
+
+        // 3. Delete the test itself
+        await tx.test.delete({ where: { id } });
+      });
+    });
 
     res.status(204).send();
   })
