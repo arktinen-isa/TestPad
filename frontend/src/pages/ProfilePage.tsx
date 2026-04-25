@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import apiClient from '../api/client'
 
 export default function ProfilePage() {
   const { user } = useAuthStore()
+  const navigate = useNavigate()
   const [password, setPassword] = useState('')
 
   const ROLE_LABELS: Record<string, string> = {
@@ -45,6 +47,15 @@ export default function ProfilePage() {
 
   return (
     <div className="animate-fade-in max-w-2xl mx-auto space-y-8">
+      <button
+        onClick={() => navigate(-1)}
+        className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors duration-200 text-sm mb-2"
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Назад
+      </button>
       <div>
         <h1 className="font-unbounded text-2xl font-bold text-white mb-1">Профіль</h1>
         <p className="text-slate-400 text-sm">Керування вашим обліковим записом</p>

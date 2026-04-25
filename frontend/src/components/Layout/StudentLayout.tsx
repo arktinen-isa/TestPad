@@ -16,7 +16,10 @@ export default function StudentLayout() {
       <nav className="sticky top-0 z-40 border-b border-white/10 backdrop-blur-md bg-dark-bg/80">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center gap-3">
+          <button 
+            onClick={() => navigate('/student/dashboard')}
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity duration-200"
+          >
             <div className="w-8 h-8 rounded-lg bg-purple-accent/20 border border-purple-accent/30 flex items-center justify-center">
               <svg width="16" height="16" viewBox="0 0 32 32" fill="none">
                 <path d="M16 3L3 10v12l13 7 13-7V10L16 3z" stroke="#a855f7" strokeWidth="2" fill="none"/>
@@ -26,7 +29,7 @@ export default function StudentLayout() {
             <span className="font-unbounded text-sm font-bold text-white">
               GradeX
             </span>
-          </div>
+          </button>
 
           {/* User info + logout */}
           <div className="flex items-center gap-4">

@@ -106,8 +106,8 @@ function TestCard({ test }: { test: StudentTest }) {
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-white">
               {test.scoringMode === 'PERCENTAGE' 
-                ? `${test.lastAttempt.percentage}%` 
-                : `${test.lastAttempt.score} / ${test.lastAttempt.maxScore} балів`}
+                ? `${test.lastAttempt.percentage ?? 0}%` 
+                : `${test.lastAttempt.score ?? 0} / ${test.lastAttempt.maxScore ?? 0} балів`}
             </span>
             <span className={`text-xs font-medium ${
               test.lastAttempt.passed ? 'text-green-400' : 'text-red-400'

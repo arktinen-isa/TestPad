@@ -120,6 +120,50 @@ async function finishAttempt(
   };
 }
 
+/**
+ * Format a question for the student (shuffled answers, no isCorrect info)
+ */
+async function getStudentQuestion(attemptId: string, index: number) {
+  const attempt = await prisma.attempt.findUnique({
+    where: { id: attemptId },
+    include: {
+      attemptQuestions: {
+        orderBy: { orderIndex: 'asc' },
+        include: {
+          question: {
+            include: {
+              answers: { select: { id: true, text: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!attempt || index >= attempt.attemptQuestions.length) return null;
+
+  const aq = attempt.attemptQuestions[index]!;
+  const answerOrder = aq.answerOrder as string[];
+  const answersMap = new Map(aq.question.answers.map((a) => [a.id, a.text]));
+
+  const orderedAnswers = answerOrder
+    .map((answerId) => {
+      const text = answersMap.get(answerId);
+      return text ? { id: answerId, text } : null;
+    })
+    .filter((a): a is { id: string; text: string } => a !== null);
+
+  return {
+    id: aq.question.id,
+    text: aq.question.text,
+    type: aq.question.type,
+    imageUrl: aq.question.imageUrl,
+    answers: orderedAnswers,
+    questionNumber: index + 1,
+    total: attempt.attemptQuestions.length,
+  };
+}
+
 // POST /api/attempts — STUDENT only
 router.post(
   '/',
@@ -234,10 +278,13 @@ router.post(
       },
     });
 
+    const firstQuestion = await getStudentQuestion(attempt.id, 0);
+
     res.status(201).json({
       attemptId: attempt.id,
       questionsTotal: sampledQuestionIds.length,
-      timeLimit: test.timeLimitMin,
+      timeLimitSec: test.timeLimitMin * 60,
+      firstQuestion,
     });
   })
 );
@@ -428,14 +475,21 @@ router.post(
 
     if (isComplete) {
       const result = await finishAttempt(id, 'NORMAL');
-      res.json({ done: true, ...result });
+      res.json({ finished: true, ...result });
       return;
     }
 
+    const nextQuestion = await getStudentQuestion(id, nextIndex);
     res.json({
-      done: false,
-      nextQuestionIndex: nextIndex,
-      questionsRemaining: attempt.attemptQuestions.length - nextIndex,
+      finished: false,
+      nextQuestion,
+      timeLeft: attempt.test.timeLimitMin > 0
+        ? Math.max(
+            0,
+            attempt.test.timeLimitMin * 60 -
+              Math.floor((Date.now() - attempt.startedAt.getTime()) / 1000)
+          )
+        : null,
     });
   })
 );
