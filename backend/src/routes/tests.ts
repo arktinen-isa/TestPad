@@ -107,10 +107,12 @@ router.get(
         }
 
         lastAttemptMapped = {
+          id: lastAttempt.id,
           score: lastAttempt.score,
           maxScore: lastAttempt.maxScore,
           percentage: pct,
           passed,
+          finishedAt: lastAttempt.finishedAt,
         };
       }
 

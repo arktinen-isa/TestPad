@@ -70,14 +70,14 @@ export interface Test {
 
 export interface AttemptResult {
   id: string
-  score: number
-  maxScore: number
+  score: number | null
+  maxScore: number | null
   percentage: number
-  passed?: boolean
-  finishedAt: string
+  passed?: boolean | null
+  finishedAt: string | null
   timeSpentSec?: number
   testTitle?: string
-  passThreshold?: number
+  passThreshold?: number | null
   scoringMode?: string
 }
 

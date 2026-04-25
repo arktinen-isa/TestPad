@@ -55,7 +55,16 @@ function TestCard({ test }: { test: StudentTest }) {
   const navigate = useNavigate()
   const status = getTestStatusInfo(test)
   const attemptsUsed = test.attemptsUsed || 0
-  const attemptsLeft = test.maxAttempts - attemptsUsed
+  const attemptsLeft = Math.max(0, test.maxAttempts - attemptsUsed)
+  const activeAttemptId = test.lastAttempt && !test.lastAttempt.finishedAt ? test.lastAttempt.id : null
+
+  const handleAction = () => {
+    if (activeAttemptId) {
+      navigate(`/student/test/${test.id}/take`)
+    } else {
+      navigate(`/student/test/${test.id}/start`)
+    }
+  }
 
   return (
     <div className="glass-card p-6 flex flex-col gap-4 hover:border-purple-accent/30 transition-all duration-300 group">
@@ -119,19 +128,23 @@ function TestCard({ test }: { test: StudentTest }) {
       )}
 
       {/* Action button */}
-      {status.available ? (
+      {status.available || activeAttemptId ? (
         <button
-          onClick={() => navigate(`/student/test/${test.id}/start`)}
-          className="btn-primary w-full text-center text-sm mt-auto"
+          onClick={handleAction}
+          className={`w-full text-center text-sm mt-auto px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
+            activeAttemptId 
+              ? 'bg-blue-500 hover:bg-blue-600 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)]' 
+              : 'btn-primary'
+          }`}
         >
-          Розпочати тест →
+          {activeAttemptId ? 'Продовжити тест →' : 'Розпочати тест →'}
         </button>
       ) : (
         <button
           disabled
           className="w-full px-6 py-3 rounded-xl font-semibold text-slate-500 bg-white/5 border border-white/10 cursor-not-allowed text-sm"
         >
-          {test.status === 'CLOSED' || attemptsLeft <= 0 ? 'Недоступний' : 'Очікування'}
+          {test.status === 'CLOSED' ? 'Тест закрито' : (attemptsLeft <= 0 ? 'Спроб немає' : 'Очікування')}
         </button>
       )}
     </div>

@@ -229,7 +229,7 @@ router.post(
     });
     if (activeAttempt) {
       res.status(409).json({
-        error: 'You already have an active attempt',
+        error: 'У вас вже є активна спроба',
         attemptId: activeAttempt.id,
       });
       return;
