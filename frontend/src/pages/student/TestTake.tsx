@@ -163,12 +163,6 @@ export default function TestTake() {
     }
   }
 
-  // Calculate time percentage
-  const totalTime = currentQuestion ? timeLeft : 0
-  const isTimeLow = currentQuestion && timeLeft > 0
-    ? timeLeft / (timeLeft + 1) < 0.2 || timeLeft < 60
-    : false
-
   if (!currentQuestion && !isFinished) {
     return (
       <div className="fixed inset-0 bg-dark-bg flex items-center justify-center">

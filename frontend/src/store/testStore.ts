@@ -15,6 +15,7 @@ interface TestState {
   passed: boolean | null
   passThreshold: number | null
   scoringMode: string | null
+  showResultMode: string | null
   isLoading: boolean
   error: string | null
 }
@@ -43,6 +44,7 @@ const initialState: TestState = {
   passed: null,
   passThreshold: null,
   scoringMode: null,
+  showResultMode: null,
   isLoading: false,
   error: null,
 }
