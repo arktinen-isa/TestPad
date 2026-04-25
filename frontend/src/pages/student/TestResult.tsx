@@ -18,11 +18,11 @@ export default function TestResult() {
   const navigate = useNavigate()
   const location = useLocation()
   const queryClient = useQueryClient()
-  const { 
-    reset, 
-    score: storeScore, 
-    maxScore: storeMax, 
-    percentage: storePercent, 
+  const {
+    reset,
+    score: storeScore,
+    maxScore: storeMax,
+    percentage: storePercent,
     passThreshold: storeThreshold,
     scoringMode: storeScoringMode,
     passed: storePassed
@@ -90,7 +90,7 @@ export default function TestResult() {
     <div className="max-w-3xl mx-auto py-8 px-4 animate-fade-in">
       <div className="glass-card overflow-hidden shadow-2xl relative mb-8">
         <div className="absolute inset-0 bg-gradient-to-b from-purple-accent/5 to-transparent pointer-events-none" />
-        
+
         <div className="p-8 md:p-12 text-center relative z-10">
           <p className="text-slate-400 uppercase tracking-widest text-[10px] font-bold mb-3">Тестування завершено</p>
           <h1 className="font-unbounded text-2xl md:text-3xl font-extrabold text-white mb-10 leading-tight">
@@ -104,9 +104,9 @@ export default function TestResult() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138z" />
                 </svg>
               </div>
-              <h2 className="font-unbounded text-2xl font-bold text-white mb-4 tracking-tight">Роботу прийнято!</h2>
+              <h2 className="font-unbounded text-2xl font-bold text-white mb-4 tracking-tight">Результати зараз на шляху до викладача!</h2>
               <p className="text-blue-300 italic mb-8 max-w-sm mx-auto leading-relaxed">
-                Твій викладач отримав результати і повідомить твою оцінку згодом у мотиваційному та надихаючому стилі.
+                Він оцінить твої старання та зовсім скоро повідомить підсумковий результат. Не зупиняйся на досягнутому!
               </p>
               <div className="h-1 w-24 bg-gradient-to-r from-transparent via-blue-500/50 to-transparent mx-auto" />
             </div>
@@ -115,18 +115,16 @@ export default function TestResult() {
               <div className="relative mb-12">
                 <div className="absolute inset-0 bg-white/5 blur-3xl rounded-full scale-150 animate-pulse-slow" />
                 <p className="text-white/60 text-xs uppercase tracking-widest font-bold mb-2 relative z-10">Твій результат</p>
-                <div className={`font-unbounded text-6xl md:text-7xl font-black mb-2 tabular-nums relative z-10 drop-shadow-2xl ${
-                  passed ? 'text-green-cta' : 'text-red-400'
-                }`}>
+                <div className={`font-unbounded text-6xl md:text-7xl font-black mb-2 tabular-nums relative z-10 drop-shadow-2xl ${passed ? 'text-green-cta' : 'text-red-400'
+                  }`}>
                   {displayScore}
                 </div>
-                
+
                 <div className="flex justify-center mt-6">
-                  <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl border text-sm font-bold uppercase tracking-widest transition-all duration-500 ${
-                    passed
+                  <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl border text-sm font-bold uppercase tracking-widest transition-all duration-500 ${passed
                       ? 'bg-green-500/10 border-green-500/30 text-green-400 shadow-lg shadow-green-500/10'
                       : 'bg-red-500/10 border-red-500/30 text-red-400 shadow-lg shadow-red-500/10'
-                  }`}>
+                    }`}>
                     {passed ? (
                       <>
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -177,11 +175,10 @@ export default function TestResult() {
         <div className="glass-card p-6 flex items-center justify-between group hover:bg-white/5 transition-colors duration-300">
           <div>
             <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold mb-1">Завершено</p>
-            <p className={`font-unbounded text-lg font-bold ${
-              result?.finishReason === 'NORMAL' ? 'text-green-400' : 'text-orange-400'
-            }`}>
-              {result?.finishReason === 'TIMEOUT' ? 'Вичерпано час' : 
-               result?.finishReason === 'EXIT' ? 'Примусово' : 'Успішно'}
+            <p className={`font-unbounded text-lg font-bold ${result?.finishReason === 'NORMAL' ? 'text-green-400' : 'text-orange-400'
+              }`}>
+              {result?.finishReason === 'TIMEOUT' ? 'Вичерпано час' :
+                result?.finishReason === 'EXIT' ? 'Примусово' : 'Успішно'}
             </p>
           </div>
           <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-purple-400 transition-colors">
