@@ -27,14 +27,6 @@ export default function TestStart() {
     try {
       await startAttempt(testId)
 
-      // Request fullscreen before navigating (REQUIRED for proctoring)
-      try {
-        await document.documentElement.requestFullscreen()
-      } catch (err) {
-        setStartError("Для проходження цього тесту ОБОВ'ЯЗКОВО потрібен повноекранний режим. Будь ласка, дозвольте його у браузері.");
-        return;
-      }
-
       navigate(`/student/test/${testId}/take`, { replace: true })
     } catch (err: unknown) {
       const msg = getApiError(err, 'Помилка при старті тесту')

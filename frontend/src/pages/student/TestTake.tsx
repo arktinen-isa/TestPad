@@ -66,28 +66,6 @@ export default function TestTake() {
     }
   }, [testId, navigate, finishAttempt, isSubmitting, reset])
 
-  // Fullscreen management
-  const handleFullscreenChange = useCallback(() => {
-    // Give some time for the initial fullscreen transition (3 seconds)
-    if (Date.now() - mountTimeRef.current < 3000) return;
-
-    if (!document.fullscreenElement && !isFinished && attemptIdRef.current) {
-      // Log suspicious event
-      apiClient.post('/events', {
-        attemptId: attemptIdRef.current,
-        eventType: 'FULLSCREEN_EXIT',
-      }).catch(() => {});
-
-      // Automatically finish test if fullscreen exited
-      handleFinish(true);
-    }
-  }, [isFinished, handleFinish])
-
-  useEffect(() => {
-    document.addEventListener('fullscreenchange', handleFullscreenChange)
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
-  }, [handleFullscreenChange])
-
   // Tab visibility tracking
   useEffect(() => {
     const handleVisibilityChange = () => {

@@ -106,12 +106,14 @@ router.get(
             : (s >= t.passThreshold);
         }
 
+        const hideScore = user.role === 'STUDENT' && t.showResultMode === 'ADMIN_ONLY' && lastAttempt.finishedAt !== null;
+
         lastAttemptMapped = {
           id: lastAttempt.id,
-          score: lastAttempt.score,
-          maxScore: lastAttempt.maxScore,
-          percentage: pct,
-          passed,
+          score: hideScore ? null : lastAttempt.score,
+          maxScore: hideScore ? null : lastAttempt.maxScore,
+          percentage: hideScore ? null : pct,
+          passed: hideScore ? null : passed,
           finishedAt: lastAttempt.finishedAt,
         };
       }

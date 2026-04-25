@@ -65,14 +65,6 @@ function TestCard({ test }: { test: StudentTest }) {
       try {
         await resumeAttempt(activeAttemptId)
         
-        // Request fullscreen on resume (REQUIRED)
-        try {
-          await document.documentElement.requestFullscreen()
-        } catch {
-          alert("Для продовження тесту необхідно уйти в повноекранний режим. Дозвольте його у браузері.");
-          return;
-        }
-        
         navigate(`/student/test/${test.id}/take`)
       } catch {
         // Fallback to start if resume fails
