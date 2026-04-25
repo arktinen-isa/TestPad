@@ -242,7 +242,7 @@ router.post(
     }
 
     // Sample questions
-    const testQuestionIds = test.questions.map((tq) => tq.questionId);
+    let testQuestionIds = test.questions.map((tq) => tq.questionId);
     let sampledQuestionIds: string[];
 
     if (test.samplingMode === 'BY_CATEGORY') {
@@ -255,6 +255,13 @@ router.post(
         prisma
       );
     } else {
+      // If sampling FROM_BANK and no questions were manually assigned
+      if (testQuestionIds.length === 0) {
+        const allQuestions = await prisma.question.findMany({
+          select: { id: true },
+        });
+        testQuestionIds = allQuestions.map(q => q.id);
+      }
       sampledQuestionIds = sampleFromBank(testQuestionIds, test.questionsCount);
     }
 

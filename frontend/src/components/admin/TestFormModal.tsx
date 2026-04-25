@@ -227,10 +227,20 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
 
           {/* Timing tab */}
           {activeTab === 'timing' && (
-            <div className="space-y-4">
+            <div className="space-y-5">
+              <div className="p-4 rounded-xl bg-purple-accent/5 border border-purple-accent/10">
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  <span className="text-purple-400 font-semibold uppercase mr-1">Підказка:</span>
+                  Якщо ви не оберете дати, тест буде доступний студентам завжди (після зміни статусу на "Відкрито").
+                </p>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Відкрити з</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5 flex items-center justify-between">
+                    <span>Дата відкриття</span>
+                    <span className="text-[10px] text-slate-500 font-normal italic">не обов'язково</span>
+                  </label>
                   <input
                     type="datetime-local" value={form.openFrom}
                     onChange={(e) => setForm({ ...form, openFrom: e.target.value })}
@@ -238,7 +248,10 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Закрити о</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5 flex items-center justify-between">
+                    <span>Дедлайн (закриття)</span>
+                    <span className="text-[10px] text-slate-500 font-normal italic">не обов'язково</span>
+                  </label>
                   <input
                     type="datetime-local" value={form.openUntil}
                     onChange={(e) => setForm({ ...form, openUntil: e.target.value })}
@@ -248,19 +261,21 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Ліміт часу (хв)</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Обмеження часу (хв)</label>
                   <input
                     type="number" required min="1" max="300" value={form.timeLimitMin}
                     onChange={(e) => setForm({ ...form, timeLimitMin: Number(e.target.value) })}
                     className="glass-input"
+                    placeholder="Напр. 60"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Макс. спроб</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Кількість спроб</label>
                   <input
                     type="number" required min="1" max="10" value={form.maxAttempts}
                     onChange={(e) => setForm({ ...form, maxAttempts: Number(e.target.value) })}
                     className="glass-input"
+                    placeholder="1"
                   />
                 </div>
               </div>
