@@ -105,13 +105,14 @@ function TestCard({ test }: { test: StudentTest }) {
           <p className="text-xs text-slate-400 mb-0.5">Остання спроба:</p>
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-white">
-              {test.lastAttempt.score} / {test.lastAttempt.maxScore} балів
+              {test.scoringMode === 'PERCENTAGE' 
+                ? `${test.lastAttempt.percentage}%` 
+                : `${test.lastAttempt.score} / ${test.lastAttempt.maxScore} балів`}
             </span>
             <span className={`text-xs font-medium ${
               test.lastAttempt.passed ? 'text-green-400' : 'text-red-400'
             }`}>
-              ({test.lastAttempt.percentage}%)
-              {test.lastAttempt.passed ? ' ✓' : ' ✗'}
+              {test.lastAttempt.passed ? ' (Складено ✓)' : ' (Не складено ✗)'}
             </span>
           </div>
         </div>

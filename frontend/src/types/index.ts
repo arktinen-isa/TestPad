@@ -126,6 +126,7 @@ export interface StudentTest {
   openFrom?: string
   openUntil?: string
   questionsCount: number
+  scoringMode: string
   passThreshold?: number
   lastAttempt?: AttemptResult
 }
