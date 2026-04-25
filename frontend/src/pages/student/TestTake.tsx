@@ -30,20 +30,9 @@ export default function TestTake() {
   const [showExitModal, setShowExitModal] = useState(false)
   const [animKey, setAnimKey] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isTopBarVisible, setIsTopBarVisible] = useState(true)
   const attemptIdRef = useRef(attemptId)
   attemptIdRef.current = attemptId
   const isTimeLow = timeLeft !== null && timeLeft > 0 && timeLeft < 120;
-
-  // Mouse tracking for auto-hide top bar
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (e.clientY < 60) setIsTopBarVisible(true)
-      else if (e.clientY > 100 && isTopBarVisible) setIsTopBarVisible(false)
-    }
-    window.addEventListener('mousemove', handleMouseMove)
-    return () => window.removeEventListener('mousemove', handleMouseMove)
-  }, [isTopBarVisible])
 
   const handleFinish = useCallback(async (auto = false) => {
     if (!attemptIdRef.current || isSubmitting) return
@@ -181,10 +170,8 @@ export default function TestTake() {
 
   return (
     <div className="fixed inset-0 bg-dark-bg flex flex-col overflow-hidden">
-      {/* Top bar (Auto-hiding) */}
-      <div className={`fixed top-0 left-0 right-0 border-b border-white/10 bg-dark-bg/90 backdrop-blur-md px-6 py-4 transition-transform duration-500 z-50 ${
-        isTopBarVisible ? 'translate-y-0' : '-translate-y-full'
-      }`}>
+      {/* Top bar (Always visible) */}
+      <div className="flex-shrink-0 border-b border-white/10 bg-dark-bg/90 backdrop-blur-md px-6 py-4 z-50">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
           {/* Test title */}
           <div className="flex-1 min-w-0">
@@ -250,7 +237,7 @@ export default function TestTake() {
       </div>
 
       {/* Question area */}
-      <div className="flex-1 overflow-y-auto mt-16">
+      <div className="flex-1 overflow-y-auto">
    { !currentQuestion && !isLoading && !isFinished && (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
         <div className="glass-card p-8 max-w-md">

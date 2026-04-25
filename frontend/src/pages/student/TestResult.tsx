@@ -25,7 +25,8 @@ export default function TestResult() {
     percentage: storePercent,
     passThreshold: storeThreshold,
     scoringMode: storeScoringMode,
-    passed: storePassed
+    passed: storePassed,
+    showResultMode: storeShowResultMode
   } = useTestStore()
 
   // Try to get attemptId from query params or state
@@ -49,7 +50,7 @@ export default function TestResult() {
   const passThreshold = result?.passThreshold ?? storeThreshold
   const scoringMode = result?.scoringMode ?? storeScoringMode
   const passed = result?.passed ?? storePassed ?? (percentage >= (passThreshold ?? 60))
-  const showResultMode = result?.showResultMode ?? (storeScore !== null ? 'IMMEDIATE' : 'ADMIN_ONLY')
+  const showResultMode = result?.showResultMode ?? storeShowResultMode ?? (storeScore !== null ? 'IMMEDIATE' : 'ADMIN_ONLY')
 
   const motivationalMessage = useMemo(() => {
     const list = passed ? PASS_MESSAGES : FAIL_MESSAGES

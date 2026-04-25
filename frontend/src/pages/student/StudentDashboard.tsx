@@ -140,7 +140,7 @@ function TestCard({ test }: { test: StudentTest }) {
       )}
 
       {/* Last attempt result */}
-      {test.lastAttempt && (
+      {test.lastAttempt && test.showResultMode !== 'ADMIN_ONLY' && (
         <div className="px-3 py-2 rounded-xl bg-white/5 border border-white/10">
           <p className="text-xs text-slate-400 mb-0.5">Остання спроба:</p>
           <div className="flex items-center gap-2">
