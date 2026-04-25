@@ -349,7 +349,7 @@ router.get(
       return;
     }
 
-    const [attempts, total, stats] = await Promise.all([
+    const [attempts, total] = await Promise.all([
       prisma.attempt.findMany({
         where: { testId: id, finishedAt: { not: null } },
         skip,
