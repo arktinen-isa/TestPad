@@ -34,7 +34,6 @@ export default function TestTake() {
   const attemptIdRef = useRef(attemptId)
   attemptIdRef.current = attemptId
   const isTimeLow = timeLeft !== null && timeLeft > 0 && timeLeft < 120;
-  const mountTimeRef = useRef(Date.now());
 
   // Mouse tracking for auto-hide top bar
   useEffect(() => {
