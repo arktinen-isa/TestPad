@@ -92,18 +92,27 @@ router.get(
       });
 
       const lastAttempt = t.attempts[0];
-      const lastAttemptMapped = lastAttempt ? {
-        score: lastAttempt.score,
-        maxScore: lastAttempt.maxScore,
-        percentage: lastAttempt.maxScore && lastAttempt.maxScore > 0 
-          ? Math.round(((lastAttempt.score || 0) / lastAttempt.maxScore) * 100) 
-          : 0,
-        passed: t.passThreshold !== null && lastAttempt.score !== null && lastAttempt.maxScore !== null
-          ? (t.scoringMode === 'PERCENTAGE' 
-              ? ((lastAttempt.score / lastAttempt.maxScore) * 100 >= t.passThreshold)
-              : (lastAttempt.score >= t.passThreshold))
-          : null,
-      } : null;
+      let lastAttemptMapped = null;
+
+      if (lastAttempt) {
+        const s = lastAttempt.score ?? 0;
+        const ms = lastAttempt.maxScore ?? 0;
+        const pct = ms > 0 ? Math.round((s / ms) * 100) : 0;
+        
+        let passed = null;
+        if (t.passThreshold !== null && lastAttempt.score !== null && lastAttempt.maxScore !== null) {
+          passed = t.scoringMode === 'PERCENTAGE' 
+            ? (pct >= t.passThreshold)
+            : (s >= t.passThreshold);
+        }
+
+        lastAttemptMapped = {
+          score: lastAttempt.score,
+          maxScore: lastAttempt.maxScore,
+          percentage: pct,
+          passed,
+        };
+      }
 
       return {
         ...t,

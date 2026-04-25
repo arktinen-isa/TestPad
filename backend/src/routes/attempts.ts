@@ -44,7 +44,14 @@ function isTimedOut(startedAt: Date, timeLimitMin: number): boolean {
 async function finishAttempt(
   attemptId: string,
   reason: 'NORMAL' | 'TIMEOUT' | 'EXIT'
-): Promise<{ score: number; maxScore: number }> {
+): Promise<{ 
+  score: number; 
+  maxScore: number; 
+  percentage: number; 
+  passed: boolean | null; 
+  passThreshold: number | null; 
+  scoringMode: string; 
+}> {
   const attempt = await prisma.attempt.findUnique({
     where: { id: attemptId },
     include: {
@@ -504,15 +511,16 @@ router.get(
       }
     }
 
-    const score = attempt.score ?? 0;
-    const maxScore = attempt.maxScore ?? 0;
-    const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100 * 100) / 100 : 0;
-    const passed =
-      attempt.test.passThreshold !== null
-        ? (attempt.test.scoringMode === 'PERCENTAGE'
-          ? percentage >= attempt.test.passThreshold
-          : score >= attempt.test.passThreshold)
-        : null;
+    const s = attempt.score ?? 0;
+    const ms = attempt.maxScore ?? 0;
+    const percentage = ms > 0 ? Math.round((s / ms) * 100 * 100) / 100 : 0;
+    
+    let passed = null;
+    if (attempt.test.passThreshold !== null && attempt.finishedAt !== null) {
+      passed = attempt.test.scoringMode === 'PERCENTAGE'
+        ? percentage >= attempt.test.passThreshold
+        : s >= attempt.test.passThreshold;
+    }
 
     res.json({
       attemptId: attempt.id,
@@ -522,8 +530,8 @@ router.get(
       startedAt: attempt.startedAt,
       finishedAt: attempt.finishedAt,
       finishReason: attempt.finishReason,
-      score,
-      maxScore,
+      score: s,
+      maxScore: ms,
       percentage,
       passed,
       passThreshold: attempt.test.passThreshold,
