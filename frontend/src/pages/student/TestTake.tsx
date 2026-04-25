@@ -67,10 +67,17 @@ export default function TestTake() {
 
   // Fullscreen management
   const handleFullscreenChange = useCallback(() => {
-    if (!document.fullscreenElement && !isFinished) {
-      setShowExitModal(true)
+    if (!document.fullscreenElement && !isFinished && attemptIdRef.current) {
+      // Log suspicious event
+      apiClient.post('/events', {
+        attemptId: attemptIdRef.current,
+        eventType: 'FULLSCREEN_EXIT',
+      }).catch(() => {});
+
+      // Automatically finish test if fullscreen exited
+      handleFinish(true);
     }
-  }, [isFinished])
+  }, [isFinished, handleFinish])
 
   useEffect(() => {
     document.addEventListener('fullscreenchange', handleFullscreenChange)
