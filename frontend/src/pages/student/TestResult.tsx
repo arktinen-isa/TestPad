@@ -139,32 +139,34 @@ export default function TestResult() {
 
           {/* Status */}
           {passed !== undefined && (
-            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold mt-2 ${
-              passed
-                ? 'bg-green-500/10 border-green-500/30 text-green-400'
-                : 'bg-red-500/10 border-red-500/30 text-red-400'
-            }`}>
-              {passed ? (
-                <>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Зараховано
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                  Не зараховано
-                </>
+            <>
+              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-semibold mt-2 ${
+                passed
+                  ? 'bg-green-500/10 border-green-500/30 text-green-400'
+                  : 'bg-red-500/10 border-red-500/30 text-red-400'
+              }`}>
+                {passed ? (
+                  <>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Зараховано
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Не зараховано
+                  </>
+                )}
+              </div>
+              {passThreshold !== undefined && scoringMode && (
+                <p className="mt-2 text-xs text-slate-500">
+                  Прохідний поріг: {passThreshold}{scoringMode === 'PERCENTAGE' ? '%' : ' балів'}
+                </p>
               )}
-            </div>
-            {passThreshold !== undefined && scoringMode && (
-              <p className="mt-2 text-xs text-slate-500">
-                Прохідний поріг: {passThreshold}{scoringMode === 'PERCENTAGE' ? '%' : ' балів'}
-              </p>
-            )}
+            </>
           )}
         </div>
 
