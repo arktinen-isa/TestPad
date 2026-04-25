@@ -21,6 +21,7 @@ interface TestState {
 
 interface TestActions {
   startAttempt: (testId: string) => Promise<string>
+  resumeAttempt: (attemptId: string) => Promise<void>
   submitAnswer: (attemptId: string, questionId: string, answerIds: string[]) => Promise<void>
   finishAttempt: (attemptId: string) => Promise<void>
   tick: () => void
@@ -68,9 +69,50 @@ export const useTestStore = create<TestStore>((set, get) => ({
       })
 
       return attemptId as string
-    } catch (error: unknown) {
-      const message =
-        getApiError(error, 'Помилка при старті тесту')
+    } catch (error: any) {
+      if (error.response?.status === 409) {
+        const activeAttemptId = error.response.data.attemptId;
+        if (activeAttemptId) {
+          await get().resumeAttempt(activeAttemptId);
+          return activeAttemptId;
+        }
+      }
+      const message = getApiError(error, 'Помилка при старті тесту')
+      set({ isLoading: false, error: message })
+      throw error
+    }
+  },
+
+  resumeAttempt: async (attemptId: string) => {
+    set({ isLoading: true, error: null })
+    try {
+      const response = await apiClient.get(`/attempts/${attemptId}/question`)
+      const { testId, currentQuestion, timeLeft, finished, score, maxScore, percentage, passed } = response.data
+
+      if (finished) {
+        set({
+          attemptId,
+          testId,
+          isFinished: true,
+          score,
+          maxScore,
+          percentage,
+          passed,
+          currentQuestion: null,
+          isLoading: false
+        })
+      } else {
+        set({
+          attemptId,
+          testId,
+          currentQuestion,
+          timeLeft: timeLeft || 0,
+          isFinished: false,
+          isLoading: false
+        })
+      }
+    } catch (error: any) {
+      const message = getApiError(error, 'Помилка при відновленні спроби')
       set({ isLoading: false, error: message })
       throw error
     }
@@ -79,18 +121,22 @@ export const useTestStore = create<TestStore>((set, get) => ({
   submitAnswer: async (attemptId: string, questionId: string, answerIds: string[]) => {
     set({ isLoading: true, error: null })
     try {
-      const response = await apiClient.post(`/attempts/${attemptId}/answers`, {
+      const response = await apiClient.post(`/attempts/${attemptId}/answer`, {
         questionId,
         answerIds,
       })
 
-      const { nextQuestion, finished, timeLeft } = response.data
+      const { nextQuestion, finished, timeLeft, score, maxScore, percentage, passed } = response.data
 
       if (finished) {
         set({
           currentQuestion: null,
           isFinished: true,
           isLoading: false,
+          score,
+          maxScore,
+          percentage,
+          passed
         })
       } else {
         set({
@@ -99,7 +145,18 @@ export const useTestStore = create<TestStore>((set, get) => ({
           isLoading: false,
         })
       }
-    } catch (error: unknown) {
+    } catch (error: any) {
+      if (error.response?.status === 409) {
+        const { currentQuestion } = error.response.data
+        if (currentQuestion) {
+          set({ 
+            currentQuestion, 
+            isLoading: false,
+            error: 'Сесію оновлено. Дайте відповідь на поточне питання.'
+          })
+          return
+        }
+      }
       const message = getApiError(error, 'Помилка при відправці відповіді')
       set({ isLoading: false, error: message })
       throw error

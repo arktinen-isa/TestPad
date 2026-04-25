@@ -168,8 +168,22 @@ export default function TestTake() {
     return (
       <div className="fixed inset-0 bg-dark-bg flex items-center justify-center">
         <div className="text-center">
-          <div className="w-10 h-10 border-2 border-purple-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-400">Завантаження питання...</p>
+          {isLoading ? (
+            <>
+              <div className="w-10 h-10 border-2 border-purple-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-slate-400">Завантаження питання...</p>
+            </>
+          ) : (
+            <>
+              <p className="text-red-400 mb-4">Помилка завантаження питання</p>
+              <button 
+                onClick={() => navigate(`/student/test/${testId}/start`, { replace: true })}
+                className="btn-secondary"
+              >
+                Повернутись на початок
+              </button>
+            </>
+          )}
         </div>
       </div>
     )

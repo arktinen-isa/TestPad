@@ -163,6 +163,17 @@ export default function TestResult() {
                   </>
                 )}
               </div>
+
+              {/* Finish Reason Info */}
+              <div className="mt-3 min-h-[1.25rem]">
+                {result?.finishReason === 'TIMEOUT' && (
+                  <p className="text-yellow-400/70 text-sm italic">Тест завершено автоматично (час вийшов)</p>
+                )}
+                {result?.finishReason === 'EXIT' && (
+                  <p className="text-red-400/80 text-sm italic font-medium">Тест завершено достроково (порушення правил)</p>
+                )}
+              </div>
+
               {passThreshold !== undefined && scoringMode && (
                 <p className="mt-2 text-xs text-slate-500">
                   Прохідний поріг: {passThreshold}{scoringMode === 'PERCENTAGE' ? '%' : ' балів'}

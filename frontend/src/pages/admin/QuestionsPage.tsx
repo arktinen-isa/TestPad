@@ -237,31 +237,18 @@ export default function QuestionsPage() {
           </div>
         </div>
 
-        <div className="flex-1 flex gap-2 overflow-x-auto pb-1 scrollbar-hide no-scrollbar">
-          <button
-            onClick={() => setCategoryFilter('')}
-            className={`px-4 py-2 rounded-xl text-xs font-medium transition-all border whitespace-nowrap ${
-              categoryFilter === ''
-                ? 'bg-purple-accent/30 text-white border-purple-accent/60'
-                : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10 hover:text-white'
-            }`}
-          >
-            Всі категорії
-          </button>
+        <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          className="glass-input py-2 text-sm w-auto min-w-48"
+        >
+          <option value="" className="bg-gray-900">Всі категорії</option>
           {categories?.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => setCategoryFilter(c.id)}
-              className={`px-4 py-2 rounded-xl text-xs font-medium transition-all border whitespace-nowrap ${
-                categoryFilter === c.id
-                  ? 'bg-purple-accent/30 text-white border-purple-accent/60'
-                  : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10 hover:text-white'
-              }`}
-            >
+            <option key={c.id} value={c.id} className="bg-gray-900">
               {c.name}
-            </button>
+            </option>
           ))}
-        </div>
+        </select>
 
         <select
           value={typeFilter}

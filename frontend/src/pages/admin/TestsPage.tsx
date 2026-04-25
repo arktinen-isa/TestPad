@@ -84,6 +84,10 @@ export default function TestsPage() {
       qc.invalidateQueries({ queryKey: ['tests'] })
       setDeleteConfirm(null)
     },
+    onError: (err: any) => {
+      const msg = err.response?.data?.error || 'Помилка при видаленні тесту'
+      alert(msg) // Simple alert for now as per minimal requirements
+    }
   })
 
   const handleSave = async (data: TestFormData, id?: string) => {

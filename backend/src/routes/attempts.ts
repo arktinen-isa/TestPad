@@ -15,6 +15,7 @@ const startAttemptSchema = z.object({
 });
 
 const answerSchema = z.object({
+  questionId: z.string().uuid(),
   answerIds: z.array(z.string().uuid()),
 });
 
@@ -219,7 +220,7 @@ router.post(
       where: { studentId: userId, testId, finishedAt: { not: null } },
     });
     if (completedAttempts >= test.maxAttempts) {
-      res.status(403).json({ error: 'Maximum attempts reached' });
+      res.status(403).json({ error: 'Ви вже використали всі доступні спроби' });
       return;
     }
 
@@ -314,59 +315,38 @@ router.get(
       },
     });
 
-    if (!attempt) {
+    if (!attempt || attempt.studentId !== userId) {
       res.status(404).json({ error: 'Attempt not found' });
       return;
     }
 
-    if (attempt.studentId !== userId) {
-      res.status(403).json({ error: 'Not your attempt' });
-      return;
-    }
-
     if (attempt.finishedAt) {
-      res.json({ done: true });
+      const percentage = attempt.maxScore ? Math.round((attempt.score ?? 0) / (attempt.maxScore ?? 0) * 100 * 10) / 10 : 0;
+      res.json({
+        finished: true,
+        score: attempt.score,
+        maxScore: attempt.maxScore,
+        percentage,
+        finishReason: attempt.finishReason,
+      });
       return;
     }
 
     // Auto-finish if timed out
     if (isTimedOut(attempt.startedAt, attempt.test.timeLimitMin)) {
-      const { score, maxScore } = await finishAttempt(id, 'TIMEOUT');
-      res.json({ done: true, reason: 'TIMEOUT', score, maxScore });
+      const result = await finishAttempt(id, 'TIMEOUT');
+      res.json({ finished: true, ...result });
       return;
     }
 
-    const currentIndex = attempt.currentQuestionIndex;
-    if (currentIndex >= attempt.attemptQuestions.length) {
-      res.json({ done: true });
-      return;
-    }
-
-    const aq = attempt.attemptQuestions[currentIndex]!;
-    // Use answerOrder to present answers in shuffled order
-    const answerOrder = aq.answerOrder as string[];
-    const answersMap = new Map(aq.question.answers.map((a) => [a.id, a.text]));
-
-    const orderedAnswers = answerOrder
-      .map((answerId) => {
-        const text = answersMap.get(answerId);
-        if (!text) return null;
-        return { id: answerId, text };
-      })
-      .filter((a): a is { id: string; text: string } => a !== null);
-
+    const question = await getStudentQuestion(id, attempt.currentQuestionIndex);
+    
     res.json({
-      attemptQuestionId: aq.id,
-      questionIndex: currentIndex,
+      finished: false,
+      testId: attempt.testId,
+      currentQuestion: question,
       questionsTotal: attempt.attemptQuestions.length,
-      question: {
-        id: aq.question.id,
-        text: aq.question.text,
-        type: aq.question.type,
-        imageUrl: aq.question.imageUrl,
-        answers: orderedAnswers,
-      },
-      timeRemaining: attempt.test.timeLimitMin > 0
+      timeLeft: attempt.test.timeLimitMin > 0
         ? Math.max(
             0,
             attempt.test.timeLimitMin * 60 -
@@ -384,7 +364,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const { id } = req.params;
     const userId = req.user!.userId;
-    const { answerIds } = answerSchema.parse(req.body);
+    const { questionId, answerIds } = answerSchema.parse(req.body);
 
     const attempt = await prisma.attempt.findUnique({
       where: { id },
@@ -431,6 +411,16 @@ router.post(
     }
 
     const currentAq = attempt.attemptQuestions[currentIndex]!;
+
+    // Verify questionId
+    if (currentAq.questionId !== questionId) {
+      res.status(409).json({ 
+        error: 'Question mismatch',
+        currentIndex,
+        currentQuestion: await getStudentQuestion(id, currentIndex)
+      });
+      return;
+    }
 
     // Validate answer IDs belong to this question
     const validAnswerIds = new Set(currentAq.question.answers.map((a) => a.id));
@@ -592,6 +582,21 @@ router.get(
       scoringMode: attempt.test.scoringMode,
       suspiciousEventsCount: attempt.suspiciousEventsCount,
     });
+  })
+);
+
+// DELETE /api/attempts/:id — ADMIN ONLY
+router.delete(
+  '/:id',
+  authorize('ADMIN'),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    
+    await prisma.attempt.delete({
+      where: { id }
+    });
+
+    res.status(204).send();
   })
 );
 

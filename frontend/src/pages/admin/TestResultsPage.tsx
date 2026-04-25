@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../../api/client'
 import { TestAttempt, Group, SuspiciousEvent } from '../../types'
 
@@ -155,8 +155,9 @@ export default function TestResultsPage() {
   const [page, setPage] = useState(1)
   const [suspiciousModal, setSuspiciousModal] = useState<{ attemptId: string; studentName: string } | null>(null)
   const [showStats, setShowStats] = useState(false)
+  const qc = useQueryClient()
 
-  const { data, isLoading } = useQuery<ResultsResponse>({
+  const { data, isLoading, refetch, isFetching } = useQuery<ResultsResponse>({
     queryKey: ['test-results', testId, groupFilter, page],
     queryFn: async () => {
       const params: Record<string, string | number> = { page, limit: 30 }
@@ -166,6 +167,20 @@ export default function TestResultsPage() {
     },
     enabled: !!testId,
   })
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => apiClient.delete(`/attempts/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['test-results'] })
+      setDeleteConfirmId(null)
+    },
+    onError: (err: any) => {
+      alert(err.response?.data?.error || 'Помилка при видаленні спроби')
+      setDeleteConfirmId(null)
+    }
+  })
+
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
   const { data: groups } = useQuery<Group[]>({
     queryKey: ['groups'],
@@ -232,6 +247,17 @@ export default function TestResultsPage() {
             <option key={g.id} value={g.id}>{g.name}</option>
           ))}
         </select>
+ 
+        <button
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 hover:text-white transition-all disabled:opacity-50"
+          title="Оновити дані"
+        >
+          <svg className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
 
         <button
           onClick={() => setShowStats((s) => !s)}
@@ -283,8 +309,9 @@ export default function TestResultsPage() {
                   <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Бал</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">%</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Час</th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Статус</th>
+                   <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Статус</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Підозр.</th>
+                  <th className="px-5 py-4 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">Дії</th>
                 </tr>
               </thead>
               <tbody>
@@ -339,9 +366,22 @@ export default function TestResultsPage() {
                             </svg>
                             {a.suspiciousEvents?.length}
                           </button>
-                        ) : (
+                         ) : (
                           <span className="text-slate-600 text-sm">0</span>
                         )}
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex justify-end">
+                          <button
+                            onClick={() => setDeleteConfirmId(a.id)}
+                            className="p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                            title="Видалити результат"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   )
@@ -382,12 +422,33 @@ export default function TestResultsPage() {
         </div>
       )}
 
-      {suspiciousModal && (
+       {suspiciousModal && (
         <SuspiciousModal
           attemptId={suspiciousModal.attemptId}
           studentName={suspiciousModal.studentName}
           onClose={() => setSuspiciousModal(null)}
         />
+      )}
+
+      {deleteConfirmId && (
+        <div className="modal-overlay">
+          <div className="modal-card max-w-sm text-center">
+            <h3 className="font-unbounded text-lg font-bold text-white mb-2">Видалити результат?</h3>
+            <p className="text-slate-400 text-sm mb-6">
+              Видалення результату дозволить студенту використати цю спробу ще раз. Ця дія незворотна.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteConfirmId(null)} className="flex-1 btn-ghost">Скасувати</button>
+              <button
+                onClick={() => deleteMutation.mutate(deleteConfirmId)}
+                disabled={deleteMutation.isPending}
+                className="flex-1 btn-danger disabled:opacity-50"
+              >
+                {deleteMutation.isPending ? 'Видалення...' : 'Видалити'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

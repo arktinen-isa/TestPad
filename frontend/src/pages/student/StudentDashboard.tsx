@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import apiClient from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
 import { StudentTest } from '../../types'
+import { useTestStore } from '../../store/testStore'
 
 function getPlural(n: number, one: string, few: string, many: string) {
   const lastDigit = n % 10;
@@ -57,10 +58,17 @@ function TestCard({ test }: { test: StudentTest }) {
   const attemptsUsed = test.attemptsUsed || 0
   const attemptsLeft = Math.max(0, test.maxAttempts - attemptsUsed)
   const activeAttemptId = test.lastAttempt && !test.lastAttempt.finishedAt ? test.lastAttempt.id : null
+  const { resumeAttempt } = useTestStore()
 
-  const handleAction = () => {
+  const handleAction = async () => {
     if (activeAttemptId) {
-      navigate(`/student/test/${test.id}/take`)
+      try {
+        await resumeAttempt(activeAttemptId)
+        navigate(`/student/test/${test.id}/take`)
+      } catch {
+        // Fallback to start if resume fails
+        navigate(`/student/test/${test.id}/start`)
+      }
     } else {
       navigate(`/student/test/${test.id}/start`)
     }

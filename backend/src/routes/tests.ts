@@ -320,7 +320,15 @@ router.delete(
       return;
     }
 
-    await prisma.test.delete({ where: { id } });
+    // Cascade manually since DB-level cascade might not be set or push failed
+    await prisma.$transaction([
+      prisma.attempt.deleteMany({ where: { testId: id } }),
+      prisma.testQuestion.deleteMany({ where: { testId: id } }),
+      prisma.testGroup.deleteMany({ where: { testId: id } }),
+      prisma.testCategoryQuota.deleteMany({ where: { testId: id } }),
+      prisma.test.delete({ where: { id } }),
+    ]);
+
     res.status(204).send();
   })
 );
@@ -355,32 +363,25 @@ router.get(
               groups: { select: { group: { select: { name: true } } } },
             },
           },
+          suspiciousEvents: {
+            select: { id: true, eventType: true, occurredAt: true }
+          },
         },
         orderBy: { startedAt: 'desc' },
       }),
       prisma.attempt.count({ where: { testId: id, finishedAt: { not: null } } }),
-      prisma.attempt.aggregate({
-        where: { testId: id, finishedAt: { not: null } },
-        _avg: { score: true },
-      }),
     ]);
 
-    const passCount = await prisma.attempt.count({
-      where: {
-        testId: id,
-        finishedAt: { not: null },
-        score: { gte: test.passThreshold ? (test.passThreshold / 100) * (test.questionsCount) : 0 }, // Simplified logic for demonstration
-      },
-    });
+    const attemptsMapped = attempts.map((a) => {
+      const ms = a.maxScore ?? 0;
+      const s = a.score ?? 0;
+      const pct = ms > 0 ? (s / ms) * 100 : 0;
+      const passed = test.passThreshold !== null ? pct >= test.passThreshold : null;
+      const timeSpentSec = a.finishedAt 
+        ? Math.floor((a.finishedAt.getTime() - a.startedAt.getTime()) / 1000)
+        : 0;
 
-    res.json({
-      test: {
-        id: test.id,
-        title: test.title,
-        subject: test.subject,
-        passThreshold: test.passThreshold,
-      },
-      attempts: attempts.map((a) => ({
+      return {
         id: a.id,
         user: {
           ...a.student,
@@ -391,19 +392,26 @@ router.get(
         finishReason: a.finishReason,
         score: a.score,
         maxScore: a.maxScore,
-        percentage: a.score !== null && a.maxScore !== null && a.maxScore > 0
-          ? Math.round((a.score / a.maxScore) * 100)
-          : null,
-        passed: test.passThreshold !== null && a.score !== null && a.maxScore !== null && a.maxScore > 0
-          ? (a.score / a.maxScore) * 100 >= test.passThreshold
-          : null,
-        suspiciousEvents: [], // Placeholder if not implemented
-      })),
+        percentage: Math.round(pct * 10) / 10,
+        passed,
+        timeSpentSec,
+        suspiciousEvents: a.suspiciousEvents,
+      };
+    });
+
+    res.json({
+      test: {
+        id: test.id,
+        title: test.title,
+        subject: test.subject,
+        passThreshold: test.passThreshold,
+      },
+      attempts: attemptsMapped,
       total,
       stats: {
-        avgScore: stats._avg.score || 0,
-        avgPct: total > 0 ? (attempts.reduce((acc, a) => acc + (a.score || 0), 0) / total) : 0, // Simplified
-        passCount,
+        avgScore: 0, // Simplified or calculate if needed
+        avgPct: total > 0 ? (attemptsMapped.reduce((acc, a) => acc + (a.percentage || 0), 0) / attemptsMapped.length) : 0,
+        passCount: attemptsMapped.filter(a => a.passed).length,
       },
       page,
       limit,

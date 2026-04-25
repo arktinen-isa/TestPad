@@ -106,7 +106,7 @@ model Question {
   imageUrl   String?
   createdAt  DateTime     @default(now())
 
-  category         QuestionCategory  @relation(fields: [categoryId], references: [id])
+  category         QuestionCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   answers          Answer[]
   testQuestions    TestQuestion[]
   attemptQuestions AttemptQuestion[]
@@ -191,7 +191,7 @@ model Attempt {
   currentQuestionIndex  Int           @default(0)
 
   student          User              @relation(fields: [studentId], references: [id])
-  test             Test              @relation(fields: [testId], references: [id])
+  test             Test              @relation(fields: [testId], references: [id], onDelete: Cascade)
   attemptQuestions AttemptQuestion[]
   suspiciousEvents SuspiciousEvent[]
 }
