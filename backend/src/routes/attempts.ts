@@ -253,28 +253,34 @@ router.post(
       sampledQuestionIds = sampleFromBank(testQuestionIds, test.questionsCount);
     }
 
+    if (sampledQuestionIds.length === 0) {
+      res.status(400).json({ error: 'У цьому тесті немає доступних питань. Зверніться до адміністратора.' });
+      return;
+    }
+
     // Create attempt with AttemptQuestion records
+    // Fetch questions in bulk
+    const questionsWithAnswers = await prisma.question.findMany({
+      where: { id: { in: sampledQuestionIds } },
+      include: { answers: { select: { id: true } } },
+    });
+
+    const questionMap = new Map(questionsWithAnswers.map(q => [q.id, q]));
+
     const attempt = await prisma.attempt.create({
       data: {
         studentId: userId,
         testId,
         attemptQuestions: {
-          create: await Promise.all(
-            sampledQuestionIds.map(async (questionId, index) => {
-              const question = await prisma.question.findUnique({
-                where: { id: questionId },
-                include: { answers: { select: { id: true } } },
-              });
-              const answerOrder = shuffleArray(
-                question?.answers.map((a) => a.id) ?? []
-              );
-              return {
-                questionId,
-                orderIndex: index,
-                answerOrder,
-              };
-            })
-          ),
+          create: sampledQuestionIds.map((questionId, index) => {
+            const q = questionMap.get(questionId);
+            const answerOrder = shuffleArray(q?.answers.map((a) => a.id) ?? []);
+            return {
+              questionId,
+              orderIndex: index,
+              answerOrder,
+            };
+          }),
         },
       },
     });

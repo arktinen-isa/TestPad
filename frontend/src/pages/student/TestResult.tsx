@@ -184,20 +184,12 @@ export default function TestResult() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-3">
-          {score !== null && maxScore !== null && (
-            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-center">
-              <p className="font-unbounded text-xl font-bold text-white">{score}</p>
-              <p className="text-slate-400 text-xs mt-1">Набраних балів</p>
-            </div>
-          )}
-          {timeSpent !== undefined && (
-            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-center">
-              <p className="font-unbounded text-base font-bold text-white">{formatDuration(timeSpent)}</p>
-              <p className="text-slate-400 text-xs mt-1">Витрачено часу</p>
-            </div>
-          )}
-        </div>
+        {timeSpent !== undefined && (
+          <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-center">
+            <p className="font-unbounded text-base font-bold text-white">{formatDuration(timeSpent)}</p>
+            <p className="text-slate-400 text-xs mt-1">Витрачено часу</p>
+          </div>
+        )}
       </div>
 
       {/* Action buttons */}

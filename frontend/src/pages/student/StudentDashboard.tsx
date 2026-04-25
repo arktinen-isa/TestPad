@@ -116,6 +116,28 @@ function TestCard({ test }: { test: StudentTest }) {
         </div>
       </div>
 
+      {/* Date window */}
+      {(test.openFrom || test.openUntil) && (
+        <div className="flex flex-col gap-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 border-dashed">
+          {test.openFrom && (
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-slate-500 uppercase tracking-wider font-semibold">Відкриття:</span>
+              <span className="text-slate-300 font-medium">
+                {new Date(test.openFrom).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+          )}
+          {test.openUntil && (
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-slate-500 uppercase tracking-wider font-semibold">Дедлайн:</span>
+              <span className="text-slate-300 font-medium">
+                {new Date(test.openUntil).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Last attempt result */}
       {test.lastAttempt && (
         <div className="px-3 py-2 rounded-xl bg-white/5 border border-white/10">
