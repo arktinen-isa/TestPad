@@ -53,55 +53,90 @@ async function finishAttempt(
   passThreshold: number | null; 
   scoringMode: string; 
 }> {
-  const attempt = await prisma.attempt.findUnique({
-    where: { id: attemptId },
-    include: {
-      test: true,
-      attemptQuestions: {
-        include: {
-          question: {
-            include: {
-              category: true,
-              answers: true,
-            },
+  // Use a retry block for MySQL-specific transient errors like 1615
+  let attempt: any = null;
+  let retries = 2;
+  
+  while (retries > 0) {
+    try {
+      attempt = await prisma.attempt.findUnique({
+        where: { id: attemptId },
+        select: {
+          id: true,
+          startedAt: true,
+          test: {
+            select: {
+              multiScoringMode: true,
+              passThreshold: true,
+              scoringMode: true,
+            }
           },
-          attemptAnswers: true,
-        },
-      },
-    },
-  });
+          attemptQuestions: {
+            select: {
+              question: {
+                select: {
+                  type: true,
+                  category: { select: { pointsWeight: true } },
+                  answers: { select: { id: true, isCorrect: true } },
+                }
+              },
+              attemptAnswers: {
+                select: { answerId: true, selected: true }
+              }
+            }
+          }
+        }
+      });
+      break;
+    } catch (err: any) {
+      if (err.message?.includes('1615') && retries > 1) {
+        retries--;
+        await new Promise(r => setTimeout(r, 200));
+        continue;
+      }
+      throw err;
+    }
+  }
 
   if (!attempt) throw new Error('Attempt not found');
 
   const { score, maxScore } = scoreAttempt(
-    attempt.attemptQuestions.map((aq) => ({
+    attempt.attemptQuestions.map((aq: any) => ({
       question: {
         type: aq.question.type as 'SINGLE' | 'MULTI',
-        answers: aq.question.answers.map((a) => ({
-          id: a.id,
-          isCorrect: a.isCorrect,
-        })),
+        answers: aq.question.answers,
         category: {
           pointsWeight: aq.question.category.pointsWeight,
         },
       },
-      attemptAnswers: aq.attemptAnswers.map((aa) => ({
-        answerId: aa.answerId,
-        selected: aa.selected,
-      })),
+      attemptAnswers: aq.attemptAnswers,
     })),
     attempt.test.multiScoringMode as 'ALL_OR_NOTHING' | 'PARTIAL'
   );
 
-  await prisma.attempt.update({
-    where: { id: attemptId },
-    data: {
-      finishedAt: new Date(),
-      finishReason: reason,
-      score,
-      maxScore,
-    },
-  });
+  // Retry the update as well
+  retries = 2;
+  while (retries > 0) {
+    try {
+      await prisma.attempt.update({
+        where: { id: attemptId },
+        data: {
+          finishedAt: new Date(),
+          finishReason: reason,
+          score,
+          maxScore,
+        },
+      });
+      break;
+    } catch (err: any) {
+      if (err.message?.includes('1615') && retries > 1) {
+        retries--;
+        await new Promise(r => setTimeout(r, 200));
+        continue;
+      }
+      throw err;
+    }
+  }
 
   const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100 * 100) / 100 : 0;
   const passed =
