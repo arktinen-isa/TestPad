@@ -426,9 +426,6 @@ export default function TestTake() {
           </div>
         </div>
       )}
-
-      {/* Unused variable suppression */}
-      {totalTime > 0 && <></>}
     </div>
   )
 }
