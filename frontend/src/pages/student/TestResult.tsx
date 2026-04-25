@@ -15,10 +15,9 @@ function formatDuration(seconds: number): string {
 }
 
 export default function TestResult() {
-  const { testId: _testId } = useParams<{ testId: string }>()
   const navigate = useNavigate()
   const location = useLocation()
-  const { reset, score: storeScore, maxScore: storeMax, percentage: storePercent, passThreshold: storeThreshold, scoringMode: storeMode } = useTestStore()
+  const { reset, score: storeScore, maxScore: storeMax, percentage: storePercent, passThreshold: storeThreshold } = useTestStore()
 
   // Try to get attemptId from query params or state
   const params = new URLSearchParams(location.search)
@@ -57,7 +56,6 @@ export default function TestResult() {
   const passed = result?.passed
   const timeSpent = result?.timeSpentSec
   const passThreshold = result?.passThreshold ?? storeThreshold
-  const scoringMode = result?.scoringMode ?? storeMode
 
   const isPassed = passed ?? (percentage >= (passThreshold ?? 60));
   const randomMessage = useMemo(() => {

@@ -68,6 +68,8 @@ model User {
   createdTests  Test[]
   attempts      Attempt[]
   refreshTokens RefreshToken[]
+
+  @@index([role])
 }
 
 model Group {
@@ -75,8 +77,10 @@ model Group {
   name String
   year Int?
 
-  users     UserGroup[]
+  users      UserGroup[]
   testGroups TestGroup[]
+
+  @@index([name])
 }
 
 model UserGroup {
@@ -87,6 +91,7 @@ model UserGroup {
   group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   @@id([userId, groupId])
+  @@index([groupId])
 }
 
 model QuestionCategory {
@@ -94,7 +99,7 @@ model QuestionCategory {
   name         String
   pointsWeight Float   @default(1.0)
 
-  questions      Question[]
+  questions          Question[]
   testCategoryQuotas TestCategoryQuota[]
 }
 
@@ -110,6 +115,8 @@ model Question {
   answers          Answer[]
   testQuestions    TestQuestion[]
   attemptQuestions AttemptQuestion[]
+
+  @@index([categoryId])
 }
 
 model Answer {
@@ -118,33 +125,38 @@ model Answer {
   text       String
   isCorrect  Boolean @default(false)
 
-  question        Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  attemptAnswers  AttemptAnswer[]
+  question       Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  attemptAnswers AttemptAnswer[]
+
+  @@index([questionId])
 }
 
 model Test {
-  id               String         @id @default(uuid())
+  id               String           @id @default(uuid())
   title            String
   subject          String?
   createdById      String
-  timeLimitMin     Int            @default(0)
-  maxAttempts      Int            @default(1)
+  timeLimitMin     Int              @default(0)
+  maxAttempts      Int              @default(1)
   openFrom         DateTime?
   openUntil        DateTime?
-  status           TestStatus     @default(DRAFT)
-  questionsCount   Int            @default(10)
-  samplingMode     SamplingMode   @default(FROM_BANK)
-  scoringMode      ScoringMode    @default(SUM)
+  status           TestStatus       @default(DRAFT)
+  questionsCount   Int              @default(10)
+  samplingMode     SamplingMode     @default(FROM_BANK)
+  scoringMode      ScoringMode      @default(SUM)
   passThreshold    Float?
-  showResultMode   ShowResultMode @default(AFTER_FINISH)
+  showResultMode   ShowResultMode   @default(AFTER_FINISH)
   multiScoringMode MultiScoringMode @default(ALL_OR_NOTHING)
-  createdAt        DateTime       @default(now())
+  createdAt        DateTime         @default(now())
 
-  createdBy       User              @relation(fields: [createdById], references: [id])
-  groups          TestGroup[]
-  questions       TestQuestion[]
-  categoryQuotas  TestCategoryQuota[]
-  attempts        Attempt[]
+  createdBy      User                @relation(fields: [createdById], references: [id])
+  groups         TestGroup[]
+  questions      TestQuestion[]
+  categoryQuotas TestCategoryQuota[]
+  attempts       Attempt[]
+
+  @@index([status])
+  @@index([createdById])
 }
 
 model TestGroup {
@@ -155,6 +167,7 @@ model TestGroup {
   group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   @@id([testId, groupId])
+  @@index([groupId])
 }
 
 model TestQuestion {
@@ -165,6 +178,7 @@ model TestQuestion {
   question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@id([testId, questionId])
+  @@index([questionId])
 }
 
 model TestCategoryQuota {
@@ -194,19 +208,25 @@ model Attempt {
   test             Test              @relation(fields: [testId], references: [id], onDelete: Cascade)
   attemptQuestions AttemptQuestion[]
   suspiciousEvents SuspiciousEvent[]
+
+  @@index([studentId, testId])
+  @@index([testId])
 }
 
 model AttemptQuestion {
-  id           String    @id @default(uuid())
-  attemptId    String
-  questionId   String
-  orderIndex   Int
-  answerOrder  Json
-  answeredAt   DateTime?
+  id          String    @id @default(uuid())
+  attemptId   String
+  questionId  String
+  orderIndex  Int
+  answerOrder Json
+  answeredAt  DateTime?
 
   attempt        Attempt         @relation(fields: [attemptId], references: [id], onDelete: Cascade)
   question       Question        @relation(fields: [questionId], references: [id])
   attemptAnswers AttemptAnswer[]
+
+  @@index([attemptId, orderIndex])
+  @@index([questionId])
 }
 
 model AttemptAnswer {
@@ -227,6 +247,8 @@ model SuspiciousEvent {
   occurredAt DateTime            @default(now())
 
   attempt Attempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@index([attemptId])
 }
 
 model RefreshToken {
@@ -237,4 +259,7 @@ model RefreshToken {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
+

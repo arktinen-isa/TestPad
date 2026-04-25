@@ -130,29 +130,32 @@ async function finishAttempt(
  * Format a question for the student (shuffled answers, no isCorrect info)
  */
 async function getStudentQuestion(attemptId: string, index: number) {
-  const attempt = await prisma.attempt.findUnique({
-    where: { id: attemptId },
-    include: {
-      attemptQuestions: {
-        orderBy: { orderIndex: 'asc' },
-        include: {
-          question: {
-            include: {
-              answers: { select: { id: true, text: true } },
-            },
+  const [attempt, aq] = await Promise.all([
+    prisma.attempt.findUnique({
+      where: { id: attemptId },
+      include: {
+        attemptQuestions: { select: { id: true } } // needed for total count
+      }
+    }),
+    prisma.attemptQuestion.findFirst({
+      where: { attemptId, orderIndex: index },
+      include: {
+        question: {
+          include: {
+            answers: { select: { id: true, text: true } },
           },
         },
       },
-    },
-  });
+    })
+  ]);
 
-  if (!attempt || index >= attempt.attemptQuestions.length) return null;
+  if (!attempt || !aq) return null;
 
-  const aq = attempt.attemptQuestions[index]!;
-  const answerOrder = aq.answerOrder as string[];
+  const total = attempt.attemptQuestions.length;
+  const { question, answerOrder } = aq;
   const answersMap = new Map(aq.question.answers.map((a) => [a.id, a.text]));
 
-  const orderedAnswers = answerOrder
+  const orderedAnswers = (answerOrder as string[])
     .map((answerId) => {
       const text = answersMap.get(answerId);
       return text ? { id: answerId, text } : null;
@@ -387,16 +390,8 @@ router.post(
     const attempt = await prisma.attempt.findUnique({
       where: { id },
       include: {
-        test: true,
-        attemptQuestions: {
-          orderBy: { orderIndex: 'asc' },
-          include: {
-            question: {
-              include: { answers: { select: { id: true } } },
-            },
-            attemptAnswers: true,
-          },
-        },
+        test: { select: { id: true, timeLimitMin: true } },
+        _count: { select: { attemptQuestions: true } }
       },
     });
 
@@ -415,20 +410,25 @@ router.post(
       return;
     }
 
-    // Check timeout
-    if (isTimedOut(attempt.startedAt, attempt.test.timeLimitMin)) {
-      const { score, maxScore } = await finishAttempt(id, 'TIMEOUT');
-      res.json({ done: true, reason: 'TIMEOUT', score, maxScore });
-      return;
-    }
+    // Fetch ONLY the current AttemptQuestion based on currentQuestionIndex
+    const currentAq = await prisma.attemptQuestion.findFirst({
+      where: {
+        attemptId: id,
+        orderIndex: attempt.currentQuestionIndex
+      },
+      include: {
+        question: {
+          include: { answers: { select: { id: true } } },
+        },
+      }
+    });
 
-    const currentIndex = attempt.currentQuestionIndex;
-    if (currentIndex >= attempt.attemptQuestions.length) {
+    if (!currentAq) {
       res.json({ done: true });
       return;
     }
 
-    const currentAq = attempt.attemptQuestions[currentIndex]!;
+    const currentIndex = attempt.currentQuestionIndex;
 
     // Verify questionId
     if (currentAq.questionId !== questionId) {
@@ -477,9 +477,16 @@ router.post(
       }),
     ]);
 
+    // Check timeout AFTER saving (so the last answer is counted)
+    if (isTimedOut(attempt.startedAt, attempt.test.timeLimitMin)) {
+      const { score, maxScore } = await finishAttempt(id, 'TIMEOUT');
+      res.json({ done: true, reason: 'TIMEOUT', score, maxScore });
+      return;
+    }
+
     // Check if this was the last question
     const nextIndex = currentIndex + 1;
-    const isComplete = nextIndex >= attempt.attemptQuestions.length;
+    const isComplete = nextIndex >= attempt._count.attemptQuestions;
 
     if (isComplete) {
       const result = await finishAttempt(id, 'NORMAL');
