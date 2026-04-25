@@ -79,6 +79,7 @@ export interface AttemptResult {
   testTitle?: string
   passThreshold?: number | null
   scoringMode?: string
+  finishReason?: string | null
 }
 
 export interface CurrentQuestion {
@@ -98,6 +99,7 @@ export interface TestAttempt {
   attemptNumber: number
   startedAt: string
   finishedAt?: string
+  finishReason?: string | null
   score?: number
   maxScore?: number
   percentage?: number
