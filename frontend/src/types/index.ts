@@ -131,6 +131,7 @@ export interface StudentTest {
   questionsCount: number
   scoringMode: string
   passThreshold?: number
+  showResultMode: string
   lastAttempt?: AttemptResult
 }
 
