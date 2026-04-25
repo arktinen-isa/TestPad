@@ -30,40 +30,28 @@ export default function TestTake() {
   const [showExitModal, setShowExitModal] = useState(false)
   const [animKey, setAnimKey] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
-
   const attemptIdRef = useRef(attemptId)
   attemptIdRef.current = attemptId
 
-  // If no attemptId, redirect to start
-  useEffect(() => {
-    if (!attemptId && !isFinished) {
-      navigate(`/student/test/${testId}/start`, { replace: true })
+  const handleFinish = useCallback(async (auto = false) => {
+    if (!attemptIdRef.current || isSubmitting) return
+    setIsSubmitting(true)
+    try {
+      await finishAttempt(attemptIdRef.current)
+    } catch {
+      // Navigate anyway
+      if (testId) {
+        navigate(`/student/test/${testId}/result`, { replace: true })
+      }
+    } finally {
+      setIsSubmitting(false)
+      if (auto) reset()
+      // Exit fullscreen on finish
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {})
+      }
     }
-  }, [attemptId, isFinished, testId, navigate])
-
-  // Timer countdown
-  useEffect(() => {
-    if (isFinished || !attemptId) return
-    const interval = setInterval(() => {
-      tick()
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [tick, isFinished, attemptId])
-
-  // Auto-finish when time runs out
-  useEffect(() => {
-    if (timeLeft === 0 && attemptId && !isFinished) {
-      handleFinish(true)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeLeft])
-
-  // Navigate when finished
-  useEffect(() => {
-    if (isFinished && testId) {
-      navigate(`/student/test/${testId}/result`, { replace: true })
-    }
-  }, [isFinished, testId, navigate])
+  }, [testId, navigate, finishAttempt, isSubmitting, reset])
 
   // Fullscreen management
   const handleFullscreenChange = useCallback(() => {
@@ -98,25 +86,36 @@ export default function TestTake() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [])
 
-  const handleFinish = async (auto = false) => {
-    if (!attemptIdRef.current || isSubmitting) return
-    setIsSubmitting(true)
-    try {
-      await finishAttempt(attemptIdRef.current)
-    } catch {
-      // Navigate anyway
-      if (testId) {
-        navigate(`/student/test/${testId}/result`, { replace: true })
-      }
-    } finally {
-      setIsSubmitting(false)
-      if (auto) reset()
-      // Exit fullscreen on finish
-      if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {})
-      }
+  // If no attemptId, redirect to start
+  useEffect(() => {
+    if (!attemptId && !isFinished) {
+      navigate(`/student/test/${testId}/start`, { replace: true })
     }
-  }
+  }, [attemptId, isFinished, testId, navigate])
+
+  // Timer countdown
+  useEffect(() => {
+    if (isFinished || !attemptId) return
+    const interval = setInterval(() => {
+      tick()
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [tick, isFinished, attemptId])
+
+  // Auto-finish when time runs out
+  useEffect(() => {
+    if (timeLeft === 0 && attemptId && !isFinished) {
+      handleFinish(true)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeLeft])
+
+  // Navigate when finished
+  useEffect(() => {
+    if (isFinished && testId) {
+      navigate(`/student/test/${testId}/result`, { replace: true })
+    }
+  }, [isFinished, testId, navigate])
 
   const handleReturnToFullscreen = async () => {
     setShowExitModal(false)
