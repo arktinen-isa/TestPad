@@ -31,13 +31,12 @@ COPY --from=backend-builder /app/package*.json ./
 RUN npm ci --omit=dev
 
 COPY --from=backend-builder /app/dist            ./dist
-COPY --from=backend-builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=backend-builder /app/prisma          ./prisma
-
-# Frontend static files served by Express at /public
 COPY --from=frontend-builder /frontend/dist      ./public
-
 COPY --from=backend-builder /app/start.sh        ./start.sh
+
+# Generate Prisma client in the production stage
+RUN npx prisma generate
 RUN chmod +x start.sh
 
 EXPOSE 3000
