@@ -95,7 +95,22 @@ async function finishAttempt(
     },
   });
 
-  return { score, maxScore, scoringMode: attempt.test.scoringMode };
+  const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100 * 100) / 100 : 0;
+  const passed =
+    attempt.test.passThreshold !== null
+      ? (attempt.test.scoringMode === 'PERCENTAGE'
+        ? percentage >= attempt.test.passThreshold
+        : score >= attempt.test.passThreshold)
+      : null;
+
+  return { 
+    score, 
+    maxScore, 
+    percentage, 
+    passed, 
+    passThreshold: attempt.test.passThreshold, 
+    scoringMode: attempt.test.scoringMode 
+  };
 }
 
 // POST /api/attempts — STUDENT only
@@ -405,8 +420,8 @@ router.post(
     const isComplete = nextIndex >= attempt.attemptQuestions.length;
 
     if (isComplete) {
-      const { score, maxScore, scoringMode } = await finishAttempt(id, 'NORMAL');
-      res.json({ done: true, score, maxScore, scoringMode });
+      const result = await finishAttempt(id, 'NORMAL');
+      res.json({ done: true, ...result });
       return;
     }
 
@@ -443,8 +458,8 @@ router.post(
       return;
     }
 
-    const { score, maxScore, scoringMode } = await finishAttempt(id, 'EXIT');
-    res.json({ done: true, score, maxScore, scoringMode });
+    const result = await finishAttempt(id, 'EXIT');
+    res.json({ done: true, ...result });
   })
 );
 

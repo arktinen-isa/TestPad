@@ -17,7 +17,7 @@ export default function TestResult() {
   const { testId: _testId } = useParams<{ testId: string }>()
   const navigate = useNavigate()
   const location = useLocation()
-  const { reset, score: storeScore, maxScore: storeMax, percentage: storePercent } = useTestStore()
+  const { reset, score: storeScore, maxScore: storeMax, percentage: storePercent, passThreshold: storeThreshold, scoringMode: storeMode } = useTestStore()
 
   // Try to get attemptId from query params or state
   const params = new URLSearchParams(location.search)
@@ -50,6 +50,8 @@ export default function TestResult() {
   const percentage = result?.percentage ?? storePercent ?? 0
   const passed = result?.passed
   const timeSpent = result?.timeSpentSec
+  const passThreshold = result?.passThreshold ?? storeThreshold
+  const scoringMode = result?.scoringMode ?? storeMode
 
   const getScoreColor = () => {
     if (percentage >= 90) return 'text-green-cta'

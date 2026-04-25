@@ -12,6 +12,9 @@ interface TestState {
   score: number | null
   maxScore: number | null
   percentage: number | null
+  passed: boolean | null
+  passThreshold: number | null
+  scoringMode: string | null
   isLoading: boolean
   error: string | null
 }
@@ -36,6 +39,9 @@ const initialState: TestState = {
   score: null,
   maxScore: null,
   percentage: null,
+  passed: null,
+  passThreshold: null,
+  scoringMode: null,
   isLoading: false,
   error: null,
 }
@@ -104,13 +110,16 @@ export const useTestStore = create<TestStore>((set, get) => ({
     set({ isLoading: true, error: null })
     try {
       const response = await apiClient.post(`/attempts/${attemptId}/finish`)
-      const { score, maxScore, percentage } = response.data
+      const { score, maxScore, percentage, passed, passThreshold, scoringMode } = response.data
 
       set({
         isFinished: true,
         score,
         maxScore,
         percentage,
+        passed,
+        passThreshold,
+        scoringMode,
         currentQuestion: null,
         isLoading: false,
       })
