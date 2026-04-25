@@ -566,11 +566,15 @@ router.get(
     // Respect showResultMode
     const showResultMode = attempt.test.showResultMode;
 
-    if (user.role === 'STUDENT') {
-      if (showResultMode === 'ADMIN_ONLY') {
-        res.status(403).json({ error: 'Results are not available to students' });
-        return;
-      }
+    if (user.role === 'STUDENT' && showResultMode === 'ADMIN_ONLY') {
+      res.json({
+        attemptId: attempt.id,
+        testId: attempt.testId,
+        testTitle: attempt.test.title,
+        finishedAt: attempt.finishedAt,
+        showResultMode: 'ADMIN_ONLY',
+      });
+      return;
     }
 
     const s = attempt.score ?? 0;

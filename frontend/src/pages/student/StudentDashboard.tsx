@@ -64,6 +64,14 @@ function TestCard({ test }: { test: StudentTest }) {
     if (activeAttemptId) {
       try {
         await resumeAttempt(activeAttemptId)
+        
+        // Request fullscreen on resume
+        try {
+          await document.documentElement.requestFullscreen()
+        } catch {
+          // ignore
+        }
+        
         navigate(`/student/test/${test.id}/take`)
       } catch {
         // Fallback to start if resume fails

@@ -80,6 +80,7 @@ export interface AttemptResult {
   passThreshold?: number | null
   scoringMode?: string
   finishReason?: string | null
+  showResultMode?: string
 }
 
 export interface CurrentQuestion {

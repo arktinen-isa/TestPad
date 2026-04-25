@@ -554,29 +554,29 @@ router.get(
   asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    const test = await prisma.test.findUnique({
-      where: { id },
-      include: {
-        questions: {
-          include: {
-            question: {
-              include: {
-                answers: { select: { id: true, isCorrect: true } },
-              },
-            },
-          },
-        },
+    // Fetch unique question IDs from all attempts of this test to ensure we cover all sampled questions
+    const usedAqs = await prisma.attemptQuestion.findMany({
+      where: {
+        attempt: { testId: id, finishedAt: { not: null } }
       },
+      select: { questionId: true },
+      distinct: ['questionId']
     });
 
-    if (!test) {
-      res.status(404).json({ error: 'Test not found' });
-      return;
-    }
+    const questionIds = usedAqs.map(aq => aq.questionId);
 
-    // Fetch all AttemptQuestions for this test's questions, with their answers
-    const questionIds = test.questions.map((tq) => tq.questionId);
+    // Fetch question details (text, type, answers) for these used questions
+    const questionsData = await prisma.question.findMany({
+      where: { id: { in: questionIds } },
+      include: {
+        answers: { select: { id: true, isCorrect: true } }
+      }
+    });
 
+    // Create a map for quick access
+    const questionDataMap = new Map(questionsData.map(q => [q.id, q]));
+
+    // Fetch all AttemptQuestions with their student answers for calculation
     const attemptQuestions = await prisma.attemptQuestion.findMany({
       where: {
         questionId: { in: questionIds },
@@ -587,7 +587,7 @@ router.get(
       },
     });
 
-    // Group AttemptQuestions by questionId for efficient processing
+    // Group AttemptQuestions by questionId
     const aqByQuestion = new Map<string, typeof attemptQuestions>();
     for (const aq of attemptQuestions) {
       if (!aqByQuestion.has(aq.questionId)) {
@@ -596,9 +596,11 @@ router.get(
       aqByQuestion.get(aq.questionId)!.push(aq);
     }
 
-    const stats = test.questions.map((tq) => {
-      const q = tq.question;
-      const aqs = aqByQuestion.get(q.id) ?? [];
+    const stats = questionIds.map((qId) => {
+      const q = questionDataMap.get(qId);
+      if (!q) return null;
+      
+      const aqs = aqByQuestion.get(qId) ?? [];
 
       // Only count answered questions
       const answered = aqs.filter((aq) => aq.answeredAt !== null);
@@ -637,7 +639,7 @@ router.get(
         correctCount,
         correctPct: Math.round(correctPct * 100) / 100,
       };
-    });
+    }).filter((s): s is NonNullable<typeof s> => s !== null);
 
     // Sort by correctPct ascending (hardest first)
     stats.sort((a, b) => a.correctPct - b.correctPct);

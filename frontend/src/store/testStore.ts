@@ -106,7 +106,7 @@ export const useTestStore = create<TestStore>((set, get) => ({
           attemptId,
           testId,
           currentQuestion,
-          timeLeft: timeLeft || 0,
+          timeLeft: timeLeft ?? null,
           isFinished: false,
           isLoading: false
         })
@@ -141,7 +141,7 @@ export const useTestStore = create<TestStore>((set, get) => ({
       } else {
         set({
           currentQuestion: nextQuestion,
-          timeLeft: timeLeft ?? get().timeLeft,
+          timeLeft: timeLeft !== undefined ? timeLeft : get().timeLeft,
           isLoading: false,
         })
       }
@@ -189,7 +189,7 @@ export const useTestStore = create<TestStore>((set, get) => ({
 
   tick: () => {
     const { timeLeft } = get()
-    if (timeLeft > 0) {
+    if (timeLeft !== null && timeLeft > 0) {
       set({ timeLeft: timeLeft - 1 })
     }
   },

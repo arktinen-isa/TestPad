@@ -104,7 +104,7 @@ export default function TestTake() {
 
   // Auto-finish when time runs out
   useEffect(() => {
-    if (timeLeft === 0 && attemptId && !isFinished) {
+    if (timeLeft === 0 && attemptId && !isFinished && timeLeft !== null) {
       handleFinish(true)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -203,19 +203,30 @@ export default function TestTake() {
           </div>
 
           {/* Timer */}
-          <div className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-2xl border ${
-            isTimeLow
-              ? 'bg-red-500/10 border-red-500/30 text-red-400 animate-pulse'
-              : 'bg-white/5 border-white/10 text-white'
-          }`}>
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="font-unbounded text-lg font-bold tabular-nums">
-              {formatTime(timeLeft)}
-            </span>
-          </div>
+          {timeLeft !== null && (
+            <div className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-2xl border ${
+              isTimeLow
+                ? 'bg-red-500/10 border-red-500/30 text-red-400 animate-pulse'
+                : 'bg-white/5 border-white/10 text-white'
+            }`}>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="font-unbounded text-lg font-bold tabular-nums">
+                {formatTime(timeLeft)}
+              </span>
+            </div>
+          )}
+          {timeLeft === null && (
+            <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-2xl border bg-white/5 border-white/10 text-slate-400">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-xs font-medium uppercase tracking-wider">Без ліміту</span>
+            </div>
+          )}
 
           {/* Progress */}
           <div className="flex-1 text-right min-w-0">
