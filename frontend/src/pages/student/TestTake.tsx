@@ -30,10 +30,21 @@ export default function TestTake() {
   const [showExitModal, setShowExitModal] = useState(false)
   const [animKey, setAnimKey] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isTopBarVisible, setIsTopBarVisible] = useState(true)
   const attemptIdRef = useRef(attemptId)
   attemptIdRef.current = attemptId
   const isTimeLow = timeLeft !== null && timeLeft > 0 && timeLeft < 120;
   const mountTimeRef = useRef(Date.now());
+
+  // Mouse tracking for auto-hide top bar
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (e.clientY < 60) setIsTopBarVisible(true)
+      else if (e.clientY > 100 && isTopBarVisible) setIsTopBarVisible(false)
+    }
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [isTopBarVisible])
 
   const handleFinish = useCallback(async (auto = false) => {
     if (!attemptIdRef.current || isSubmitting) return
@@ -118,6 +129,9 @@ export default function TestTake() {
   // Navigate when finished
   useEffect(() => {
     if (isFinished && testId) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {})
+      }
       navigate(`/student/test/${testId}/result`, { replace: true })
     }
   }, [isFinished, testId, navigate])
@@ -190,8 +204,10 @@ export default function TestTake() {
 
   return (
     <div className="fixed inset-0 bg-dark-bg flex flex-col overflow-hidden">
-      {/* Top bar */}
-      <div className="flex-shrink-0 border-b border-white/10 bg-dark-bg/90 backdrop-blur-md px-6 py-4">
+      {/* Top bar (Auto-hiding) */}
+      <div className={`fixed top-0 left-0 right-0 border-b border-white/10 bg-dark-bg/90 backdrop-blur-md px-6 py-4 transition-transform duration-500 z-50 ${
+        isTopBarVisible ? 'translate-y-0' : '-translate-y-full'
+      }`}>
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
           {/* Test title */}
           <div className="flex-1 min-w-0">
@@ -257,7 +273,7 @@ export default function TestTake() {
       </div>
 
       {/* Question area */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto mt-16">
    { !currentQuestion && !isLoading && !isFinished && (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
         <div className="glass-card p-8 max-w-md">
@@ -380,8 +396,8 @@ export default function TestTake() {
             ) : (
               <>
                 {currentQuestion && currentQuestion.questionNumber < currentQuestion.total
-                  ? 'Далі'
-                  : 'Завершити тест'}
+                  ? 'Наступне питання'
+                  : 'Завершити тестування'}
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
@@ -402,10 +418,10 @@ export default function TestTake() {
               </svg>
             </div>
             <h3 className="font-unbounded text-xl font-bold text-white mb-3">
-              Завершити тест?
+              Завершити тестування?
             </h3>
             <p className="text-slate-400 text-sm mb-6 leading-relaxed">
-              Ви намагаєтесь вийти з тесту. Тест буде завершено та оцінено.
+              Ви намагаєтесь вийти. Тест буде завершено та оцінено.
               Решта питань вважатиметься без відповіді. Підтвердити?
             </p>
             <div className="flex flex-col sm:flex-row gap-3">

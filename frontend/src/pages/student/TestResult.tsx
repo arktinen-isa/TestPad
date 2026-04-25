@@ -73,56 +73,44 @@ export default function TestResult() {
   const getCircleColor = () => {
     if (percentage >= 90) return '#00ff87'
     if (percentage >= 70) return '#4ade80'
-    if (percentage >= 50) return '#facc15'
-    return '#f87171'
-  }
+  const testTitle = result?.testTitle
 
-  const radius = 60
-  const circumference = 2 * Math.PI * radius
-  const strokeDashoffset = circumference - (percentage / 100) * circumference
+  const scoringMode = result?.scoringMode || storeScoringMode
+  
+  const displayScore = useMemo(() => {
+    if (scoringMode === 'POINTS') {
+      return `${score} / ${maxScore}`
+    }
+    return `${percentage}%`
+  }, [scoringMode, score, maxScore, percentage])
+
+  const scoreLabel = useMemo(() => {
+    return scoringMode === 'POINTS' ? 'Набрано балів' : 'Результат'
+  }, [scoringMode])
+
+  useEffect(() => {
+    if (!isLoading && !result && !attemptId) {
+      navigate('/student/dashboard')
+    }
+  }, [isLoading, result, attemptId, navigate])
+
+  const motivationalMessage = useMemo(() => {
+    const list = (passed ?? (percentage >= (passThreshold ?? 60))) ? PASS_MESSAGES : FAIL_MESSAGES
+    return list[Math.floor(Math.random() * list.length)]
+  }, [passed, percentage, passThreshold])
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <div className="w-10 h-10 border-2 border-purple-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-400">Завантаження результатів...</p>
+          <div className="w-12 h-12 border-4 border-purple-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-slate-400 font-medium">Обробка результатів...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="max-w-lg mx-auto animate-fade-in py-8 px-4">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="font-unbounded text-2xl font-bold text-white mb-2">
-          Результати тесту
-        </h1>
-        {result?.testTitle && (
-          <p className="text-slate-400">{result.testTitle}</p>
-        )}
-      </div>
-
-      {/* Main result card or Hidden result card */}
-      <div className="glass-card p-8 mb-6">
-        {result?.showResultMode === 'ADMIN_ONLY' ? (
-          <div className="text-center py-6">
-            <div className="w-16 h-16 rounded-2xl bg-purple-accent/10 border border-purple-accent/20 flex items-center justify-center mx-auto mb-6">
-              <svg className="w-8 h-8 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h2 className="font-unbounded text-lg font-bold text-white mb-4">Тест завершено успішно!</h2>
-            <div className="space-y-4 max-w-sm mx-auto">
-              <p className="text-slate-300 text-sm leading-relaxed">
-                Твій шлях пізнання щойно зробив величезний крок вперед! Кожна відповідь — це твій внесок у майбутній успіх.
-              </p>
-              <div className="p-4 rounded-xl bg-purple-900/20 border border-purple-500/20 italic">
-                <p className="text-purple-300 text-sm font-medium">
-                  « Результати зараз на шляху до викладача. Він оцінить твої старання та зовсім скоро повідомить підсумковий результат. Не зупиняйся на досягнутому! »
-                </p>
-              </div>
             </div>
           </div>
         ) : (

@@ -631,7 +631,7 @@ router.get(
       passed,
       passThreshold: attempt.test.passThreshold,
       scoringMode: attempt.test.scoringMode,
-      suspiciousEventsCount: attempt.suspiciousEventsCount,
+      showResultMode: 'IMMEDIATE',
     });
   })
 );
