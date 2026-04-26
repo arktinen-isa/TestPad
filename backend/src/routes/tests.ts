@@ -347,15 +347,22 @@ router.get(
     const limit = Math.min(100, Math.max(1, parseInt(req.query['limit'] as string) || 20));
     const skip = (page - 1) * limit;
 
+    const groupId = req.query['groupId'] as string | undefined;
+
     const test = await prisma.test.findUnique({ where: { id } });
     if (!test) {
       res.status(404).json({ error: 'Test not found' });
       return;
     }
 
+    const where: any = { testId: id, finishedAt: { not: null } };
+    if (groupId) {
+      where.student = { groups: { some: { groupId } } };
+    }
+
     const [attempts, total] = await Promise.all([
       prisma.attempt.findMany({
-        where: { testId: id, finishedAt: { not: null } },
+        where,
         skip,
         take: limit,
         select: {
@@ -378,7 +385,7 @@ router.get(
         },
         orderBy: { startedAt: 'desc' },
       }),
-      prisma.attempt.count({ where: { testId: id, finishedAt: { not: null } } }),
+      prisma.attempt.count({ where }),
     ]);
 
     const attemptsMapped = attempts.map((a) => {
