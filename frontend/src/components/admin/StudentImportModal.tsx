@@ -101,9 +101,9 @@ export default function StudentImportModal({ groupName, onClose, onImport }: Stu
 
   return (
     <div className="modal-overlay">
-      <div className="modal-card max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden bg-slate-900 border border-white/10 shadow-2xl">
+      <div className="bg-slate-900 border border-white/10 shadow-2xl rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-fade-in">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-slate-900/50">
+        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-slate-900/50 flex-shrink-0">
           <div>
             <h2 className="font-unbounded text-lg font-bold text-white">Імпорт студентів</h2>
             <p className="text-slate-400 text-xs mt-0.5">Група: <span className="text-purple-400 font-semibold">{groupName}</span></p>
@@ -234,7 +234,7 @@ export default function StudentImportModal({ groupName, onClose, onImport }: Stu
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-5 border-t border-white/10 bg-slate-900/80 backdrop-blur-sm flex gap-3">
+        <div className="px-6 py-5 border-t border-white/10 bg-slate-900/80 backdrop-blur-sm flex gap-3 flex-shrink-0">
           <button onClick={onClose} className="flex-1 btn-ghost h-11 text-sm font-semibold">
             Скасувати
           </button>
