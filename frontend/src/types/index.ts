@@ -16,7 +16,7 @@ export interface Group {
   id: string
   name: string
   year?: number
-  studentsCount?: number
+  studentCount?: number
   students?: User[]
 }
 

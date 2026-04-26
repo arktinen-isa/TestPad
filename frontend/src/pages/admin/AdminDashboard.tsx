@@ -142,7 +142,16 @@ export default function AdminDashboard() {
                 <tbody>
                   {stats.activeTests.map((test) => (
                     <tr key={test.id} className="table-row">
-                      <td className="px-5 py-4 text-white font-medium">{test.title}</td>
+                      <td className="px-5 py-4">
+                        <div className="text-white font-medium mb-1">{test.title}</div>
+                        <div className="flex flex-wrap gap-1">
+                          {(test as any).groups?.map((tg: any, i: number) => (
+                            <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-slate-400">
+                              {tg.group.name}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
                       <td className="px-5 py-4 text-slate-400 text-sm">{test.subject || '—'}</td>
                       <td className="px-5 py-4">
                         <span className={getStatusClass(test.status)}>

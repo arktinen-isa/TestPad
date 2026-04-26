@@ -34,6 +34,7 @@ router.get(
           openUntil: true,
           questionsCount: true,
           createdAt: true,
+          groups: { select: { group: { select: { name: true } } } },
           _count: { select: { attempts: true } },
         },
       }),
