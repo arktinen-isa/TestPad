@@ -162,60 +162,53 @@ export default function TestTake() {
   }
 
   return (
-    <div className="flex flex-col min-h-[60vh]">
-      <div className="flex-shrink-0 border-b border-white/10 bg-dark-bg/60 backdrop-blur-md px-6 py-3 z-30 sticky top-0">
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <p className="text-slate-400 text-xs mb-0.5">Тест</p>
-            <p className="text-white font-semibold text-sm truncate">
-              {currentQuestion?.total ? `${currentQuestion.questionNumber} / ${currentQuestion.total}` : ''}
-            </p>
+    <div className="fixed inset-0 bg-[#0A051A] flex flex-col z-[1000] overflow-hidden select-none">
+      <div className="flex-shrink-0 bg-[#160D33]/80 backdrop-blur-xl border-b border-white/5 px-6 py-4 shadow-2xl relative z-[1001]">
+        <div className="max-w-5xl mx-auto flex items-center justify-between gap-6">
+          <div className="flex-1">
+            <p className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">Виконується тест</p>
+            <h1 className="text-white font-unbounded text-sm font-bold truncate tracking-tight">
+              {currentQuestion?.total ? `Питання ${currentQuestion.questionNumber} з ${currentQuestion.total}` : 'Завантаження...'}
+            </h1>
           </div>
 
-          {timeLeft !== null && (
-            <div className={`flex-shrink-0 flex items-center gap-3 px-5 py-2.5 rounded-2xl border transition-all duration-300 ${
-              isTimeLow
-                ? 'bg-red-500/20 border-red-500/50 text-red-400 animate-pulse'
-                : 'bg-white/5 border-white/10 text-white'
-            }`}>
-              <div className="flex flex-col items-end">
-                <span className="text-[10px] uppercase tracking-widest font-bold opacity-50 mb-0.5">Час</span>
-                <span className="font-unbounded text-lg font-bold tabular-nums leading-none">
-                  {formatTime(timeLeft)}
-                </span>
+          <div className="flex-shrink-0">
+            {timeLeft !== null ? (
+              <div className={`px-4 py-2 rounded-2xl border transition-all duration-500 flex items-center gap-3 ${
+                isTimeLow 
+                  ? 'bg-red-500/20 border-red-500/50 text-red-100 shadow-[0_0_20px_rgba(239,68,68,0.2)]' 
+                  : 'bg-white/5 border-white/10 text-white shadow-xl'
+              }`}>
+                <div className="flex flex-col items-end">
+                  <span className="text-[9px] uppercase tracking-widest font-black opacity-50">Час залишився</span>
+                  <span className="font-unbounded text-xl font-black tabular-nums tracking-tighter leading-none">
+                    {formatTime(timeLeft)}
+                  </span>
+                </div>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isTimeLow ? 'bg-red-500/20' : 'bg-purple-500/20'}`}>
+                  <svg className={`w-5 h-5 ${isTimeLow ? 'animate-pulse text-red-400' : 'text-purple-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
               </div>
-              <svg className={`w-6 h-6 ${isTimeLow ? 'text-red-400' : 'text-purple-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-          )}
-          {timeLeft === null && (
-            <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-2xl border bg-white/5 border-white/10 text-slate-400">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="text-xs font-medium uppercase tracking-wider">Без ліміту</span>
-            </div>
-          )}
-
-          <div className="flex-1 text-right min-w-0">
-            <p className="text-slate-400 text-xs mb-0.5">Прогрес</p>
-            <p className="text-white font-semibold text-sm">
-              {currentQuestion ? `Питання ${currentQuestion.questionNumber} з ${currentQuestion.total}` : ''}
-            </p>
+            ) : (
+              <div className="px-4 py-2 rounded-2xl border bg-white/5 border-white/10 text-white/40 flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-xs font-bold uppercase tracking-widest">Без ліміту</span>
+              </div>
+            )}
           </div>
         </div>
 
+        {/* Global Progress Line */}
         {currentQuestion && (
-          <div className="max-w-4xl mx-auto mt-3">
-            <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-purple-accent to-pink-accent rounded-full transition-all duration-500"
-                style={{ width: `${(currentQuestion.questionNumber / currentQuestion.total) * 100}%` }}
-              />
-            </div>
+          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/5 overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 transition-all duration-700 ease-out shadow-[0_0_15px_rgba(168,85,247,0.5)]"
+              style={{ width: `${(currentQuestion.questionNumber / currentQuestion.total) * 100}%` }}
+            />
           </div>
         )}
       </div>
@@ -304,42 +297,45 @@ export default function TestTake() {
         </div>
       </div>
 
-      <div className="sticky bottom-0 border-t border-white/10 bg-dark-bg/95 backdrop-blur-xl px-6 py-4 -mx-4 sm:-mx-6 -mb-8 z-40 shadow-[0_-10px_20px_rgba(0,0,0,0.4)]">
-        <div className="max-w-3xl mx-auto flex items-center justify-between gap-4">
+      <div className="flex-shrink-0 border-t border-white/5 bg-[#0D071F]/90 backdrop-blur-2xl px-6 py-6 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
+        <div className="max-w-5xl mx-auto flex items-center justify-between gap-6">
           <button
             onClick={() => setShowExitModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-slate-400 hover:text-red-400 bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/30 transition-all duration-200 text-sm"
+            className="flex items-center gap-3 px-6 py-3.5 rounded-2xl text-white/40 hover:text-red-400 bg-white/5 hover:bg-red-500/10 border border-white/5 hover:border-red-500/20 transition-all font-bold text-sm uppercase tracking-widest"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
             Завершити
           </button>
 
           <button
             onClick={handleNext}
-            disabled={isSubmitting || isLoading}
-            className="btn-primary px-8 py-3 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none flex items-center gap-2"
+            disabled={isSubmitting || isLoading || !selectedAnswers.length}
+            className="group relative px-10 py-3.5 rounded-2xl bg-gradient-to-br from-green-400 to-emerald-600 text-white font-unbounded font-black text-sm uppercase tracking-widest shadow-[0_10px_30px_rgba(52,211,153,0.3)] hover:shadow-[0_10px_40px_rgba(52,211,153,0.5)] transition-all active:scale-95 disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed"
           >
-            {isSubmitting ? (
-              <>
-                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                </svg>
-                Збереження...
-              </>
-            ) : (
-              <>
-                {currentQuestion && currentQuestion.questionNumber < currentQuestion.total
-                  ? 'Наступне питання'
-                  : 'Завершити тестування'}
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </>
-            )}
+            <div className="flex items-center gap-3 relative z-10">
+              {isSubmitting ? (
+                <>
+                  <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4}/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                  <span>Завантаження...</span>
+                </>
+              ) : (
+                <>
+                  <span>
+                    {currentQuestion && currentQuestion.questionNumber < currentQuestion.total 
+                      ? 'Наступне питання' 
+                      : 'Фініш'}
+                  </span>
+                  <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </>
+              )}
+            </div>
           </button>
         </div>
       </div>

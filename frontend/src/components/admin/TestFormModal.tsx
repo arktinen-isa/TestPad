@@ -109,10 +109,18 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    // ONLY allow save if we are on the last tab (scoring)
+    if (activeTab !== 'scoring') return
+
     setLoading(true)
     setError(null)
     try {
-      await onSave(form, initial?.id)
+      const dataToSave = {
+        ...form,
+        openFrom: form.openFrom ? new Date(form.openFrom).toISOString() : null,
+        openUntil: form.openUntil ? new Date(form.openUntil).toISOString() : null,
+      }
+      await onSave(dataToSave as any, initial?.id)
       onClose()
     } catch (err: unknown) {
       setError(
