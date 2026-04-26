@@ -34,8 +34,8 @@ export default function TestTake() {
     const handleFsChange = () => {
       const isFs = !!document.fullscreenElement
       setIsFullScreen(isFs)
-      if (!isFs && !isFinished) {
-        logSuspiciousEvent(attemptId!, 'WINDOW_RESIZE')
+      if (!isFs && !isFinished && attemptId) {
+        apiClient.post('/events', { attemptId, eventType: 'WINDOW_RESIZE' }).catch(() => {})
       }
     }
     document.addEventListener('fullscreenchange', handleFsChange)
@@ -401,7 +401,8 @@ export default function TestTake() {
             </div>
           )}
         </div>
-      </div>
+      )}
+    </div>
 
       <div className="flex-shrink-0 border-t border-white/5 bg-[#0D071F]/90 backdrop-blur-2xl px-6 py-6 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-6">
@@ -463,7 +464,7 @@ export default function TestTake() {
               Решта питань вважатиметься без відповіді. Підтвердити?
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
-              <button onClick={handleReturnToFullscreen} className="flex-1 btn-secondary">
+              <button onClick={enterFullscreen} className="flex-1 btn-secondary">
                 Повернутись до тесту
               </button>
               <button
