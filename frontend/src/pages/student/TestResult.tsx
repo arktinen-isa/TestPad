@@ -6,12 +6,12 @@ import { useTestStore } from '../../store/testStore'
 import { AttemptResult } from '../../types'
 import { PASS_MESSAGES, FAIL_MESSAGES } from '../../constants/messages'
 
-function formatDuration(seconds: number): string {
-  if (!seconds) return '—'
-  const m = Math.floor(seconds / 60)
-  const s = seconds % 60
-  if (m === 0) return `${s} сек`
-  return `${m} хв ${s} сек`
+function getPlural(n: number, one: string, few: string, many: string) {
+  const lastDigit = Math.floor(n) % 10;
+  const lastTwoDigits = Math.floor(n) % 100;
+  if (lastDigit === 1 && lastTwoDigits !== 11) return one;
+  if (lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 10 || lastTwoDigits >= 20)) return few;
+  return many;
 }
 
 export default function TestResult() {
@@ -43,13 +43,19 @@ export default function TestResult() {
     enabled: !!attemptId,
   })
 
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ['tests'] })
+  }, [queryClient])
+
   const score = result?.score ?? storeScore
   const maxScore = result?.maxScore ?? storeMax
   const percentage = result?.percentage ?? storePercent ?? 0
   const passThreshold = result?.passThreshold ?? storeThreshold
   const scoringMode = result?.scoringMode ?? storeScoringMode
   const passed = result?.passed ?? storePassed ?? (percentage >= (passThreshold ?? 60))
-  const showResultMode = result?.showResultMode || storeShowResultMode || 'AFTER_FINISH'
+  
+  const showResultModeValue = result?.showResultMode || storeShowResultMode || 'ADMIN_ONLY'
+  const isConfidential = showResultModeValue === 'ADMIN_ONLY' || (score === null && storeScore === null)
 
   const motivationalMessage = useMemo(() => {
     const list = passed ? PASS_MESSAGES : FAIL_MESSAGES
@@ -57,7 +63,9 @@ export default function TestResult() {
   }, [passed])
 
   const displayScore = useMemo(() => {
-    if (scoringMode === 'SUM') return `${score} / ${maxScore}`
+    if (scoringMode === 'SUM') {
+      return `${score} / ${maxScore} ${getPlural(maxScore || 0, 'бал', 'бали', 'балів')}`
+    }
     return `${percentage}%`
   }, [scoringMode, score, maxScore, percentage])
 
