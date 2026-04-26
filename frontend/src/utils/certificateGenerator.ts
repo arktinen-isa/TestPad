@@ -1,117 +1,213 @@
 import { jsPDF } from 'jspdf'
 
-export const generateCertificate = (studentName: string, testTitle: string, score: string, finishedAt: string, testLogoUrl?: string) => {
-  const doc = new jsPDF({
-    orientation: 'landscape',
-    unit: 'mm',
-    format: 'a4'
-  })
+export const generateCertificate = (
+  studentName: string,
+  testTitle: string,
+  score: string,
+  finishedAt: string,
+  testLogoUrl?: string | null
+) => {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+  const W = 297, H = 210
 
-  // 1. BACKGROUND
-  doc.setFillColor(254, 254, 255)
-  doc.rect(0, 0, 297, 210, 'F')
-  
-  // High-poly background watermark
-  const drawWatermark = () => {
-    doc.saveGraphicsState()
-    doc.setGState(new (doc as any).GState({ opacity: 0.02 }))
-    doc.setFillColor(124, 58, 237)
-    const centerX = 148.5, centerY = 105, size = 150
-    doc.triangle(centerX, centerY - size/2, centerX + size/3, centerY + size/3, centerX - size/3, centerY + size/3, 'F')
-    doc.restoreGraphicsState()
+  const rgb = (r: number, g: number, b: number) => [r, g, b] as const
+  const BG      = rgb(10, 11, 30)
+  const BG2     = rgb(18, 16, 50)
+  const PURPLE  = rgb(124, 58, 237)
+  const PURPLEM = rgb(99, 46, 190)
+  const PURPLEL = rgb(167, 139, 250)
+  const GOLD    = rgb(251, 191, 36)
+  const DIM     = rgb(71, 85, 105)
+  const DARK    = rgb(30, 41, 59)
+
+  const fill  = (c: readonly [number,number,number]) => doc.setFillColor(c[0], c[1], c[2])
+  const draw  = (c: readonly [number,number,number]) => doc.setDrawColor(c[0], c[1], c[2])
+  const gst   = (opacity: number) => doc.setGState(new (doc as any).GState({ opacity }))
+  const save  = () => doc.saveGraphicsState()
+  const restore = () => doc.restoreGraphicsState()
+
+  // ── BACKGROUND ──────────────────────────────────────────────────────────
+  fill(BG); doc.rect(0, 0, W, H, 'F')
+
+  save(); gst(0.35); fill(BG2); doc.rect(0, 0, W * 0.55, H, 'F'); restore()
+
+  // Glow blobs
+  save(); gst(0.14); fill(PURPLE); doc.circle(0, 0, 90, 'F'); restore()
+  save(); gst(0.10); fill(GOLD);   doc.circle(W, H, 75, 'F'); restore()
+  save(); gst(0.06); fill(PURPLE); doc.circle(W, 0, 50, 'F'); restore()
+
+  // Dot grid
+  save(); gst(0.05); fill(PURPLEL)
+  for (let x = 22; x < W; x += 11)
+    for (let y = 22; y < H; y += 11)
+      doc.circle(x, y, 0.4, 'F')
+  restore()
+
+  // ── BORDERS ─────────────────────────────────────────────────────────────
+  draw(GOLD);    doc.setLineWidth(0.75); doc.rect(8,  8,  W-16,  H-16)
+  draw(PURPLE);  doc.setLineWidth(0.25); doc.rect(11, 11, W-22, H-22)
+
+  // Corner ornaments
+  const corner = (cx: number, cy: number, dx: number, dy: number) => {
+    const s = 2.8
+    save(); gst(0.95); fill(GOLD)
+    doc.triangle(cx, cy - s, cx + s * 0.9, cy, cx, cy + s, 'F')
+    doc.triangle(cx, cy - s, cx - s * 0.9, cy, cx, cy + s, 'F')
+    draw(GOLD); doc.setLineWidth(0.55)
+    doc.line(cx, cy, cx + dx * 18, cy)
+    doc.line(cx, cy, cx, cy + dy * 18)
+    restore()
   }
-  drawWatermark()
+  corner(8,   8,    1,  1)
+  corner(W-8, 8,   -1,  1)
+  corner(W-8, H-8, -1, -1)
+  corner(8,   H-8,  1, -1)
 
-  // 2. CORNER DECORATIONS (Subtle)
-  const drawCorner = (x: number, y: number, type: 'TL'|'TR'|'BR'|'BL') => {
-    doc.saveGraphicsState()
-    doc.setGState(new (doc as any).GState({ opacity: 0.05 }))
-    doc.setFillColor(124, 58, 237)
-    if (type === 'TL') doc.triangle(x, y, x + 40, y, x, y + 40, 'F')
-    if (type === 'TR') doc.triangle(x, y, x - 40, y, x, y + 40, 'F')
-    if (type === 'BR') doc.triangle(x, y, x - 40, y, x, y - 40, 'F')
-    if (type === 'BL') doc.triangle(x, y, x + 40, y, x, y - 40, 'F')
-    doc.restoreGraphicsState()
-  }
-  drawCorner(0, 0, 'TL'); drawCorner(297, 0, 'TR'); drawCorner(297, 210, 'BR'); drawCorner(0, 210, 'BL')
+  // ── LEFT ACCENT BAR ──────────────────────────────────────────────────────
+  save(); gst(0.55); fill(PURPLE); doc.rect(14, 14, 3.5, H-28, 'F'); restore()
+  save(); gst(0.95); fill(GOLD);   doc.rect(14, 14, 1.2, H-28, 'F'); restore()
 
-  // 3. BORDERS
-  doc.setDrawColor(124, 58, 237); doc.setLineWidth(1.0); doc.rect(7, 7, 283, 196)
-  doc.setDrawColor(79, 70, 229); doc.setLineWidth(0.2); doc.rect(9, 9, 279, 192)
-
-  // 4. SYSTEM LOGO (Top Center)
-  const drawSystemLogo = (x: number, y: number, size: number) => {
-    doc.setFillColor(124, 58, 237)
-    doc.triangle(x, y - size/2, x + size/2, y, x, y + size/2, 'F')
-    doc.setFillColor(79, 70, 229)
-    doc.triangle(x, y - size/2, x - size/2, y, x, y + size/2, 'F')
-    doc.setDrawColor(255, 255, 255); doc.setLineWidth(0.3)
-    doc.line(x, y-size/3, x+size/4, y); doc.line(x+size/4, y, x, y+size/3)
-    doc.line(x, y+size/3, x-size/4, y); doc.line(x-size/4, y, x, y-size/3)
-  }
-  drawSystemLogo(148.5, 25, 18)
-
-  // 5. TEXT RENDERING HELPER (Canvas for Cyrillic)
-  const drawTextToPdf = (text: string, x: number, y: number, fontSize: number, isBold: boolean, color: string) => {
-    if (!text) return 0
-    const canvas = document.createElement('canvas')
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return 0
-    const scale = 4
-    ctx.font = `${isBold ? 'bold ' : ''}${fontSize * scale}px "Unbounded", "Inter", sans-serif`
-    const metrics = ctx.measureText(text)
-    canvas.width = metrics.width + 20
-    canvas.height = fontSize * scale * 1.8
-    ctx.font = `${isBold ? 'bold ' : ''}${fontSize * scale}px "Unbounded", "Inter", sans-serif`
-    ctx.fillStyle = color
+  // ── CANVAS TEXT RENDERER ─────────────────────────────────────────────────
+  const drawText = (
+    text: string, x: number, y: number,
+    sizePx: number, weight: string,
+    hex: string, align: 'left'|'center'|'right' = 'center'
+  ) => {
+    if (!text) return
+    const cvs = document.createElement('canvas')
+    const ctx = cvs.getContext('2d')!
+    const sc = 4
+    const font = `${weight} ${sizePx * sc}px "Unbounded","Inter",sans-serif`
+    ctx.font = font
+    const mw = ctx.measureText(text).width
+    cvs.width  = Math.ceil(mw + 24)
+    cvs.height = Math.ceil(sizePx * sc * 1.65)
+    ctx.font = font
+    ctx.fillStyle = hex
     ctx.textBaseline = 'middle'
-    ctx.fillText(text, 10, canvas.height / 2)
-    const w = metrics.width / scale, h = canvas.height / scale
-    doc.addImage(canvas.toDataURL('image/png'), 'PNG', x - w/2, y - h/2, w, h)
-    return h
+    ctx.fillText(text, 12, cvs.height / 2)
+    const pw = cvs.width / sc, ph = cvs.height / sc
+    const px = align === 'center' ? x - pw / 2 : align === 'right' ? x - pw : x
+    doc.addImage(cvs.toDataURL('image/png'), 'PNG', px, y - ph / 2, pw, ph)
   }
 
-  // 6. MAIN CONTENT
-  drawTextToPdf('СЕРТИФІКАТ', 148.5, 50, 20, true, '#1e1b4b')
-  drawTextToPdf('ПРО УСПІШНЕ ПРОХОДЖЕННЯ ТЕСТУ', 148.5, 60, 11, false, '#4338ca')
-
-  drawTextToPdf('Цим підтверджується, що студент(ка)', 148.5, 80, 12, false, '#64748b')
-
-  // Name (Surname capped at 20)
-  const np = studentName.split(' ')
-  const sur = np[0] || '', res = np.slice(1).join(' ')
-  drawTextToPdf(sur.toUpperCase(), 148.5, 95, 20, true, '#4f46e5')
-  if (res) drawTextToPdf(res, 148.5, 105, 16, false, '#6366f1')
-
-  drawTextToPdf('успішно завершив(ла) тестування з курсу/теми:', 148.5, 125, 12, false, '#64748b')
-
-  // Title
-  const lines = doc.splitTextToSize(testTitle, 230)
-  let cy = 138
-  lines.forEach((l: string) => {
-    drawTextToPdf(l, 148.5, cy, 18, true, '#1e293b')
-    cy += 12
-  })
-
-  drawTextToPdf(`РЕЗУЛЬТАТ: ${score}`, 148.5, cy + 5, 14, true, '#4f46e5')
-
-  // SEAL
-  const drawSeal = (x: number, y: number) => {
-    doc.saveGraphicsState(); doc.setGState(new (doc as any).GState({ opacity: 0.8 }))
-    doc.setDrawColor(124, 58, 237); doc.setLineWidth(0.4); doc.circle(x, y, 15, 'S'); doc.circle(x, y, 13, 'S')
-    drawTextToPdf('GRADEX', x, y - 2, 6, true, '#7c3aed')
-    drawTextToPdf('VERIFIED', x, y + 3, 4, false, '#7c3aed')
-    doc.restoreGraphicsState()
+  const wrapText = (text: string, maxPx: number, sizePx: number, weight: string): string[] => {
+    const cvs = document.createElement('canvas')
+    const ctx = cvs.getContext('2d')!
+    const sc = 4
+    ctx.font = `${weight} ${sizePx * sc}px "Unbounded","Inter",sans-serif`
+    const words = text.split(' ')
+    const lines: string[] = []
+    let cur = ''
+    for (const w of words) {
+      const test = cur ? cur + ' ' + w : w
+      if (ctx.measureText(test).width / sc > maxPx && cur) { lines.push(cur); cur = w }
+      else cur = test
+    }
+    if (cur) lines.push(cur)
+    return lines
   }
-  drawSeal(38, 172)
 
-  // 7. FOOTER
-  const dt = finishedAt ? new Date(finishedAt).toLocaleDateString('uk-UA') : new Date().toLocaleDateString('uk-UA')
-  doc.setDrawColor(199, 210, 254); doc.setLineWidth(0.4); doc.line(160, 185, 245, 185)
-  drawTextToPdf('ЗАСВІДЧЕНО СИСТЕМОЮ GRADEX', 100, 192, 8, false, '#94a3b8')
-  drawTextToPdf(dt, 202, 192, 10, true, '#64748b')
+  // ── LOGO MARK ─────────────────────────────────────────────────────────────
+  const logoMark = (lx: number, ly: number, s: number) => {
+    fill(PURPLE);  doc.triangle(lx, ly - s, lx + s * 0.75, ly, lx, ly + s, 'F')
+    fill(PURPLEM); doc.triangle(lx, ly - s, lx - s * 0.75, ly, lx, ly + s, 'F')
+    save(); gst(0.9); fill(GOLD)
+    const h = s * 0.38
+    doc.triangle(lx, ly - h * 1.1, lx + h * 0.65, ly, lx, ly + h * 0.7, 'F')
+    restore()
+  }
 
-  if (testLogoUrl) try { doc.addImage(testLogoUrl, 'PNG', 260, 170, 16, 16) } catch (e) {}
+  // ── HEADER ────────────────────────────────────────────────────────────────
+  logoMark(W / 2, 25, 10)
+  drawText('GRADEX', W / 2, 40.5, 7.5, 'bold', '#a78bfa')
 
-  doc.save(`GradeX_Certificate_${studentName.replace(/\s+/g, '_')}.pdf`)
+  // Decorative rule with center dot
+  draw(PURPLEL); doc.setLineWidth(0.2)
+  doc.line(W/2 - 38, 46.5, W/2 - 5, 46.5)
+  doc.line(W/2 + 5,  46.5, W/2 + 38, 46.5)
+  fill(GOLD); doc.circle(W / 2, 46.5, 1.1, 'F')
+
+  // ── CERTIFICATE TITLE ─────────────────────────────────────────────────────
+  drawText('СЕРТИФІКАТ', W / 2, 59, 20, 'bold', '#ffffff')
+  drawText('ПРО УСПІШНЕ ПРОХОДЖЕННЯ ТЕСТУВАННЯ', W / 2, 70, 7, '400', '#a78bfa')
+
+  draw(DIM); doc.setLineWidth(0.25)
+  doc.line(W / 2 - 55, 76, W / 2 + 55, 76)
+
+  // ── BODY ──────────────────────────────────────────────────────────────────
+  drawText('Цим підтверджується, що', W / 2, 84, 8.5, '300', '#94a3b8')
+
+  const parts = studentName.trim().split(/\s+/)
+  const lastName  = (parts[0] ?? '').toUpperCase()
+  const firstName = parts.slice(1).join(' ')
+
+  drawText(lastName,  W / 2, 96, 20, 'bold', '#fbbf24')
+  if (firstName) drawText(firstName, W / 2, 108, 13, '400', '#e2e8f0')
+
+  const nameBottom = firstName ? 114 : 103
+  save(); gst(0.35); draw(GOLD); doc.setLineWidth(0.45)
+  doc.line(W / 2 - 52, nameBottom, W / 2 + 52, nameBottom)
+  restore()
+
+  drawText('успішно завершив(ла) тестування з теми:', W / 2, nameBottom + 8, 8.5, '300', '#94a3b8')
+
+  // Title — wrapped
+  const titleLines = wrapText(testTitle, 200, 13, 'bold').slice(0, 2)
+  let titleY = nameBottom + 20
+  for (const line of titleLines) {
+    drawText(line, W / 2, titleY, 13, 'bold', '#e2e8f0')
+    titleY += 11
+  }
+
+  // Score badge
+  const badgeY = titleY + 8
+  const bx = W / 2 - 38, bw = 76, bh = 13
+  save(); gst(0.22); fill(PURPLE); doc.roundedRect(bx, badgeY - bh / 2, bw, bh, 3, 3, 'F'); restore()
+  draw(PURPLEL); doc.setLineWidth(0.3); doc.roundedRect(bx, badgeY - bh / 2, bw, bh, 3, 3, 'S')
+  drawText(`РЕЗУЛЬТАТ: ${score}`, W / 2, badgeY + 0.3, 9.5, 'bold', '#c4b5fd')
+
+  // ── SEAL ──────────────────────────────────────────────────────────────────
+  const sx = 42, sy = H - 33
+  // Notched outer ring
+  draw(GOLD); doc.setLineWidth(0.5)
+  for (let a = 0; a < 360; a += 14) {
+    const ra = (a * Math.PI) / 180
+    doc.line(
+      sx + 16.5 * Math.cos(ra), sy + 16.5 * Math.sin(ra),
+      sx + 18.2 * Math.cos(ra), sy + 18.2 * Math.sin(ra)
+    )
+  }
+  draw(GOLD); doc.setLineWidth(0.45); doc.circle(sx, sy, 15, 'S')
+  save(); gst(0.07); fill(GOLD); doc.circle(sx, sy, 15, 'F'); restore()
+  logoMark(sx, sy - 9, 4)
+  drawText('GRADEX',   sx, sy - 1.5, 5.5, 'bold', '#fbbf24')
+  drawText('VERIFIED', sx, sy + 4,   4.2, '400',  '#fcd34d')
+
+  // ── FOOTER ────────────────────────────────────────────────────────────────
+  draw(DARK); doc.setLineWidth(0.3); doc.line(23, H - 27, W - 23, H - 27)
+
+  const dateStr = (finishedAt ? new Date(finishedAt) : new Date())
+    .toLocaleDateString('uk-UA', { day: '2-digit', month: 'long', year: 'numeric' })
+
+  // Center date block
+  draw(PURPLEL); doc.setLineWidth(0.25)
+  doc.line(W / 2 - 42, H - 21.5, W / 2 + 42, H - 21.5)
+  drawText('ДАТА ЗАВЕРШЕННЯ', W / 2, H - 17.5, 5.5, '400', '#64748b')
+  drawText(dateStr, W / 2, H - 12,   8.5, 'bold',  '#94a3b8')
+
+  // Bottom right branding
+  drawText('gradex.app',              W - 28, H - 13, 7.5, '400',  '#475569', 'right')
+  drawText('Система онлайн-тестування', W - 28, H - 19, 5.5, '300', '#334155', 'right')
+
+  // Optional test logo
+  if (testLogoUrl) {
+    try {
+      save(); gst(0.65)
+      doc.addImage(testLogoUrl, 'PNG', W - 48, 14, 18, 18)
+      restore()
+    } catch {}
+  }
+
+  doc.save(`Сертифікат_${studentName.replace(/\s+/g, '_')}.pdf`)
 }
