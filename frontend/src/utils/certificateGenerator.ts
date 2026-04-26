@@ -10,14 +10,12 @@ export const generateCertificate = (
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
   const W = 297, H = 210
 
-  // Palette
-  const BG      = [10, 11, 30]   as const
-  const BG2     = [18, 16, 50]   as const
-  const PURPLE  = [124, 58, 237] as const
-  const PURPLEM = [99, 46, 190]  as const
+  const BG      = [10, 11, 30]    as const
+  const BG2     = [18, 16, 50]    as const
+  const PURPLE  = [124, 58, 237]  as const
   const PURPLEL = [167, 139, 250] as const
-  const GOLD    = [251, 191, 36] as const
-  const DIM     = [71, 85, 105]  as const
+  const GOLD    = [251, 191, 36]  as const
+  const DIM     = [71, 85, 105]   as const
 
   const fill = (c: readonly [number,number,number]) => doc.setFillColor(c[0], c[1], c[2])
   const draw = (c: readonly [number,number,number]) => doc.setDrawColor(c[0], c[1], c[2])
@@ -27,12 +25,11 @@ export const generateCertificate = (
 
   // ── BACKGROUND ─────────────────────────────────────────────────────────
   fill(BG); doc.rect(0, 0, W, H, 'F')
-  sv(); gst(0.3); fill(BG2); doc.rect(0, 0, W * 0.52, H, 'F'); rs()
+  sv(); gst(0.30); fill(BG2);    doc.rect(0, 0, W * 0.52, H, 'F'); rs()
   sv(); gst(0.13); fill(PURPLE); doc.circle(0, 0, 85, 'F'); rs()
   sv(); gst(0.09); fill(GOLD);   doc.circle(W, H, 70, 'F'); rs()
   sv(); gst(0.05); fill(PURPLE); doc.circle(W, 0, 45, 'F'); rs()
 
-  // Dot grid
   sv(); gst(0.045); fill(PURPLEL)
   for (let x = 22; x < W; x += 11)
     for (let y = 22; y < H; y += 11)
@@ -43,7 +40,6 @@ export const generateCertificate = (
   draw(GOLD);   doc.setLineWidth(0.8);  doc.rect(8,  8,  W - 16, H - 16)
   draw(PURPLE); doc.setLineWidth(0.25); doc.rect(11, 11, W - 22, H - 22)
 
-  // Corner ornaments
   const corner = (cx: number, cy: number, dx: number, dy: number) => {
     sv(); gst(0.95); fill(GOLD)
     const s = 2.8
@@ -59,17 +55,26 @@ export const generateCertificate = (
   corner(W-8, H-8, -1, -1)
   corner(8,   H-8,  1, -1)
 
-  // ── CANVAS TEXT RENDERER ───────────────────────────────────────────────
+  // ── TEXT RENDERER ──────────────────────────────────────────────────────
+  // fontFamily: 'heading' = Unbounded (titles, name, GRADEX)
+  //             'body'    = Inter (phrases, descriptions)
+  //             'mono'    = monospace (dates, IDs)
   const drawText = (
     text: string, x: number, y: number,
     sizePx: number, weight: string,
-    hex: string, align: 'left'|'center'|'right' = 'center'
+    hex: string,
+    align: 'left'|'center'|'right' = 'center',
+    fontFamily: 'heading'|'body'|'mono' = 'heading'
   ) => {
     if (!text) return
+    const family =
+      fontFamily === 'mono'    ? '"Courier New", "Courier", monospace' :
+      fontFamily === 'body'    ? '"Inter", "Helvetica Neue", sans-serif' :
+                                 '"Unbounded", "Inter", sans-serif'
     const cvs = document.createElement('canvas')
     const ctx = cvs.getContext('2d')!
     const sc = 4
-    const font = `${weight} ${sizePx * sc}px "Unbounded","Inter",sans-serif`
+    const font = `${weight} ${sizePx * sc}px ${family}`
     ctx.font = font
     const mw = ctx.measureText(text).width
     cvs.width  = Math.ceil(mw + 24)
@@ -97,117 +102,111 @@ export const generateCertificate = (
     return lines
   }
 
-  // ── LOGO MARK ──────────────────────────────────────────────────────────
-  const logoMark = (lx: number, ly: number, s: number) => {
-    fill(PURPLE);  doc.triangle(lx, ly - s, lx + s * 0.75, ly, lx, ly + s, 'F')
-    fill(PURPLEM); doc.triangle(lx, ly - s, lx - s * 0.75, ly, lx, ly + s, 'F')
-    sv(); gst(0.9); fill(GOLD)
-    const h = s * 0.38
-    doc.triangle(lx, ly - h * 1.1, lx + h * 0.65, ly, lx, ly + h * 0.7, 'F')
-    rs()
+  // ── PROJECT LOGO (SVG diamond + checkmark) ────────────────────────────
+  const drawProjectLogo = (lx: number, ly: number, sizeMm: number) => {
+    const sc = 6
+    const px = Math.round(sizeMm * sc)
+    const cvs = document.createElement('canvas')
+    cvs.width = px; cvs.height = px
+    const ctx = cvs.getContext('2d')!
+    const s = px / 100
+
+    const grad = ctx.createLinearGradient(5*s, 5*s, 95*s, 95*s)
+    grad.addColorStop(0, '#7C3AED'); grad.addColorStop(1, '#4F46E5')
+    ctx.fillStyle = grad
+    ctx.beginPath()
+    ctx.moveTo(50*s, 5*s); ctx.lineTo(95*s, 50*s)
+    ctx.lineTo(50*s, 95*s); ctx.lineTo(5*s, 50*s)
+    ctx.closePath(); ctx.fill()
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 2*s; ctx.stroke()
+
+    ctx.strokeStyle = 'white'; ctx.lineWidth = 8*s
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+    ctx.beginPath()
+    ctx.moveTo(35*s, 50*s); ctx.lineTo(45*s, 60*s); ctx.lineTo(65*s, 40*s)
+    ctx.stroke()
+
+    ctx.setLineDash([4*s, 4*s])
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1.2*s
+    ctx.beginPath(); ctx.arc(50*s, 50*s, 45*s, 0, Math.PI*2); ctx.stroke()
+    ctx.setLineDash([])
+
+    doc.addImage(cvs.toDataURL('image/png'), 'PNG', lx - sizeMm/2, ly - sizeMm/2, sizeMm, sizeMm)
   }
 
   // ══════════════════════════════════════════════════════════════
-  // HEADER  (y 14 – 54)
+  // HEADER
   // ══════════════════════════════════════════════════════════════
-  logoMark(W / 2, 22, 9)
-  drawText('GRADEX', W / 2, 34, 7.5, 'bold', '#a78bfa')
+  drawProjectLogo(W / 2, 19, 18)
+  drawText('GRADEX', W / 2, 32, 7.5, 'bold', '#a78bfa', 'center', 'heading')
 
   draw(PURPLEL); doc.setLineWidth(0.2)
-  doc.line(W/2 - 36, 39.5, W/2 - 5, 39.5)
-  doc.line(W/2 + 5,  39.5, W/2 + 36, 39.5)
-  fill(GOLD); doc.circle(W / 2, 39.5, 1.0, 'F')
+  doc.line(W/2 - 36, 40, W/2 - 5, 40)
+  doc.line(W/2 + 5,  40, W/2 + 36, 40)
+  fill(GOLD); doc.circle(W / 2, 40, 1.0, 'F')
 
-  drawText('СЕРТИФІКАТ', W / 2, 49, 19, 'bold', '#ffffff')
-  drawText('ПРО УСПІШНЕ ПРОХОДЖЕННЯ ТЕСТУВАННЯ', W / 2, 58, 6.5, '400', '#a78bfa')
+  drawText('СЕРТИФІКАТ', W / 2, 52, 19, '800', '#ffffff', 'center', 'heading')
+  drawText('ПРО УСПІШНЕ ПРОХОДЖЕННЯ ТЕСТУВАННЯ', W / 2, 63, 7.5, '600', '#a78bfa', 'center', 'body')
 
-  // Header / body separator
-  sv(); gst(0.5); draw(DIM); doc.setLineWidth(0.3)
-  doc.line(20, 64, W - 20, 64); rs()
+  sv(); gst(0.45); draw(DIM); doc.setLineWidth(0.3)
+  doc.line(20, 73, W - 20, 73); rs()
 
   // ══════════════════════════════════════════════════════════════
-  // BODY  (y 68 – 148)
+  // BODY
   // ══════════════════════════════════════════════════════════════
-  drawText('Цим підтверджується, що', W / 2, 72, 8, '300', '#94a3b8')
+  drawText('цим підтверджується, що', W / 2, 83, 8, '300', '#94a3b8', 'center', 'body')
 
   const parts     = studentName.trim().split(/\s+/)
   const lastName  = (parts[0] ?? '').toUpperCase()
   const firstName = parts.slice(1).join(' ')
 
-  drawText(lastName,  W / 2, 83, 19, 'bold', '#fbbf24')
-  if (firstName) drawText(firstName, W / 2, 94, 12, '400', '#e2e8f0')
+  drawText(lastName,  W / 2, 96, 19, '800', '#fbbf24', 'center', 'heading')
+  if (firstName) drawText(firstName, W / 2, 109, 12, '400', '#e2e8f0', 'center', 'heading')
 
-  const nameBottom = firstName ? 100 : 89
+  const nameBottom = firstName ? 116 : 104
+
   sv(); gst(0.3); draw(GOLD); doc.setLineWidth(0.4)
-  doc.line(W/2 - 50, nameBottom, W/2 + 50, nameBottom); rs()
+  doc.line(W/2 - 52, nameBottom, W/2 + 52, nameBottom); rs()
 
-  drawText('успішно завершив(ла) тестування з теми:', W / 2, nameBottom + 8, 8, '300', '#94a3b8')
+  drawText('успішно завершив(ла) тестування з теми (курсу):', W / 2, nameBottom + 13, 8, '400', '#94a3b8', 'center', 'body')
 
-  // Test title – wrapped
   const titleLines = wrapText(testTitle, 200, 12, 'bold').slice(0, 2)
-  let titleY = nameBottom + 19
+  let titleY = nameBottom + 28
   for (const line of titleLines) {
-    drawText(line, W / 2, titleY, 12, 'bold', '#e2e8f0')
-    titleY += 10.5
+    drawText(line, W / 2, titleY, 12, '700', '#e2e8f0', 'center', 'heading')
+    titleY += 13
   }
 
   // Score badge
-  const badgeY = titleY + 8
-  sv(); gst(0.2); fill(PURPLE)
-  doc.roundedRect(W/2 - 40, badgeY - 7, 80, 14, 3, 3, 'F'); rs()
+  const badgeY = titleY + 9
+  const bh = 14
+  sv(); gst(0.22); fill(PURPLE)
+  doc.roundedRect(W/2 - 70, badgeY - bh/2, 140, bh, 3, 3, 'F'); rs()
   draw(PURPLEL); doc.setLineWidth(0.3)
-  doc.roundedRect(W/2 - 40, badgeY - 7, 80, 14, 3, 3, 'S')
-  drawText(`РЕЗУЛЬТАТ: ${score}`, W / 2, badgeY + 0.3, 9.5, 'bold', '#c4b5fd')
+  doc.roundedRect(W/2 - 70, badgeY - bh/2, 140, bh, 3, 3, 'S')
+  drawText(`РЕЗУЛЬТАТ: ${score}`, W / 2, badgeY + 0.2, 7.5, '700', '#c4b5fd', 'center', 'body')
 
   // ══════════════════════════════════════════════════════════════
-  // FOOTER SEPARATOR  (y ≈ badgeY + 13)
+  // FOOTER SEPARATOR
   // ══════════════════════════════════════════════════════════════
-  const footerTop = Math.max(badgeY + 13, 148)
+  const footerTop = Math.max(badgeY + bh/2 + 6, 155)
 
   sv(); gst(0.45); draw(DIM); doc.setLineWidth(0.3)
   doc.line(20, footerTop, W - 20, footerTop); rs()
-
-  // Decorative centre diamond on rule
   fill(GOLD); doc.circle(W / 2, footerTop, 1.0, 'F')
 
   // ══════════════════════════════════════════════════════════════
-  // FOOTER  – three columns  (footerTop … H-12)
+  // FOOTER — date only, small/secondary, Inter
   // ══════════════════════════════════════════════════════════════
-  const fCY = (footerTop + H - 12) / 2   // vertical centre of footer zone
+  const fCY = (footerTop + H - 10) / 2
 
-  // ── Left column: Seal ──────────────────────────────────────────
-  const sx = 48, sy = fCY
-  draw(GOLD); doc.setLineWidth(0.45)
-  for (let a = 0; a < 360; a += 14) {
-    const ra = (a * Math.PI) / 180
-    doc.line(sx + 15.5 * Math.cos(ra), sy + 15.5 * Math.sin(ra),
-             sx + 17.2 * Math.cos(ra), sy + 17.2 * Math.sin(ra))
-  }
-  doc.circle(sx, sy, 14, 'S')
-  sv(); gst(0.07); fill(GOLD); doc.circle(sx, sy, 14, 'F'); rs()
-  logoMark(sx, sy - 8, 3.8)
-  drawText('GRADEX',   sx, sy - 0.5, 5.2, 'bold', '#fbbf24')
-  drawText('VERIFIED', sx, sy + 4.5, 4,   '400',  '#fcd34d')
-
-  // ── Centre column: Date ────────────────────────────────────────
   const dateStr = (finishedAt ? new Date(finishedAt) : new Date())
     .toLocaleDateString('uk-UA', { day: '2-digit', month: 'long', year: 'numeric' })
 
-  drawText('ДАТА ЗАВЕРШЕННЯ', W / 2, fCY - 6, 5.8, '400', '#64748b')
-  // Thin rule under label
-  sv(); gst(0.4); draw(PURPLEL); doc.setLineWidth(0.25)
-  doc.line(W/2 - 36, fCY - 2, W/2 + 36, fCY - 2); rs()
-  drawText(dateStr, W / 2, fCY + 5, 9, 'bold', '#e2e8f0')
+  drawText('дата завершення', W / 2, fCY - 4, 5, '400', '#475569', 'center', 'body')
+  drawText(dateStr,           W / 2, fCY + 4, 7, '400', '#64748b', 'center', 'mono')
 
-  // ── Right column: Issuer ───────────────────────────────────────
-  const rx = W - 48
-  // Signature line
-  sv(); gst(0.5); draw(PURPLEL); doc.setLineWidth(0.3)
-  doc.line(rx - 34, fCY - 3, rx + 20, fCY - 3); rs()
-  drawText('ЗАСВІДЧЕНО', rx - 7, fCY + 3,  5.5, '400',  '#64748b', 'center')
-  drawText('GradeX',    rx - 7, fCY + 9.5, 8,   'bold', '#a78bfa', 'center')
-
-  // Test logo (top-right, if provided)
   if (testLogoUrl) {
     try {
       sv(); gst(0.65)
