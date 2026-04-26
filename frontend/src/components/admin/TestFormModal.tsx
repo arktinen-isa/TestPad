@@ -239,20 +239,28 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">Групи</label>
                 <div className="flex flex-wrap gap-2">
-                  {groups?.map((g) => (
-                    <button
-                      key={g.id}
-                      type="button"
-                      onClick={() => toggleGroup(g.id)}
-                      className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all border ${
-                        form.groupIds.includes(g.id)
-                          ? 'bg-purple-accent/30 text-white border-purple-accent/60'
-                          : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'
-                      }`}
-                    >
-                      {g.name}
-                    </button>
-                  ))}
+                    {groups?.map((g) => {
+                      const isSelected = form.groupIds.includes(g.id)
+                      return (
+                        <button
+                          key={g.id}
+                          type="button"
+                          onClick={() => toggleGroup(g.id)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all border ${
+                            isSelected
+                              ? 'bg-purple-accent text-white border-purple-accent shadow-[0_0_15px_rgba(168,85,247,0.4)]'
+                              : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10 hover:text-slate-300'
+                          }`}
+                        >
+                          {isSelected && (
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                          {g.name}
+                        </button>
+                      )
+                    })}
                   {(!groups || groups.length === 0) && (
                     <p className="text-slate-500 text-sm">Груп не знайдено</p>
                   )}

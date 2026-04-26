@@ -78,6 +78,7 @@ router.get(
           allowCertificate: true,
           passThreshold: true,
           logoUrl: true,
+          groups: { select: { groupId: true } },
           attempts: {
             where: user.role === 'STUDENT'
               ? { studentId: user.userId, finishedAt: { not: null } }

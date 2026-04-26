@@ -65,8 +65,8 @@ export default function TestsPage() {
     mutationFn: async ({ data, id }: { data: TestFormData; id?: string }) => {
       const payload = {
         ...data,
-        openFrom: data.openFrom ? new Date(data.openFrom).toISOString() : undefined,
-        openUntil: data.openUntil ? new Date(data.openUntil).toISOString() : undefined,
+        openFrom: data.openFrom ? new Date(data.openFrom).toISOString() : (data.openFrom === null || data.openFrom === '') ? null : undefined,
+        openUntil: data.openUntil ? new Date(data.openUntil).toISOString() : (data.openUntil === null || data.openUntil === '') ? null : undefined,
         passThreshold: data.passThreshold !== '' ? data.passThreshold : undefined,
       }
       if (id) {
