@@ -150,9 +150,9 @@ export default function TestStart() {
             <p className="text-yellow-400 font-semibold text-sm mb-1">Увага! Анти-чит система активована</p>
             <ul className="text-slate-300 text-xs space-y-2 list-disc pl-4">
               <li>Тест відкриється у <span className="text-white font-bold underline">повноекранному режимі</span>.</li>
-              <li>Спроба виходу з повного екрану або перемикання вкладок буде <span className="text-red-400 font-semibold">зафіксована</span> у звіті.</li>
-              <li>Копіювання тексту та скріншоти заблоковані на час тестування.</li>
-              <li>Будьте уважні: будь-яка підозріла активність впливає на ваш рейтинг доброчесності.</li>
+              <li>Спроба виходу з повного екрану або перемикання вкладок буде <span className="text-red-400 font-semibold">зафіксована</span>.</li>
+              <li>Використання <span className="text-white font-bold">ШІ (ChatGPT, Gemini тощо)</span> та сторонніх девайсів суворо заборонено.</li>
+              <li>Будь-яка спроба порушення правил призведе до того, що тест буде вважатися <span className="text-red-400 font-bold uppercase underline">не складеним</span>.</li>
             </ul>
           </div>
         </div>
