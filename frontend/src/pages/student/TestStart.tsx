@@ -33,8 +33,12 @@ export default function TestStart() {
     if (!testId) return
     setStartError(null)
     try {
+      // FULLSCREEN ON START
+      if (document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen().catch(() => {})
+      }
+      
       await startAttempt(testId)
-
       navigate(`/student/test/${testId}/take`, { replace: true })
     } catch (err: unknown) {
       const msg = getApiError(err, 'Помилка при старті тесту')

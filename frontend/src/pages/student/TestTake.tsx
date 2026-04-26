@@ -62,8 +62,20 @@ export default function TestTake() {
         }).catch(() => {})
       }
     }
+    const handleBlur = () => {
+      if (attemptIdRef.current) {
+        apiClient.post('/events', {
+          attemptId: attemptIdRef.current,
+          eventType: 'WINDOW_BLUR',
+        }).catch(() => {})
+      }
+    }
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('blur', handleBlur)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('blur', handleBlur)
+    }
   }, [])
 
   useEffect(() => {
@@ -162,8 +174,11 @@ export default function TestTake() {
   }
 
   return (
-    <div className="fixed inset-0 bg-[#0A051A] flex flex-col z-[1000] overflow-hidden select-none">
-      <div className="flex-shrink-0 bg-[#160D33]/80 backdrop-blur-xl border-b border-white/5 px-6 py-4 shadow-2xl relative z-[1001]">
+    <div className="fixed inset-0 bg-[#0F0A1E] text-white flex flex-col z-[1000] overflow-hidden select-none" onContextMenu={(e) => e.preventDefault()}>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,#3B2A6B_0%,#0F0A1E_80%)] opacity-60 pointer-events-none" />
+      
+      {/* Header / Progress Bar */}
+      <div className="flex-shrink-0 bg-[#160D33]/60 backdrop-blur-3xl border-b border-white/5 px-6 py-4 shadow-2xl relative z-[1001]">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-6">
           <div className="flex-1">
             <p className="text-white/40 text-[10px] uppercase tracking-[0.2em] font-bold mb-1">Виконується тест</p>
@@ -213,7 +228,22 @@ export default function TestTake() {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar relative z-[1001]">
+        {isLoading && (
+          <div className="max-w-3xl mx-auto px-6 py-12 space-y-12 animate-pulse">
+            <div className="space-y-4">
+              <div className="h-4 w-32 bg-white/5 rounded-full" />
+              <div className="h-10 w-full bg-white/5 rounded-2xl" />
+              <div className="h-8 w-3/4 bg-white/5 rounded-2xl" />
+            </div>
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="h-16 w-full bg-white/5 rounded-3xl" />
+              ))}
+            </div>
+          </div>
+        )}
         {!currentQuestion && !isLoading && !isFinished && (
           <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
             <div className="glass-card p-8 max-w-md">
@@ -234,14 +264,16 @@ export default function TestTake() {
         <div className="max-w-3xl mx-auto px-4 py-8">
           {currentQuestion && (
             <div key={animKey} className="animate-slide-in">
-              <div className="flex items-center gap-3 mb-5">
-                <span className="px-3 py-1 rounded-full bg-purple-accent/20 border border-purple-accent/30 text-purple-300 text-xs font-semibold">
-                  Питання {currentQuestion.questionNumber}
-                </span>
-                <span className="text-slate-500 text-xs">
-                  {currentQuestion.type === 'SINGLE' ? 'Одна правильна відповідь' : 'Кілька правильних відповідей'}
-                </span>
-              </div>
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="px-4 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-[10px] font-black uppercase tracking-widest shadow-[0_0_15px_rgba(168,85,247,0.1)]">
+                    Питання {currentQuestion.questionNumber}
+                  </div>
+                  <div className="h-px flex-1 bg-white/5" />
+                  <div className="text-white/30 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500/50 animate-pulse" />
+                    {currentQuestion.type === 'SINGLE' ? 'Оберіть одну відповідь' : 'Оберіть кілька відповідей'}
+                  </div>
+                </div>
 
               {currentQuestion.imageUrl && (
                 <div className="mb-6">

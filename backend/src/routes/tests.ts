@@ -18,8 +18,8 @@ const createTestSchema = z.object({
   subject: z.string().optional(),
   timeLimitMin: z.number().int().min(0).default(0),
   maxAttempts: z.number().int().positive().default(1),
-  openFrom: z.string().datetime().optional(),
-  openUntil: z.string().datetime().optional(),
+  openFrom: z.string().datetime().optional().nullable(),
+  openUntil: z.string().datetime().optional().nullable(),
   status: z.enum(['DRAFT', 'OPEN', 'CLOSED']).default('DRAFT'),
   questionsCount: z.number().int().positive().default(10),
   samplingMode: z.enum(['FROM_BANK', 'BY_CATEGORY']).default('FROM_BANK'),
@@ -135,8 +135,8 @@ router.post(
         createdById: user.userId,
         timeLimitMin: data.timeLimitMin,
         maxAttempts: data.maxAttempts,
-        openFrom: data.openFrom ? new Date(data.openFrom) : undefined,
-        openUntil: data.openUntil ? new Date(data.openUntil) : undefined,
+        openFrom: data.openFrom ? new Date(data.openFrom) : null,
+        openUntil: data.openUntil ? new Date(data.openUntil) : null,
         status: data.status,
         questionsCount: data.questionsCount,
         samplingMode: data.samplingMode,
@@ -235,8 +235,8 @@ router.patch(
     if (data.subject !== undefined) updatePayload['subject'] = data.subject;
     if (data.timeLimitMin !== undefined) updatePayload['timeLimitMin'] = data.timeLimitMin;
     if (data.maxAttempts !== undefined) updatePayload['maxAttempts'] = data.maxAttempts;
-    if (data.openFrom !== undefined) updatePayload['openFrom'] = data.openFrom ? new Date(data.openFrom) : null;
-    if (data.openUntil !== undefined) updatePayload['openUntil'] = data.openUntil ? new Date(data.openUntil) : null;
+    if (data.openFrom !== undefined) updatePayload['openFrom'] = data.openFrom ? new Date(data.openFrom) : data.openFrom === null ? null : undefined;
+    if (data.openUntil !== undefined) updatePayload['openUntil'] = data.openUntil ? new Date(data.openUntil) : data.openUntil === null ? null : undefined;
     if (data.status !== undefined) updatePayload['status'] = data.status;
     if (data.questionsCount !== undefined) updatePayload['questionsCount'] = data.questionsCount;
     if (data.samplingMode !== undefined) updatePayload['samplingMode'] = data.samplingMode;

@@ -70,6 +70,9 @@ export default function TestResult() {
   }, [scoringMode, score, maxScore, percentage])
 
   const handleBackToDashboard = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {})
+    }
     reset()
     queryClient.invalidateQueries({ queryKey: ['student-tests'] })
     navigate('/student/dashboard', { replace: true })
@@ -131,15 +134,25 @@ export default function TestResult() {
                   {displayScore}
                 </div>
 
-                <div className="flex justify-center mt-6">
+                <div className="flex justify-center mt-6 relative">
+                  {passed && (
+                    <div className="absolute inset-0 pointer-events-none">
+                      <div className="absolute inset-x-0 -top-10 flex justify-center">
+                        <div className="w-1 h-1 bg-green-400 rounded-full animate-ping opacity-50" />
+                      </div>
+                      <div className="absolute -left-10 top-0 w-2 h-2 bg-purple-400 rounded-full animate-bounce opacity-40 delay-100" />
+                      <div className="absolute -right-10 top-5 w-2 h-2 bg-pink-400 rounded-full animate-bounce opacity-40 delay-300" />
+                    </div>
+                  )}
                   <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl border text-sm font-bold uppercase tracking-widest transition-all duration-500 ${
                     passed
-                      ? 'bg-green-500/10 border-green-500/30 text-green-400 shadow-lg shadow-green-500/10'
+                      ? 'bg-green-500/10 border-green-500/30 text-green-400 shadow-[0_0_40px_rgba(34,197,94,0.2)] scale-110'
                       : 'bg-red-500/10 border-red-500/30 text-red-400 shadow-lg shadow-red-500/10'
                   }`}>
                     {passed ? (
                       <>
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div className="absolute inset-0 bg-green-500/20 blur-xl animate-pulse rounded-full" />
+                        <svg className="w-5 h-5 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         Складено
