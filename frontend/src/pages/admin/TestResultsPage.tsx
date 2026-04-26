@@ -345,7 +345,7 @@ export default function TestResultsPage() {
                         <p className="text-slate-500 text-xs">{a.user?.email}</p>
                       </td>
                       <td className="px-5 py-4 text-slate-400 text-sm">
-                        {a.user?.group?.name ?? '—'}
+                        {a.user?.groups?.[0]?.group?.name ?? '—'}
                       </td>
                       <td className="px-5 py-4 text-slate-400 text-sm">#{idx + 1}</td>
                       <td className="px-5 py-4 text-slate-400 text-sm whitespace-nowrap">
@@ -544,7 +544,7 @@ export default function TestResultsPage() {
               return (
                 <tr key={a.id} className="border-b-2 border-x-2 border-black">
                   <td className="p-3 border-r-2 border-black font-bold">{a.user?.name ?? '—'}</td>
-                  <td className="p-3 border-r-2 border-black">{a.user?.group?.name || '—'}</td>
+                  <td className="p-3 border-r-2 border-black">{a.user?.groups?.[0]?.group?.name || '—'}</td>
                   <td className="p-3 border-r-2 border-black text-center whitespace-nowrap">
                     <span className="font-black text-sm">{pct.toFixed(1)}%</span>
                     <span className="text-[10px] text-gray-500 ml-1">({a.score} / {a.maxScore})</span>

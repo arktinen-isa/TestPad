@@ -103,6 +103,10 @@ interface StudentsModalProps {
 
 function StudentsModal({ group, onClose }: StudentsModalProps) {
   const qc = useQueryClient()
+  const [addEmail, setAddEmail] = useState('')
+  const [addError, setAddError] = useState<string | null>(null)
+  const [addLoading, setAddLoading] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
   const [unassignedSearch, setUnassignedSearch] = useState('')
 
   const { data: students, isLoading } = useQuery<User[]>({
