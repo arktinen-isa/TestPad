@@ -382,7 +382,7 @@ export default function GroupsPage() {
                     <td className="px-5 py-4 text-slate-400">{g.year || '—'}</td>
                     <td className="px-5 py-4">
                       <span className="status-badge bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                        {g.studentsCount ?? 0} студ.
+                        {g.studentCount ?? 0} студ.
                       </span>
                     </td>
                     <td className="px-5 py-4">

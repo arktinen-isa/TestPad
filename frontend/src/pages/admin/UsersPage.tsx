@@ -141,14 +141,27 @@ function UserModal({ initial, onClose, onSave }: UserModalProps) {
 export default function UsersPage() {
   const qc = useQueryClient()
   const [roleFilter, setRoleFilter] = useState<Role | 'ALL'>('ALL')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
   const [showModal, setShowModal] = useState(false)
   const [editUser, setEditUser] = useState<User | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<User | null>(null)
 
   const { data: users, isLoading } = useQuery<User[]>({
-    queryKey: ['users', roleFilter],
+    queryKey: ['users', roleFilter, debouncedSearch],
     queryFn: async () => {
-      const params = roleFilter !== 'ALL' ? { role: roleFilter } : {}
+      const params: any = {}
+      if (roleFilter !== 'ALL') params.role = roleFilter
+      if (debouncedSearch) params.search = debouncedSearch
       const res = await apiClient.get('/users', { params })
       return res.data.data
     },
@@ -182,7 +195,6 @@ export default function UsersPage() {
       day: '2-digit', month: '2-digit', year: 'numeric',
     })
   }
-
   return (
     <div className="animate-fade-in space-y-6">
       {/* Header */}
@@ -199,21 +211,36 @@ export default function UsersPage() {
         </button>
       </div>
 
-      {/* Filter */}
-      <div className="flex gap-2 flex-wrap">
-        {(['ALL', 'STUDENT', 'TEACHER', 'ADMIN'] as const).map((r) => (
-          <button
-            key={r}
-            onClick={() => setRoleFilter(r)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 border ${
-              roleFilter === r
-                ? 'bg-purple-accent/30 text-white border-purple-accent/50'
-                : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10 hover:text-white'
-            }`}
-          >
-            {r === 'ALL' ? 'Всі' : ROLE_LABELS[r]}
-          </button>
-        ))}
+      {/* Filter & Search */}
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+        <div className="flex gap-2 flex-wrap">
+          {(['ALL', 'STUDENT', 'TEACHER', 'ADMIN'] as const).map((r) => (
+            <button
+              key={r}
+              onClick={() => setRoleFilter(r)}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 border ${
+                roleFilter === r
+                  ? 'bg-purple-accent/30 text-white border-purple-accent/50'
+                  : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              {r === 'ALL' ? 'Всі' : ROLE_LABELS[r]}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative w-full md:w-64">
+           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+           </svg>
+           <input 
+             type="text"
+             value={searchTerm}
+             onChange={(e) => setSearchTerm(e.target.value)}
+             placeholder="Пошук (ПІБ або email)..."
+             className="glass-input pl-10 h-10 text-sm"
+           />
+        </div>
       </div>
 
       {/* Table */}

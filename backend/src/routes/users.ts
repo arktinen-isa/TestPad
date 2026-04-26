@@ -20,6 +20,7 @@ const updateUserSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   email: z.string().email().optional(),
   password: z.string().min(6).optional(),
+  role: z.enum(['ADMIN', 'TEACHER', 'STUDENT']).optional(),
 });
 
 // GET /api/users — ADMIN only
@@ -29,6 +30,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const role = req.query['role'] as string;
     const unassigned = req.query['unassigned'] === 'true';
+    const search = req.query['search'] as string;
     const page = Math.max(1, parseInt(req.query['page'] as string) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query['limit'] as string) || 20));
     const skip = (page - 1) * limit;
@@ -41,6 +43,13 @@ router.get(
     if (unassigned) {
       where['role'] = 'STUDENT';
       where['groups'] = { none: {} };
+    }
+
+    if (search) {
+      where['OR'] = [
+        { name: { contains: search } },
+        { email: { contains: search } },
+      ];
     }
 
     const [users, total] = await Promise.all([
@@ -179,6 +188,16 @@ router.patch(
     if (data.name !== undefined) updateData['name'] = data.name;
     if (data.email !== undefined) updateData['email'] = data.email;
     if (data.password !== undefined) updateData['passwordHash'] = await hashPassword(data.password);
+    
+    // Only ADMIN can change roles
+    if (data.role !== undefined && currentUser.role === 'ADMIN') {
+      updateData['role'] = data.role;
+      
+      // If role changes from STUDENT to something else, remove from all groups
+      if (data.role !== 'STUDENT') {
+        await prisma.userGroup.deleteMany({ where: { userId: id } });
+      }
+    }
 
     const user = await prisma.user.update({
       where: { id },
