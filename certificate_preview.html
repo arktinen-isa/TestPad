@@ -5,140 +5,143 @@
 <title>Certificate Preview — GradeX</title>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  body { margin: 0; background: #050610; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
-  canvas { box-shadow: 0 0 80px rgba(124,58,237,0.35); max-width: 95vw; display: block; }
-  p { color: #475569; font-size: 11px; font-family: Inter, sans-serif; margin-top: 10px; }
+  body { margin:0; background:#050610; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; }
+  canvas { box-shadow:0 0 80px rgba(124,58,237,0.35); max-width:95vw; display:block; }
+  p { color:#475569; font-size:11px; font-family:Inter,sans-serif; margin-top:10px; }
 </style>
 </head>
 <body>
 <canvas id="c" width="1587" height="1122"></canvas>
-<p>Превʼю · GradeX Certificate · A4 landscape</p>
+<p>Превʼю · GradeX Certificate · A4 landscape · рівномірний розподіл</p>
 <script>
 document.fonts.ready.then(draw)
+
+const STUDENT = 'Шевченко Тарас Григорович'
+const TITLE   = 'Підсумкова контрольна робота'
+const SCORE   = '9 / 20'
+const DATE    = '26 квітня 2026 р.'
 
 function draw() {
   const cv = document.getElementById('c')
   const g  = cv.getContext('2d')
-  const W  = 1587, H = 1122
-  const m  = v => v * (W / 297)   // mm → px
+  const W = 1587, H = 1122
+  const m = v => v * (W / 297)
 
-  // ── helpers ─────────────────────────────────────────────────────
-  const fr = (c,x,y,w,h) => { g.fillStyle=c; g.fillRect(x,y,w,h) }
-  const sr = (c,lw,x,y,w,h) => { g.strokeStyle=c; g.lineWidth=lw*m(1); g.strokeRect(x,y,w,h) }
   const ln = (c,lw,x1,y1,x2,y2) => { g.strokeStyle=c; g.lineWidth=lw*m(1); g.beginPath(); g.moveTo(x1,y1); g.lineTo(x2,y2); g.stroke() }
-  const ci = (c,x,y,r,fill=true) => { g.beginPath(); g.arc(m(x),m(y),m(r),0,Math.PI*2); fill?(g.fillStyle=c,g.fill()):(g.strokeStyle=c,g.stroke()) }
+  const ci = (c,x,y,r) => { g.fillStyle=c; g.beginPath(); g.arc(m(x),m(y),m(r),0,Math.PI*2); g.fill() }
 
   const txt = (str, x, y, sz, wt, col, align='center', fam='heading') => {
-    const family = fam==='mono' ? '"Courier New",monospace'
-                 : fam==='body' ? '"Inter",sans-serif'
-                 : '"Unbounded","Inter",sans-serif'
-    g.fillStyle = col
-    g.font = `${wt} ${m(sz)}px ${family}`
-    g.textAlign = align
-    g.textBaseline = 'middle'
+    const family = fam==='mono'?'"Courier New",monospace' : fam==='body'?'"Inter",sans-serif' : '"Unbounded","Inter",sans-serif'
+    g.fillStyle=col; g.font=`${wt} ${m(sz)}px ${family}`; g.textAlign=align; g.textBaseline='middle'
     g.fillText(str, m(x), m(y))
   }
 
   // ── background ────────────────────────────────────────────────
-  fr('#0a0b1e', 0, 0, W, H)
-  g.globalAlpha=0.30; fr('#12103a',0,0,m(297*.52),H); g.globalAlpha=1
-
-  const glow = (c,x,y,r,a) => {
-    g.globalAlpha=a
-    const gl=g.createRadialGradient(m(x),m(y),0,m(x),m(y),m(r))
-    gl.addColorStop(0,c); gl.addColorStop(1,'transparent')
-    g.fillStyle=gl; g.beginPath(); g.arc(m(x),m(y),m(r),0,Math.PI*2); g.fill()
-    g.globalAlpha=1
-  }
+  g.fillStyle='#0a0b1e'; g.fillRect(0,0,W,H)
+  g.globalAlpha=.30; g.fillStyle='#12103a'; g.fillRect(0,0,m(297*.52),H); g.globalAlpha=1
+  const glow=(c,x,y,r,a)=>{g.globalAlpha=a;const gl=g.createRadialGradient(m(x),m(y),0,m(x),m(y),m(r));gl.addColorStop(0,c);gl.addColorStop(1,'transparent');g.fillStyle=gl;g.beginPath();g.arc(m(x),m(y),m(r),0,Math.PI*2);g.fill();g.globalAlpha=1}
   glow('#7c3aed',0,0,85,.13); glow('#fbbf24',297,210,70,.09); glow('#7c3aed',297,0,45,.05)
-
   g.globalAlpha=.045; g.fillStyle='#a78bfa'
-  for(let x=22;x<297;x+=11) for(let y=22;y<210;y+=11){g.beginPath();g.arc(m(x),m(y),m(.4),0,Math.PI*2);g.fill()}
+  for(let x=22;x<297;x+=11)for(let y=22;y<210;y+=11){g.beginPath();g.arc(m(x),m(y),m(.4),0,Math.PI*2);g.fill()}
   g.globalAlpha=1
 
   // ── borders ────────────────────────────────────────────────────
-  sr('#fbbf24',.8,m(8),m(8),m(281),m(194))
-  sr('#7c3aed',.25,m(11),m(11),m(275),m(188))
-
+  g.strokeStyle='#fbbf24'; g.lineWidth=m(.8); g.strokeRect(m(8),m(8),m(281),m(194))
+  g.strokeStyle='#7c3aed'; g.lineWidth=m(.25); g.strokeRect(m(11),m(11),m(275),m(188))
   const corner=(cx,cy,dx,dy)=>{
     g.globalAlpha=.95; g.fillStyle='#fbbf24'
-    const s=m(2.8)
-    g.beginPath();g.moveTo(m(cx),m(cy)-s);g.lineTo(m(cx)+s*.9,m(cy));g.lineTo(m(cx),m(cy)+s);g.closePath();g.fill()
-    g.beginPath();g.moveTo(m(cx),m(cy)-s);g.lineTo(m(cx)-s*.9,m(cy));g.lineTo(m(cx),m(cy)+s);g.closePath();g.fill()
-    g.globalAlpha=1
-    ln('#fbbf24',.55,m(cx),m(cy),m(cx)+dx*m(18),m(cy))
-    ln('#fbbf24',.55,m(cx),m(cy),m(cx),m(cy)+dy*m(18))
+    const s=m(2.8); g.beginPath(); g.moveTo(m(cx),m(cy)-s); g.lineTo(m(cx)+s*.9,m(cy)); g.lineTo(m(cx),m(cy)+s); g.closePath(); g.fill()
+    g.beginPath(); g.moveTo(m(cx),m(cy)-s); g.lineTo(m(cx)-s*.9,m(cy)); g.lineTo(m(cx),m(cy)+s); g.closePath(); g.fill()
+    g.globalAlpha=1; ln('#fbbf24',.55,m(cx),m(cy),m(cx)+dx*m(18),m(cy)); ln('#fbbf24',.55,m(cx),m(cy),m(cx),m(cy)+dy*m(18))
   }
   corner(8,8,1,1); corner(289,8,-1,1); corner(289,202,-1,-1); corner(8,202,1,-1)
 
-  // ── project logo (diamond + checkmark) ─────────────────────────
+  // ── logo ──────────────────────────────────────────────────────
   const logo=(lx,ly,sz)=>{
-    const px=Math.round(m(sz)), cv2=document.createElement('canvas')
-    cv2.width=px; cv2.height=px
+    const px=Math.round(m(sz)), cv2=document.createElement('canvas'); cv2.width=px; cv2.height=px
     const c2=cv2.getContext('2d'), s=px/100
-    const gr=c2.createLinearGradient(5*s,5*s,95*s,95*s)
-    gr.addColorStop(0,'#7C3AED'); gr.addColorStop(1,'#4F46E5')
-    c2.fillStyle=gr
-    c2.beginPath(); c2.moveTo(50*s,5*s); c2.lineTo(95*s,50*s); c2.lineTo(50*s,95*s); c2.lineTo(5*s,50*s); c2.closePath(); c2.fill()
+    const gr=c2.createLinearGradient(5*s,5*s,95*s,95*s); gr.addColorStop(0,'#7C3AED'); gr.addColorStop(1,'#4F46E5')
+    c2.fillStyle=gr; c2.beginPath(); c2.moveTo(50*s,5*s); c2.lineTo(95*s,50*s); c2.lineTo(50*s,95*s); c2.lineTo(5*s,50*s); c2.closePath(); c2.fill()
     c2.strokeStyle='rgba(255,255,255,.15)'; c2.lineWidth=2*s; c2.stroke()
     c2.strokeStyle='white'; c2.lineWidth=8*s; c2.lineCap='round'; c2.lineJoin='round'
     c2.beginPath(); c2.moveTo(35*s,50*s); c2.lineTo(45*s,60*s); c2.lineTo(65*s,40*s); c2.stroke()
     c2.setLineDash([4*s,4*s]); c2.strokeStyle='rgba(255,255,255,.3)'; c2.lineWidth=1.2*s
     c2.beginPath(); c2.arc(50*s,50*s,45*s,0,Math.PI*2); c2.stroke(); c2.setLineDash([])
-    g.drawImage(cv2, m(lx)-m(sz)/2, m(ly)-m(sz)/2, m(sz), m(sz))
+    g.drawImage(cv2,m(lx)-m(sz)/2,m(ly)-m(sz)/2,m(sz),m(sz))
   }
 
-  // ── header ──────────────────────────────────────────────────────
-  logo(148.5, 19, 18)
-  txt('GRADEX', 148.5, 32, 7.5, '700', '#a78bfa')
+  // ── proportional layout ───────────────────────────────────────
+  const parts = STUDENT.trim().split(/\s+/)
+  const lastName  = parts[0].toUpperCase()
+  const firstName = parts.slice(1).join(' ')
+
+  // wrap title
+  const tmpC = document.createElement('canvas').getContext('2d')
+  tmpC.font = `700 ${m(12)}px "Unbounded","Inter",sans-serif`
+  const titleWords = TITLE.split(' '); let tl = [], tcur = ''
+  for(const w of titleWords){const t=tcur?tcur+' '+w:w; if(tmpC.measureText(t).width/m(1)>215&&tcur){tl.push(tcur);tcur=w}else tcur=t}
+  if(tcur)tl.push(tcur); const titleLines=tl.slice(0,2)
+
+  const ELEMS = [
+    {h:18,key:'logo'},{h:4.5,key:'gradex'},{h:0,key:'rule'},
+    {h:9,key:'cert'},{h:4,key:'subtitle'},{h:0,key:'sep1'},
+    {h:4,key:'cym'},{h:9,key:'lastname'},
+    ...(firstName?[{h:5.5,key:'firstname'}]:[]),
+    {h:0,key:'underline'},{h:4,key:'phrase'},
+    ...titleLines.map((_,i)=>({h:6,key:`title${i}`})),
+    {h:14,key:'badge'},{h:0,key:'sep2'},{h:4,key:'date'},
+  ]
+
+  const MARGIN_TOP=13, MARGIN_BTM=12, usableH=210-MARGIN_TOP-MARGIN_BTM
+  const totalH=ELEMS.reduce((s,e)=>s+e.h,0)
+  const gap=(usableH-totalH)/(ELEMS.length-1)
+
+  const pos={}; let curY=MARGIN_TOP
+  for(let i=0;i<ELEMS.length;i++){
+    curY+=ELEMS[i].h/2; pos[ELEMS[i].key]=curY; curY+=ELEMS[i].h/2
+    if(i<ELEMS.length-1)curY+=gap
+  }
+
+  // ── render ────────────────────────────────────────────────────
+  logo(148.5, pos.logo, 18)
+  txt('GRADEX', 148.5, pos.gradex, 7.5, '700', '#a78bfa')
 
   g.strokeStyle='#a78bfa'; g.lineWidth=m(.2)
-  g.beginPath(); g.moveTo(m(148.5-36),m(40)); g.lineTo(m(148.5-5),m(40)); g.stroke()
-  g.beginPath(); g.moveTo(m(148.5+5),m(40));  g.lineTo(m(148.5+36),m(40)); g.stroke()
-  ci('#fbbf24',148.5,40,1)
+  g.beginPath(); g.moveTo(m(148.5-36),m(pos.rule)); g.lineTo(m(148.5-5),m(pos.rule)); g.stroke()
+  g.beginPath(); g.moveTo(m(148.5+5),m(pos.rule));  g.lineTo(m(148.5+36),m(pos.rule)); g.stroke()
+  ci('#fbbf24',148.5,pos.rule,1)
 
-  txt('СЕРТИФІКАТ',                         148.5, 52, 19, '800', '#ffffff', 'center', 'heading')
-  txt('ПРО УСПІШНЕ ПРОХОДЖЕННЯ ТЕСТУВАННЯ', 148.5, 63, 7.5,'600', '#a78bfa', 'center', 'body')
+  txt('СЕРТИФІКАТ',                         148.5, pos.cert,     19,  '800', '#ffffff', 'center', 'heading')
+  txt('ПРО УСПІШНЕ ПРОХОДЖЕННЯ ТЕСТУВАННЯ', 148.5, pos.subtitle, 7.5, '600', '#a78bfa', 'center', 'body')
 
-  g.globalAlpha=.45; ln('#47556980',.3,m(20),m(73),m(277),m(73)); g.globalAlpha=1
+  g.globalAlpha=.45; ln('#47556980',.3,m(20),m(pos.sep1),m(277),m(pos.sep1)); g.globalAlpha=1
 
-  // ── body ─────────────────────────────────────────────────────────
-  txt('цим підтверджується, що', 148.5, 83, 8, '300', '#94a3b8', 'center', 'body')
+  txt('цим підтверджується, що', 148.5, pos.cym, 8, '300', '#94a3b8', 'center', 'body')
+  txt(lastName,  148.5, pos.lastname, 19, '800', '#fbbf24', 'center', 'heading')
+  if(firstName) txt(firstName, 148.5, pos.firstname, 12, '400', '#e2e8f0', 'center', 'heading')
 
-  txt('ШЕВЧЕНКО',          148.5, 96,  19,'800','#fbbf24','center','heading')
-  txt('Тарас Григорович',  148.5, 109, 12,'400','#e2e8f0','center','heading')
+  g.globalAlpha=.3; ln('#fbbf24',.4,m(148.5-52),m(pos.underline),m(148.5+52),m(pos.underline)); g.globalAlpha=1
 
-  const nb=116
-  g.globalAlpha=.3; ln('#fbbf24',.4,m(148.5-52),m(nb),m(148.5+52),m(nb)); g.globalAlpha=1
+  txt('успішно завершив(ла) тестування з теми (курсу):', 148.5, pos.phrase, 8, '400', '#94a3b8', 'center', 'body')
+  titleLines.forEach((line,i) => txt(line, 148.5, pos[`title${i}`], 12, '700', '#e2e8f0', 'center', 'heading'))
 
-  txt('успішно завершив(ла) тестування з теми (курсу):', 148.5, nb+13, 8,'400','#94a3b8','center','body')
-  txt('Підсумкова контрольна робота', 148.5, nb+28, 12,'700','#e2e8f0','center','heading')
+  const bh=m(14), bw=m(140)
+  g.globalAlpha=.22; g.fillStyle='#7c3aed'; rr(g,m(148.5)-bw/2,m(pos.badge)-bh/2,bw,bh,m(3),true); g.globalAlpha=1
+  g.strokeStyle='#a78bfa'; g.lineWidth=m(.3); rr(g,m(148.5)-bw/2,m(pos.badge)-bh/2,bw,bh,m(3),false)
+  txt('РЕЗУЛЬТАТ: '+SCORE, 148.5, pos.badge, 7.5, '700', '#c4b5fd', 'center', 'body')
 
-  const badgeY=nb+28+13+9, bh=m(14), bw=m(140)
-  g.globalAlpha=.22; g.fillStyle='#7c3aed'
-  rr(g,m(148.5)-bw/2,m(badgeY)-bh/2,bw,bh,m(3),true); g.globalAlpha=1
-  g.strokeStyle='#a78bfa'; g.lineWidth=m(.3)
-  rr(g,m(148.5)-bw/2,m(badgeY)-bh/2,bw,bh,m(3),false)
-  txt('РЕЗУЛЬТАТ: 9 / 20 балів', 148.5, badgeY, 7.5,'700','#c4b5fd','center','body')
+  g.globalAlpha=.45; ln('#47556980',.3,m(20),m(pos.sep2),m(277),m(pos.sep2)); g.globalAlpha=1
+  ci('#fbbf24',148.5,pos.sep2,1)
 
-  // ── footer separator ─────────────────────────────────────────────
-  const ft=Math.max(badgeY+bh/m(1)/2+6, 155)
-  g.globalAlpha=.45; ln('#47556980',.3,m(20),m(ft),m(277),m(ft)); g.globalAlpha=1
-  ci('#fbbf24',148.5,ft,1)
-
-  // ── footer — date only ───────────────────────────────────────────
-  const fCY=(ft+(210-10))/2
-  txt('дата завершення',  148.5, fCY-4, 5,  '400','#475569','center','body')
-  txt('26 квітня 2026 р.',148.5, fCY+4, 7,  '400','#64748b','center','mono')
+  txt(`дата завершення: ${DATE}`, 148.5, pos.date, 8, '400', '#64748b', 'center', 'body')
 }
 
 function rr(ctx,x,y,w,h,r,fill){
-  ctx.beginPath()
-  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r)
+  ctx.beginPath(); ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r)
   ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r)
   ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r)
-  ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r)
-  ctx.closePath(); fill ? ctx.fill() : ctx.stroke()
+  ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r); ctx.closePath()
+  fill ? ctx.fill() : ctx.stroke()
 }
 </script>
 </body>

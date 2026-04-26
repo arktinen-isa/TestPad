@@ -56,21 +56,17 @@ export const generateCertificate = (
   corner(8,   H-8,  1, -1)
 
   // ── TEXT RENDERER ──────────────────────────────────────────────────────
-  // fontFamily: 'heading' = Unbounded (titles, name, GRADEX)
-  //             'body'    = Inter (phrases, descriptions)
-  //             'mono'    = monospace (dates, IDs)
   const drawText = (
     text: string, x: number, y: number,
-    sizePx: number, weight: string,
-    hex: string,
+    sizePx: number, weight: string, hex: string,
     align: 'left'|'center'|'right' = 'center',
     fontFamily: 'heading'|'body'|'mono' = 'heading'
   ) => {
     if (!text) return
     const family =
-      fontFamily === 'mono'    ? '"Courier New", "Courier", monospace' :
-      fontFamily === 'body'    ? '"Inter", "Helvetica Neue", sans-serif' :
-                                 '"Unbounded", "Inter", sans-serif'
+      fontFamily === 'mono'  ? '"Courier New","Courier",monospace' :
+      fontFamily === 'body'  ? '"Inter","Helvetica Neue",sans-serif' :
+                               '"Unbounded","Inter",sans-serif'
     const cvs = document.createElement('canvas')
     const ctx = cvs.getContext('2d')!
     const sc = 4
@@ -102,110 +98,130 @@ export const generateCertificate = (
     return lines
   }
 
-  // ── PROJECT LOGO (SVG diamond + checkmark) ────────────────────────────
+  // ── PROJECT LOGO ───────────────────────────────────────────────────────
   const drawProjectLogo = (lx: number, ly: number, sizeMm: number) => {
-    const sc = 6
-    const px = Math.round(sizeMm * sc)
+    const sc = 6, px = Math.round(sizeMm * sc)
     const cvs = document.createElement('canvas')
     cvs.width = px; cvs.height = px
     const ctx = cvs.getContext('2d')!
     const s = px / 100
-
     const grad = ctx.createLinearGradient(5*s, 5*s, 95*s, 95*s)
     grad.addColorStop(0, '#7C3AED'); grad.addColorStop(1, '#4F46E5')
     ctx.fillStyle = grad
     ctx.beginPath()
-    ctx.moveTo(50*s, 5*s); ctx.lineTo(95*s, 50*s)
-    ctx.lineTo(50*s, 95*s); ctx.lineTo(5*s, 50*s)
+    ctx.moveTo(50*s,5*s); ctx.lineTo(95*s,50*s)
+    ctx.lineTo(50*s,95*s); ctx.lineTo(5*s,50*s)
     ctx.closePath(); ctx.fill()
-
     ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 2*s; ctx.stroke()
-
     ctx.strokeStyle = 'white'; ctx.lineWidth = 8*s
     ctx.lineCap = 'round'; ctx.lineJoin = 'round'
     ctx.beginPath()
-    ctx.moveTo(35*s, 50*s); ctx.lineTo(45*s, 60*s); ctx.lineTo(65*s, 40*s)
+    ctx.moveTo(35*s,50*s); ctx.lineTo(45*s,60*s); ctx.lineTo(65*s,40*s)
     ctx.stroke()
-
-    ctx.setLineDash([4*s, 4*s])
+    ctx.setLineDash([4*s,4*s])
     ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1.2*s
-    ctx.beginPath(); ctx.arc(50*s, 50*s, 45*s, 0, Math.PI*2); ctx.stroke()
+    ctx.beginPath(); ctx.arc(50*s,50*s,45*s,0,Math.PI*2); ctx.stroke()
     ctx.setLineDash([])
-
-    doc.addImage(cvs.toDataURL('image/png'), 'PNG', lx - sizeMm/2, ly - sizeMm/2, sizeMm, sizeMm)
+    doc.addImage(cvs.toDataURL('image/png'), 'PNG', lx-sizeMm/2, ly-sizeMm/2, sizeMm, sizeMm)
   }
 
   // ══════════════════════════════════════════════════════════════
-  // HEADER
+  // PROPORTIONAL LAYOUT CALCULATOR
+  // Each element: { h: height-in-mm, key: string }
+  // Elements with h=0 are horizontal rules / underlines.
+  // Gap between all consecutive elements is calculated to fill
+  // the usable height (y 12 → 198) uniformly.
   // ══════════════════════════════════════════════════════════════
-  drawProjectLogo(W / 2, 19, 18)
-  drawText('GRADEX', W / 2, 32, 7.5, 'bold', '#a78bfa', 'center', 'heading')
-
-  draw(PURPLEL); doc.setLineWidth(0.2)
-  doc.line(W/2 - 36, 40, W/2 - 5, 40)
-  doc.line(W/2 + 5,  40, W/2 + 36, 40)
-  fill(GOLD); doc.circle(W / 2, 40, 1.0, 'F')
-
-  drawText('СЕРТИФІКАТ', W / 2, 52, 19, '800', '#ffffff', 'center', 'heading')
-  drawText('ПРО УСПІШНЕ ПРОХОДЖЕННЯ ТЕСТУВАННЯ', W / 2, 63, 7.5, '600', '#a78bfa', 'center', 'body')
-
-  sv(); gst(0.45); draw(DIM); doc.setLineWidth(0.3)
-  doc.line(20, 73, W - 20, 73); rs()
-
-  // ══════════════════════════════════════════════════════════════
-  // BODY
-  // ══════════════════════════════════════════════════════════════
-  drawText('цим підтверджується, що', W / 2, 83, 8, '300', '#94a3b8', 'center', 'body')
-
   const parts     = studentName.trim().split(/\s+/)
   const lastName  = (parts[0] ?? '').toUpperCase()
   const firstName = parts.slice(1).join(' ')
-
-  drawText(lastName,  W / 2, 96, 19, '800', '#fbbf24', 'center', 'heading')
-  if (firstName) drawText(firstName, W / 2, 109, 12, '400', '#e2e8f0', 'center', 'heading')
-
-  const nameBottom = firstName ? 116 : 104
-
-  sv(); gst(0.3); draw(GOLD); doc.setLineWidth(0.4)
-  doc.line(W/2 - 52, nameBottom, W/2 + 52, nameBottom); rs()
-
-  drawText('успішно завершив(ла) тестування з теми (курсу):', W / 2, nameBottom + 13, 8, '400', '#94a3b8', 'center', 'body')
-
-  const titleLines = wrapText(testTitle, 200, 12, 'bold').slice(0, 2)
-  let titleY = nameBottom + 28
-  for (const line of titleLines) {
-    drawText(line, W / 2, titleY, 12, '700', '#e2e8f0', 'center', 'heading')
-    titleY += 13
-  }
-
-  // Score badge
-  const badgeY = titleY + 9
-  const bh = 14
-  sv(); gst(0.22); fill(PURPLE)
-  doc.roundedRect(W/2 - 70, badgeY - bh/2, 140, bh, 3, 3, 'F'); rs()
-  draw(PURPLEL); doc.setLineWidth(0.3)
-  doc.roundedRect(W/2 - 70, badgeY - bh/2, 140, bh, 3, 3, 'S')
-  drawText(`РЕЗУЛЬТАТ: ${score}`, W / 2, badgeY + 0.2, 7.5, '700', '#c4b5fd', 'center', 'body')
-
-  // ══════════════════════════════════════════════════════════════
-  // FOOTER SEPARATOR
-  // ══════════════════════════════════════════════════════════════
-  const footerTop = Math.max(badgeY + bh/2 + 6, 155)
-
-  sv(); gst(0.45); draw(DIM); doc.setLineWidth(0.3)
-  doc.line(20, footerTop, W - 20, footerTop); rs()
-  fill(GOLD); doc.circle(W / 2, footerTop, 1.0, 'F')
-
-  // ══════════════════════════════════════════════════════════════
-  // FOOTER — date only, small/secondary, Inter
-  // ══════════════════════════════════════════════════════════════
-  const fCY = (footerTop + H - 10) / 2
+  const titleLines = wrapText(testTitle, 215, 12, '700').slice(0, 2)
 
   const dateStr = (finishedAt ? new Date(finishedAt) : new Date())
     .toLocaleDateString('uk-UA', { day: '2-digit', month: 'long', year: 'numeric' })
 
-  drawText('дата завершення', W / 2, fCY - 4, 5, '400', '#475569', 'center', 'body')
-  drawText(dateStr,           W / 2, fCY + 4, 7, '400', '#64748b', 'center', 'mono')
+  type ElemKey =
+    'logo'|'gradex'|'rule'|'cert'|'subtitle'|'sep1'|
+    'cym'|'lastname'|'firstname'|'underline'|'phrase'|
+    'title0'|'title1'|'badge'|'sep2'|'date'
+
+  const ELEMS: Array<{ h: number; key: ElemKey }> = [
+    { h: 18,  key: 'logo'      },
+    { h: 4.5, key: 'gradex'    },
+    { h: 0,   key: 'rule'      },
+    { h: 9,   key: 'cert'      },
+    { h: 4,   key: 'subtitle'  },
+    { h: 0,   key: 'sep1'      },
+    { h: 4,   key: 'cym'       },
+    { h: 9,   key: 'lastname'  },
+    ...(firstName ? [{ h: 5.5, key: 'firstname' as ElemKey }] : []),
+    { h: 0,   key: 'underline' },
+    { h: 4,   key: 'phrase'    },
+    ...titleLines.map((_, i) => ({ h: 6, key: `title${i}` as ElemKey })),
+    { h: 14,  key: 'badge'     },
+    { h: 0,   key: 'sep2'      },
+    { h: 4,   key: 'date'      },
+  ]
+
+  const MARGIN_TOP = 13, MARGIN_BTM = 12
+  const usableH = H - MARGIN_TOP - MARGIN_BTM
+  const totalElemH = ELEMS.reduce((s, e) => s + e.h, 0)
+  const gap = (usableH - totalElemH) / (ELEMS.length - 1)
+
+  const pos: Partial<Record<ElemKey, number>> = {}
+  let curY = MARGIN_TOP
+  for (let i = 0; i < ELEMS.length; i++) {
+    curY += ELEMS[i].h / 2
+    pos[ELEMS[i].key] = curY
+    curY += ELEMS[i].h / 2
+    if (i < ELEMS.length - 1) curY += gap
+  }
+
+  // ── HEADER ─────────────────────────────────────────────────────────────
+  drawProjectLogo(W / 2, pos.logo!, 18)
+  drawText('GRADEX', W / 2, pos.gradex!, 7.5, 'bold', '#a78bfa', 'center', 'heading')
+
+  draw(PURPLEL); doc.setLineWidth(0.2)
+  doc.line(W/2 - 36, pos.rule!, W/2 - 5, pos.rule!)
+  doc.line(W/2 + 5,  pos.rule!, W/2 + 36, pos.rule!)
+  fill(GOLD); doc.circle(W / 2, pos.rule!, 1.0, 'F')
+
+  drawText('СЕРТИФІКАТ', W / 2, pos.cert!, 19, '800', '#ffffff', 'center', 'heading')
+  drawText('ПРО УСПІШНЕ ПРОХОДЖЕННЯ ТЕСТУВАННЯ', W / 2, pos.subtitle!, 7.5, '600', '#a78bfa', 'center', 'body')
+
+  sv(); gst(0.45); draw(DIM); doc.setLineWidth(0.3)
+  doc.line(20, pos.sep1!, W - 20, pos.sep1!); rs()
+
+  // ── BODY ───────────────────────────────────────────────────────────────
+  drawText('цим підтверджується, що', W / 2, pos.cym!, 8, '300', '#94a3b8', 'center', 'body')
+
+  drawText(lastName, W / 2, pos.lastname!, 19, '800', '#fbbf24', 'center', 'heading')
+  if (firstName) drawText(firstName, W / 2, pos.firstname!, 12, '400', '#e2e8f0', 'center', 'heading')
+
+  sv(); gst(0.3); draw(GOLD); doc.setLineWidth(0.4)
+  doc.line(W/2 - 52, pos.underline!, W/2 + 52, pos.underline!); rs()
+
+  drawText('успішно завершив(ла) тестування з теми (курсу):', W / 2, pos.phrase!, 8, '400', '#94a3b8', 'center', 'body')
+
+  titleLines.forEach((line, i) => {
+    drawText(line, W / 2, pos[`title${i}` as ElemKey]!, 12, '700', '#e2e8f0', 'center', 'heading')
+  })
+
+  // Score badge
+  const bh = 14
+  sv(); gst(0.22); fill(PURPLE)
+  doc.roundedRect(W/2 - 70, pos.badge! - bh/2, 140, bh, 3, 3, 'F'); rs()
+  draw(PURPLEL); doc.setLineWidth(0.3)
+  doc.roundedRect(W/2 - 70, pos.badge! - bh/2, 140, bh, 3, 3, 'S')
+  drawText(`РЕЗУЛЬТАТ: ${score}`, W / 2, pos.badge! + 0.2, 7.5, '700', '#c4b5fd', 'center', 'body')
+
+  // ── FOOTER ─────────────────────────────────────────────────────────────
+  sv(); gst(0.45); draw(DIM); doc.setLineWidth(0.3)
+  doc.line(20, pos.sep2!, W - 20, pos.sep2!); rs()
+  fill(GOLD); doc.circle(W / 2, pos.sep2!, 1.0, 'F')
+
+  // Date label + value on one line, 8pt Inter
+  drawText(`дата завершення: ${dateStr}`, W / 2, pos.date!, 8, '400', '#64748b', 'center', 'body')
 
   if (testLogoUrl) {
     try {
