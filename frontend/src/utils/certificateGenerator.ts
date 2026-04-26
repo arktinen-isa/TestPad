@@ -189,8 +189,8 @@ export const generateCertificate = (
   drawText('СЕРТИФІКАТ', W / 2, pos.cert!, 19, '800', '#ffffff', 'center', 'heading')
   drawText('ПРО УСПІШНЕ ПРОХОДЖЕННЯ ТЕСТУВАННЯ', W / 2, pos.subtitle!, 8, '600', '#a78bfa', 'center', 'body')
 
-  sv(); gst(0.45); draw(DIM); doc.setLineWidth(0.3)
-  doc.line(20, pos.sep1!, W - 20, pos.sep1!); rs()
+  //sv(); gst(0.45); draw(DIM); doc.setLineWidth(0.3)
+  //doc.line(20, pos.sep1!, W - 20, pos.sep1!); rs()
 
   // ── BODY ───────────────────────────────────────────────────────────────
   drawText('цим підтверджується, що', W / 2, pos.cym!, 6, '300', '#94a3b8', 'center', 'body')
@@ -201,10 +201,10 @@ export const generateCertificate = (
   sv(); gst(0.3); draw(GOLD); doc.setLineWidth(0.4)
   doc.line(W / 2 - 52, pos.underline!, W / 2 + 52, pos.underline!); rs()
 
-  drawText('успішно завершив(ла) тестування з теми (курсу):', W / 2, pos.phrase!, 6, '400', '#94a3b8', 'center', 'body')
+  drawText('успішно завершив(-ла) тестування з курсу', W / 2, pos.phrase!, 6, '400', '#94a3b8', 'center', 'body')
 
   titleLines.forEach((line, i) => {
-    drawText(line, W / 2, pos[`title${i}` as ElemKey]!, 12, '700', '#e2e8f0', 'center', 'heading')
+    drawText(line, W / 2, pos[`title${i}` as ElemKey]!, 10, '700', '#e2e8f0', 'center', 'heading')
   })
 
   // Score badge
@@ -216,12 +216,12 @@ export const generateCertificate = (
   drawText(`РЕЗУЛЬТАТ: ${score}`, W / 2, pos.badge! + 0.2, 5, '700', '#c4b5fd', 'center', 'body')
 
   // ── FOOTER ─────────────────────────────────────────────────────────────
-  sv(); gst(0.45); draw(DIM); doc.setLineWidth(0.3)
-  doc.line(20, pos.sep2!, W - 20, pos.sep2!); rs()
-  fill(GOLD); doc.circle(W / 2, pos.sep2!, 1.0, 'F')
+  //sv(); gst(0.45); draw(DIM); doc.setLineWidth(0.3)
+  //doc.line(20, pos.sep2!, W - 20, pos.sep2!); rs()
+  //fill(GOLD); doc.circle(W / 2, pos.sep2!, 1.0, 'F')
 
   // Date label + value on one line, 8pt Inter
-  drawText(`дата завершення: ${dateStr}`, W / 2, pos.date!, 3, '400', '#64748b', 'center', 'body')
+  drawText(`дата завершення ${dateStr}`, W / 2, pos.date!, 3, '400', '#64748b', 'center', 'body')
 
   if (testLogoUrl) {
     try {
