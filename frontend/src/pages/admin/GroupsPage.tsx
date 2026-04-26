@@ -335,16 +335,16 @@ function StudentsModal({ group, onClose }: StudentsModalProps) {
         <div className="px-6 py-4 border-t border-white/10 bg-slate-900/50 flex justify-end flex-shrink-0">
           <button onClick={onClose} className="btn-ghost px-8 h-10 text-sm font-semibold">Закрити</button>
         </div>
-
-        {showImportModal && (
-          <StudentImportModal
-            groupId={group.id}
-            groupName={group.name}
-            onClose={() => setShowImportModal(false)}
-            onImport={handleImportStudents}
-          />
-        )}
       </div>
+
+      {showImportModal && (
+        <StudentImportModal
+          groupId={group.id}
+          groupName={group.name}
+          onClose={() => setShowImportModal(false)}
+          onImport={handleImportStudents}
+        />
+      )}
     </div>
   )
 }
