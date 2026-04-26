@@ -100,7 +100,7 @@ export default function StudentImportModal({ groupName, onClose, onImport }: Stu
   }
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay z-[60]">
       <div className="bg-slate-900 border border-white/10 shadow-2xl rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-fade-in">
         {/* Header */}
         <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-slate-900/50 flex-shrink-0">
