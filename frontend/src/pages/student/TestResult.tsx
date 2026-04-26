@@ -5,14 +5,6 @@ import apiClient from '../../api/client'
 import { useTestStore } from '../../store/testStore'
 import { AttemptResult } from '../../types'
 import { PASS_MESSAGES, FAIL_MESSAGES } from '../../constants/messages'
- 
-function getPlural(n: number, one: string, few: string, many: string) {
-  const lastDigit = Math.floor(n) % 10;
-  const lastTwoDigits = Math.floor(n) % 100;
-  if (lastDigit === 1 && lastTwoDigits !== 11) return one;
-  if (lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 10 || lastTwoDigits >= 20)) return few;
-  return many;
-}
 
 function formatDuration(seconds: number): string {
   if (!seconds) return '—'
@@ -28,18 +20,18 @@ export default function TestResult() {
   const queryClient = useQueryClient()
   const {
     reset,
+    attemptId: storeAttemptId,
     score: storeScore,
     maxScore: storeMax,
     percentage: storePercent,
     passThreshold: storeThreshold,
     scoringMode: storeScoringMode,
     passed: storePassed,
-    showResultMode: storeShowResultMode
+    showResultMode: storeShowResultMode,
   } = useTestStore()
 
-  // Try to get attemptId from query params or state
   const params = new URLSearchParams(location.search)
-  const attemptId = params.get('attemptId') || location.state?.attemptId
+  const attemptId = params.get('attemptId') || location.state?.attemptId || storeAttemptId
 
   const { data: result, isLoading } = useQuery<AttemptResult>({
     queryKey: ['attempt-result', attemptId],
@@ -51,15 +43,13 @@ export default function TestResult() {
     enabled: !!attemptId,
   })
 
-  // Use store values as fallback
   const score = result?.score ?? storeScore
   const maxScore = result?.maxScore ?? storeMax
   const percentage = result?.percentage ?? storePercent ?? 0
   const passThreshold = result?.passThreshold ?? storeThreshold
   const scoringMode = result?.scoringMode ?? storeScoringMode
   const passed = result?.passed ?? storePassed ?? (percentage >= (passThreshold ?? 60))
-  const showResultMode = result?.showResultMode || storeShowResultMode || 'ADMIN_ONLY'
-  const isConfidential = showResultMode === 'ADMIN_ONLY' || (score === null && storeScore === null)
+  const showResultMode = result?.showResultMode || storeShowResultMode || 'AFTER_FINISH'
 
   const motivationalMessage = useMemo(() => {
     const list = passed ? PASS_MESSAGES : FAIL_MESSAGES
@@ -67,9 +57,7 @@ export default function TestResult() {
   }, [passed])
 
   const displayScore = useMemo(() => {
-    if (scoringMode === 'SUM') {
-      return `${score} / ${maxScore} ${getPlural(maxScore || 0, 'бал', 'бали', 'балів')}`
-    }
+    if (scoringMode === 'SUM') return `${score} / ${maxScore}`
     return `${percentage}%`
   }, [scoringMode, score, maxScore, percentage])
 
@@ -80,7 +68,6 @@ export default function TestResult() {
   }
 
   useEffect(() => {
-    // Invalidate dashboard tests query as soon as we arrive at results
     queryClient.invalidateQueries({ queryKey: ['student-tests'] })
   }, [queryClient])
 
@@ -112,7 +99,7 @@ export default function TestResult() {
             {result?.testTitle || 'Результати тесту'}
           </h1>
 
-          {isConfidential ? (
+          {showResultMode === 'ADMIN_ONLY' ? (
             <div className="glass-card p-10 border-blue-500/20 bg-blue-500/5 backdrop-blur-xl">
               <div className="w-20 h-20 rounded-3xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto mb-8 shadow-lg shadow-blue-500/10">
                 <svg className="w-10 h-10 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -130,16 +117,18 @@ export default function TestResult() {
               <div className="relative mb-12">
                 <div className="absolute inset-0 bg-white/5 blur-3xl rounded-full scale-150 animate-pulse-slow" />
                 <p className="text-white/60 text-xs uppercase tracking-widest font-bold mb-2 relative z-10">Твій результат</p>
-                <div className={`font-unbounded text-6xl md:text-7xl font-black mb-2 tabular-nums relative z-10 drop-shadow-2xl ${passed ? 'text-green-cta' : 'text-red-400'
-                  }`}>
+                <div className={`font-unbounded text-6xl md:text-7xl font-black mb-2 tabular-nums relative z-10 drop-shadow-2xl ${
+                  passed ? 'text-green-cta' : 'text-red-400'
+                }`}>
                   {displayScore}
                 </div>
 
                 <div className="flex justify-center mt-6">
-                  <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl border text-sm font-bold uppercase tracking-widest transition-all duration-500 ${passed
+                  <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl border text-sm font-bold uppercase tracking-widest transition-all duration-500 ${
+                    passed
                       ? 'bg-green-500/10 border-green-500/30 text-green-400 shadow-lg shadow-green-500/10'
                       : 'bg-red-500/10 border-red-500/30 text-red-400 shadow-lg shadow-red-500/10'
-                    }`}>
+                  }`}>
                     {passed ? (
                       <>
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -190,8 +179,9 @@ export default function TestResult() {
         <div className="glass-card p-6 flex items-center justify-between group hover:bg-white/5 transition-colors duration-300">
           <div>
             <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold mb-1">Завершено</p>
-            <p className={`font-unbounded text-lg font-bold ${result?.finishReason === 'NORMAL' ? 'text-green-400' : 'text-orange-400'
-              }`}>
+            <p className={`font-unbounded text-lg font-bold ${
+              result?.finishReason === 'NORMAL' ? 'text-green-400' : 'text-orange-400'
+            }`}>
               {result?.finishReason === 'TIMEOUT' ? 'Вичерпано час' :
                 result?.finishReason === 'EXIT' ? 'Примусово' : 'Успішно'}
             </p>

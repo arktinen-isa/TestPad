@@ -34,7 +34,6 @@ const createTestSchema = z.object({
 
 const updateTestSchema = createTestSchema.partial();
 
-// GET /api/tests
 router.get(
   '/',
   asyncHandler(async (req, res) => {
@@ -46,20 +45,14 @@ router.get(
     let where: Record<string, unknown> = {};
 
     if (user.role === 'STUDENT') {
-      // Student sees open tests assigned to their groups
       const userGroups = await prisma.userGroup.findMany({
         where: { userId: user.userId },
         select: { groupId: true },
       });
       const groupIds = userGroups.map((ug) => ug.groupId);
-
       where = {
         status: 'OPEN',
-        groups: {
-          some: {
-            groupId: { in: groupIds },
-          },
-        },
+        groups: { some: { groupId: { in: groupIds } } },
       };
     }
 
@@ -74,7 +67,9 @@ router.get(
           groups: { select: { groupId: true } },
           categoryQuotas: true,
           attempts: {
-            where: user.role === 'STUDENT' ? { studentId: user.userId } : undefined,
+            where: user.role === 'STUDENT'
+              ? { studentId: user.userId, finishedAt: { not: null } }
+              : undefined,
             orderBy: { startedAt: 'desc' },
             take: 1,
           },
@@ -84,52 +79,48 @@ router.get(
       prisma.test.count({ where }),
     ]);
 
-    const tests = await Promise.all(rawTests.map(async (t) => {
-      if (user.role !== 'STUDENT') return t;
-      
-      const attemptsUsed = await prisma.attempt.count({
-        where: { testId: t.id, studentId: user.userId, finishedAt: { not: null } }
+    let tests: any[] = rawTests;
+
+    if (user.role === 'STUDENT') {
+      const testIds = rawTests.map(t => t.id);
+      const countRows = await prisma.attempt.groupBy({
+        by: ['testId'],
+        where: { testId: { in: testIds }, studentId: user.userId, finishedAt: { not: null } },
+        _count: { id: true },
       });
+      const countMap = new Map(countRows.map(r => [r.testId, r._count.id]));
 
-      const lastAttempt = t.attempts[0];
-      let lastAttemptMapped = null;
+      tests = rawTests.map(t => {
+        const lastAttempt = t.attempts[0];
+        let lastAttemptMapped = null;
 
-      if (lastAttempt) {
-        const s = lastAttempt.score ?? 0;
-        const ms = lastAttempt.maxScore ?? 0;
-        const pct = ms > 0 ? Math.round((s / ms) * 100) : 0;
-        
-        let passed = null;
-        if (t.passThreshold !== null && lastAttempt.score !== null && lastAttempt.maxScore !== null) {
-          passed = t.scoringMode === 'PERCENTAGE' 
-            ? (pct >= t.passThreshold)
-            : (s >= t.passThreshold);
+        if (lastAttempt) {
+          const s = lastAttempt.score ?? 0;
+          const ms = lastAttempt.maxScore ?? 0;
+          const pct = ms > 0 ? Math.round((s / ms) * 100) : 0;
+          let passed = null;
+          if (t.passThreshold !== null && lastAttempt.score !== null && lastAttempt.maxScore !== null) {
+            passed = t.scoringMode === 'PERCENTAGE' ? pct >= t.passThreshold : s >= t.passThreshold;
+          }
+          const hideScore = t.showResultMode === 'ADMIN_ONLY';
+          lastAttemptMapped = {
+            id: lastAttempt.id,
+            score: hideScore ? null : lastAttempt.score,
+            maxScore: hideScore ? null : lastAttempt.maxScore,
+            percentage: hideScore ? null : pct,
+            passed: hideScore ? null : passed,
+            finishedAt: lastAttempt.finishedAt,
+          };
         }
 
-        const hideScore = user.role === 'STUDENT' && t.showResultMode === 'ADMIN_ONLY' && lastAttempt.finishedAt !== null;
-
-        lastAttemptMapped = {
-          id: lastAttempt.id,
-          score: hideScore ? null : lastAttempt.score,
-          maxScore: hideScore ? null : lastAttempt.maxScore,
-          percentage: hideScore ? null : pct,
-          passed: hideScore ? null : passed,
-          finishedAt: lastAttempt.finishedAt,
-        };
-      }
-
-      return {
-        ...t,
-        attemptsUsed,
-        lastAttempt: lastAttemptMapped,
-      };
-    }));
+        return { ...t, attemptsUsed: countMap.get(t.id) ?? 0, lastAttempt: lastAttemptMapped };
+      });
+    }
 
     res.json({ data: tests, total, page, limit, totalPages: Math.ceil(total / limit) });
   })
 );
 
-// POST /api/tests — ADMIN+TEACHER
 router.post(
   '/',
   authorize('ADMIN', 'TEACHER'),
@@ -160,12 +151,7 @@ router.post(
           ? { create: data.questionIds.map((questionId) => ({ questionId })) }
           : undefined,
         categoryQuotas: data.categoryQuotas
-          ? {
-              create: data.categoryQuotas.map((cq) => ({
-                categoryId: cq.categoryId,
-                quota: cq.quota,
-              })),
-            }
+          ? { create: data.categoryQuotas.map((cq) => ({ categoryId: cq.categoryId, quota: cq.quota })) }
           : undefined,
       },
       include: {
@@ -180,7 +166,6 @@ router.post(
   })
 );
 
-// GET /api/tests/:id
 router.get(
   '/:id',
   asyncHandler(async (req, res) => {
@@ -193,9 +178,7 @@ router.get(
         createdBy: { select: { id: true, name: true } },
         groups: { include: { group: { select: { id: true, name: true } } } },
         questions: { select: { questionId: true } },
-        categoryQuotas: {
-          include: { category: { select: { id: true, name: true } } },
-        },
+        categoryQuotas: { include: { category: { select: { id: true, name: true } } } },
         _count: { select: { attempts: true } },
       },
     });
@@ -205,7 +188,6 @@ router.get(
       return;
     }
 
-    // Students can only see tests accessible to them
     if (user.role === 'STUDENT') {
       if (test.status !== 'OPEN') {
         res.status(403).json({ error: 'Test is not available' });
@@ -217,30 +199,24 @@ router.get(
       });
       const userGroupIds = new Set(userGroups.map((ug) => ug.groupId));
       const testGroupIds = test.groups.map((tg) => tg.group.id);
-      const hasAccess = testGroupIds.some((gid) => userGroupIds.has(gid));
-      if (!hasAccess) {
+      if (!testGroupIds.some((gid) => userGroupIds.has(gid))) {
         res.status(403).json({ error: 'You do not have access to this test' });
         return;
       }
     }
 
-    const responseData: Record<string, any> = {
-      ...test,
-      questionsInBankCount: test.questions.length,
-    };
+    const responseData: Record<string, any> = { ...test, questionsInBankCount: test.questions.length };
 
     if (user.role === 'STUDENT') {
-      const attemptsUsed = await prisma.attempt.count({
+      responseData['attemptsUsed'] = await prisma.attempt.count({
         where: { testId: id, studentId: user.userId, finishedAt: { not: null } },
       });
-      responseData['attemptsUsed'] = attemptsUsed;
     }
 
     res.json(responseData);
   })
 );
 
-// PATCH /api/tests/:id — ADMIN+TEACHER
 router.patch(
   '/:id',
   authorize('ADMIN', 'TEACHER'),
@@ -269,47 +245,38 @@ router.patch(
     if (data.showResultMode !== undefined) updatePayload['showResultMode'] = data.showResultMode;
     if (data.multiScoringMode !== undefined) updatePayload['multiScoringMode'] = data.multiScoringMode;
 
-    // Handle relationship updates
     if (data.groupIds !== undefined) {
       await prisma.testGroup.deleteMany({ where: { testId: id } });
-      updatePayload['groups'] = {
-        create: data.groupIds.map((groupId) => ({ groupId })),
-      };
+      updatePayload['groups'] = { create: data.groupIds.map((groupId) => ({ groupId })) };
     }
-
     if (data.questionIds !== undefined) {
       await prisma.testQuestion.deleteMany({ where: { testId: id } });
-      updatePayload['questions'] = {
-        create: data.questionIds.map((questionId) => ({ questionId })),
-      };
+      updatePayload['questions'] = { create: data.questionIds.map((questionId) => ({ questionId })) };
     }
-
     if (data.categoryQuotas !== undefined) {
       await prisma.testCategoryQuota.deleteMany({ where: { testId: id } });
       updatePayload['categoryQuotas'] = {
-        create: data.categoryQuotas.map((cq) => ({
-          categoryId: cq.categoryId,
-          quota: cq.quota,
-        })),
+        create: data.categoryQuotas.map((cq) => ({ categoryId: cq.categoryId, quota: cq.quota })),
       };
     }
 
-    const test = await withDbRetry(() => prisma.test.update({
-      where: { id },
-      data: updatePayload,
-      include: {
-        createdBy: { select: { id: true, name: true } },
-        groups: { include: { group: { select: { id: true, name: true } } } },
-        questions: { select: { questionId: true } },
-        categoryQuotas: true,
-      },
-    }));
+    const test = await withDbRetry(() =>
+      prisma.test.update({
+        where: { id },
+        data: updatePayload,
+        include: {
+          createdBy: { select: { id: true, name: true } },
+          groups: { include: { group: { select: { id: true, name: true } } } },
+          questions: { select: { questionId: true } },
+          categoryQuotas: true,
+        },
+      })
+    );
 
     res.json(test);
   })
 );
 
-// DELETE /api/tests/:id — ADMIN only
 router.delete(
   '/:id',
   authorize('ADMIN'),
@@ -322,43 +289,22 @@ router.delete(
       return;
     }
 
-    // Deep cascade delete to ensure all relations are cleared
     await withDbRetry(async () => {
       await prisma.$transaction(async (tx) => {
-        // 1. Delete deeply nested attempt data
-        const attemptIds = (await tx.attempt.findMany({
-          where: { testId: id },
-          select: { id: true }
-        })).map(a => a.id);
+        const attemptIds = (
+          await tx.attempt.findMany({ where: { testId: id }, select: { id: true } })
+        ).map(a => a.id);
 
         if (attemptIds.length > 0) {
-          // Delete suspicious events
-          await tx.suspiciousEvent.deleteMany({
-            where: { attemptId: { in: attemptIds } }
-          });
-          
-          // Delete attempt answers
-          await tx.attemptAnswer.deleteMany({
-            where: { attemptQuestion: { attemptId: { in: attemptIds } } }
-          });
-
-          // Delete attempt questions
-          await tx.attemptQuestion.deleteMany({
-            where: { attemptId: { in: attemptIds } }
-          });
-
-          // Delete attempts
-          await tx.attempt.deleteMany({
-            where: { id: { in: attemptIds } }
-          });
+          await tx.suspiciousEvent.deleteMany({ where: { attemptId: { in: attemptIds } } });
+          await tx.attemptAnswer.deleteMany({ where: { attemptQuestion: { attemptId: { in: attemptIds } } } });
+          await tx.attemptQuestion.deleteMany({ where: { attemptId: { in: attemptIds } } });
+          await tx.attempt.deleteMany({ where: { id: { in: attemptIds } } });
         }
 
-        // 2. Delete test relations
         await tx.testQuestion.deleteMany({ where: { testId: id } });
         await tx.testGroup.deleteMany({ where: { testId: id } });
         await tx.testCategoryQuota.deleteMany({ where: { testId: id } });
-
-        // 3. Delete the test itself
         await tx.test.delete({ where: { id } });
       });
     });
@@ -367,7 +313,6 @@ router.delete(
   })
 );
 
-// GET /api/tests/:id/results — ADMIN+TEACHER, paginated attempt results
 router.get(
   '/:id/results',
   authorize('ADMIN', 'TEACHER'),
@@ -397,9 +342,7 @@ router.get(
               groups: { select: { group: { select: { name: true } } } },
             },
           },
-          suspiciousEvents: {
-            select: { id: true, eventType: true, occurredAt: true }
-          },
+          suspiciousEvents: { select: { id: true, eventType: true, occurredAt: true } },
         },
         orderBy: { startedAt: 'desc' },
       }),
@@ -410,41 +353,32 @@ router.get(
       const ms = a.maxScore ?? 0;
       const s = a.score ?? 0;
       const pct = ms > 0 ? (s / ms) * 100 : 0;
-      const passed = test.passThreshold !== null ? pct >= test.passThreshold : null;
-      const timeSpentSec = a.finishedAt 
-        ? Math.floor((a.finishedAt.getTime() - a.startedAt.getTime()) / 1000)
-        : 0;
-
       return {
         id: a.id,
-        user: {
-          ...a.student,
-          group: a.student.groups[0]?.group,
-        },
+        user: { ...a.student, group: a.student.groups[0]?.group },
         startedAt: a.startedAt,
         finishedAt: a.finishedAt,
         finishReason: a.finishReason,
         score: a.score,
         maxScore: a.maxScore,
         percentage: Math.round(pct * 10) / 10,
-        passed,
-        timeSpentSec,
+        passed: test.passThreshold !== null ? pct >= test.passThreshold : null,
+        timeSpentSec: a.finishedAt
+          ? Math.floor((a.finishedAt.getTime() - a.startedAt.getTime()) / 1000)
+          : 0,
         suspiciousEvents: a.suspiciousEvents,
       };
     });
 
     res.json({
-      test: {
-        id: test.id,
-        title: test.title,
-        subject: test.subject,
-        passThreshold: test.passThreshold,
-      },
+      test: { id: test.id, title: test.title, subject: test.subject, passThreshold: test.passThreshold },
       attempts: attemptsMapped,
       total,
       stats: {
-        avgScore: 0, // Simplified or calculate if needed
-        avgPct: total > 0 ? (attemptsMapped.reduce((acc, a) => acc + (a.percentage || 0), 0) / attemptsMapped.length) : 0,
+        avgScore: 0,
+        avgPct: attemptsMapped.length > 0
+          ? attemptsMapped.reduce((acc, a) => acc + (a.percentage || 0), 0) / attemptsMapped.length
+          : 0,
         passCount: attemptsMapped.filter(a => a.passed).length,
       },
       page,
@@ -454,7 +388,6 @@ router.get(
   })
 );
 
-// GET /api/tests/:id/results/export — ADMIN+TEACHER, CSV export of all attempt results
 router.get(
   '/:id/results/export',
   authorize('ADMIN', 'TEACHER'),
@@ -468,17 +401,9 @@ router.get(
       return;
     }
 
-    // Build attempt filter
-    const attemptWhere: Record<string, unknown> = {
-      testId: id,
-      finishedAt: { not: null },
-    };
-
-    // If groupId filter provided, only include students belonging to that group
+    const attemptWhere: Record<string, unknown> = { testId: id, finishedAt: { not: null } };
     if (groupId) {
-      attemptWhere['student'] = {
-        groups: { some: { groupId } },
-      };
+      attemptWhere['student'] = { groups: { some: { groupId } } };
     }
 
     const attempts = await prisma.attempt.findMany({
@@ -489,24 +414,18 @@ router.get(
             id: true,
             name: true,
             email: true,
-            groups: {
-              select: {
-                group: { select: { name: true } },
-              },
-            },
+            groups: { select: { group: { select: { name: true } } } },
           },
         },
       },
       orderBy: { startedAt: 'desc' },
     });
 
-    // CSV helpers
     const escapeCsv = (value: string | number | null | undefined): string => {
       const str = value === null || value === undefined ? '' : String(value);
-      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-        return `"${str.replace(/"/g, '""')}"`;
-      }
-      return str;
+      return str.includes(',') || str.includes('"') || str.includes('\n')
+        ? `"${str.replace(/"/g, '""')}"`
+        : str;
     };
 
     const headers = ['Студент', 'Email', 'Група', 'Дата', 'Бал', 'Макс.бал', 'Відсоток', 'Час(хв)', 'Підозрілих подій'];
@@ -514,24 +433,20 @@ router.get(
     const rows = attempts.map((a) => {
       const groupName = a.student.groups.map((ug) => ug.group.name).join('; ');
       const date = a.finishedAt ? a.finishedAt.toISOString().replace('T', ' ').substring(0, 19) : '';
-      const score = a.score !== null ? a.score : '';
-      const maxScore = a.maxScore !== null ? a.maxScore : '';
       const percentage =
         a.score !== null && a.maxScore !== null && a.maxScore > 0
           ? Math.round((a.score / a.maxScore) * 100)
           : '';
       const timeSpentMin =
-        a.finishedAt !== null && a.startedAt !== null
-          ? Math.round((a.finishedAt.getTime() - a.startedAt.getTime()) / 60000)
-          : '';
+        a.finishedAt ? Math.round((a.finishedAt.getTime() - a.startedAt.getTime()) / 60000) : '';
 
       return [
         escapeCsv(a.student.name),
         escapeCsv(a.student.email),
         escapeCsv(groupName),
         escapeCsv(date),
-        escapeCsv(score),
-        escapeCsv(maxScore),
+        escapeCsv(a.score !== null ? a.score : ''),
+        escapeCsv(a.maxScore !== null ? a.maxScore : ''),
         escapeCsv(percentage),
         escapeCsv(timeSpentMin),
         escapeCsv(a.suspiciousEventsCount),
@@ -539,112 +454,79 @@ router.get(
     });
 
     const csv = [headers.map(escapeCsv).join(','), ...rows].join('\r\n');
-
-    // Prepend UTF-8 BOM for Excel compatibility
-    const bom = '﻿';
-
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="results_${id}.csv"`);
-    res.send(bom + csv);
+    res.send('﻿' + csv);
   })
 );
 
-// GET /api/tests/:id/stats/questions — ADMIN+TEACHER, per-question correctness statistics
 router.get(
   '/:id/stats/questions',
   authorize('ADMIN', 'TEACHER'),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    // Fetch unique question IDs from all attempts of this test to ensure we cover all sampled questions
     const usedAqs = await prisma.attemptQuestion.findMany({
-      where: {
-        attempt: { testId: id, finishedAt: { not: null } }
-      },
+      where: { attempt: { testId: id, finishedAt: { not: null } } },
       select: { questionId: true },
-      distinct: ['questionId']
+      distinct: ['questionId'],
     });
 
     const questionIds = usedAqs.map(aq => aq.questionId);
 
-    // Fetch question details (text, type, answers) for these used questions
-    const questionsData = await prisma.question.findMany({
-      where: { id: { in: questionIds } },
-      include: {
-        answers: { select: { id: true, isCorrect: true } }
-      }
-    });
+    const [questionsData, attemptQuestions] = await Promise.all([
+      prisma.question.findMany({
+        where: { id: { in: questionIds } },
+        include: { answers: { select: { id: true, isCorrect: true } } },
+      }),
+      prisma.attemptQuestion.findMany({
+        where: { questionId: { in: questionIds }, attempt: { testId: id, finishedAt: { not: null } } },
+        include: { attemptAnswers: { select: { answerId: true, selected: true } } },
+      }),
+    ]);
 
-    // Create a map for quick access
     const questionDataMap = new Map(questionsData.map(q => [q.id, q]));
 
-    // Fetch all AttemptQuestions with their student answers for calculation
-    const attemptQuestions = await prisma.attemptQuestion.findMany({
-      where: {
-        questionId: { in: questionIds },
-        attempt: { testId: id, finishedAt: { not: null } },
-      },
-      include: {
-        attemptAnswers: { select: { answerId: true, selected: true } },
-      },
-    });
-
-    // Group AttemptQuestions by questionId
     const aqByQuestion = new Map<string, typeof attemptQuestions>();
     for (const aq of attemptQuestions) {
-      if (!aqByQuestion.has(aq.questionId)) {
-        aqByQuestion.set(aq.questionId, []);
-      }
+      if (!aqByQuestion.has(aq.questionId)) aqByQuestion.set(aq.questionId, []);
       aqByQuestion.get(aq.questionId)!.push(aq);
     }
 
-    const stats = questionIds.map((qId) => {
-      const q = questionDataMap.get(qId);
-      if (!q) return null;
-      
-      const aqs = aqByQuestion.get(qId) ?? [];
+    const stats = questionIds
+      .map((qId) => {
+        const q = questionDataMap.get(qId);
+        if (!q) return null;
 
-      // Only count answered questions
-      const answered = aqs.filter((aq) => aq.answeredAt !== null);
-      const totalAnswered = answered.length;
+        const answered = (aqByQuestion.get(qId) ?? []).filter(aq => aq.answeredAt !== null);
+        const totalAnswered = answered.length;
+        const correctAnswerIds = new Set(q.answers.filter(a => a.isCorrect).map(a => a.id));
+        let correctCount = 0;
 
-      const correctAnswerIds = new Set(q.answers.filter((a) => a.isCorrect).map((a) => a.id));
-
-      let correctCount = 0;
-
-      for (const aq of answered) {
-        const selectedIds = new Set(aq.attemptAnswers.filter((aa) => aa.selected).map((aa) => aa.answerId));
-
-        if (q.type === 'SINGLE') {
-          // Correct if the student selected the single correct answer
-          const [correctId] = [...correctAnswerIds];
-          if (correctId && selectedIds.has(correctId) && selectedIds.size === 1) {
-            correctCount++;
-          }
-        } else {
-          // MULTI — ALL_OR_NOTHING: all correct selected and no wrong selected
-          const allCorrectSelected = [...correctAnswerIds].every((cid) => selectedIds.has(cid));
-          const noWrongSelected = [...selectedIds].every((sid) => correctAnswerIds.has(sid));
-          if (allCorrectSelected && noWrongSelected) {
-            correctCount++;
+        for (const aq of answered) {
+          const selectedIds = new Set(aq.attemptAnswers.filter(aa => aa.selected).map(aa => aa.answerId));
+          if (q.type === 'SINGLE') {
+            const [correctId] = [...correctAnswerIds];
+            if (correctId && selectedIds.has(correctId) && selectedIds.size === 1) correctCount++;
+          } else {
+            const allCorrect = [...correctAnswerIds].every(cid => selectedIds.has(cid));
+            const noWrong = [...selectedIds].every(sid => correctAnswerIds.has(sid));
+            if (allCorrect && noWrong) correctCount++;
           }
         }
-      }
 
-      const correctPct = totalAnswered > 0 ? (correctCount / totalAnswered) * 100 : 0;
-
-      return {
-        questionId: q.id,
-        questionText: q.text.substring(0, 80),
-        questionType: q.type,
-        totalAnswered,
-        correctCount,
-        correctPct: Math.round(correctPct * 100) / 100,
-      };
-    }).filter((s): s is NonNullable<typeof s> => s !== null);
-
-    // Sort by correctPct ascending (hardest first)
-    stats.sort((a, b) => a.correctPct - b.correctPct);
+        const correctPct = totalAnswered > 0 ? (correctCount / totalAnswered) * 100 : 0;
+        return {
+          questionId: q.id,
+          questionText: q.text.substring(0, 80),
+          questionType: q.type,
+          totalAnswered,
+          correctCount,
+          correctPct: Math.round(correctPct * 100) / 100,
+        };
+      })
+      .filter((s): s is NonNullable<typeof s> => s !== null)
+      .sort((a, b) => a.correctPct - b.correctPct);
 
     res.json(stats);
   })

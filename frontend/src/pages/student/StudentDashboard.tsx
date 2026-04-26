@@ -76,13 +76,11 @@ function TestCard({ test }: { test: StudentTest }) {
       }
     } else {
       navigate(`/student/test/${test.id}/start`)
-      // Not setting loading false here as we navigate away immediately to a non-take page
     }
   }
 
   return (
     <div className="glass-card p-6 flex flex-col gap-4 hover:border-purple-accent/30 transition-all duration-300 group">
-      {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <h3 className="font-unbounded text-base font-semibold text-white group-hover:text-purple-300 transition-colors duration-200 leading-snug">
@@ -95,7 +93,6 @@ function TestCard({ test }: { test: StudentTest }) {
         <span className={status.color}>{status.label}</span>
       </div>
 
-      {/* Stats */}
       <div className="flex flex-wrap gap-3">
         <div className="flex items-center gap-1.5 text-sm text-slate-400">
           <svg className="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -116,13 +113,12 @@ function TestCard({ test }: { test: StudentTest }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          {attemptsLeft <= 0 
-            ? 'Спроб немає' 
+          {attemptsLeft <= 0
+            ? 'Спроб немає'
             : `${attemptsLeft} ${getPlural(attemptsLeft, 'спроба залишилась', 'спроби залишилось', 'спроб залишилось')}`}
         </div>
       </div>
 
-      {/* Date window */}
       {(test.openFrom || test.openUntil) && (
         <div className="flex flex-col gap-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 border-dashed">
           {test.openFrom && (
@@ -144,15 +140,14 @@ function TestCard({ test }: { test: StudentTest }) {
         </div>
       )}
 
-      {/* Last attempt result */}
-      {test.lastAttempt && test.showResultMode !== 'ADMIN_ONLY' && (
+      {test.lastAttempt?.finishedAt && test.showResultMode !== 'ADMIN_ONLY' && (
         <div className="px-3 py-2 rounded-xl bg-white/5 border border-white/10">
           <p className="text-xs text-slate-400 mb-0.5">Остання спроба:</p>
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-white">
-              {test.scoringMode === 'PERCENTAGE' 
-                ? `${test.lastAttempt.percentage ?? 0}%` 
-                : `${test.lastAttempt.score ?? 0} / ${test.lastAttempt.maxScore ?? 0} ${getPlural(test.lastAttempt.maxScore ?? 0, 'бал', 'бали', 'балів')}`}
+              {test.scoringMode === 'PERCENTAGE'
+                ? `${test.lastAttempt.percentage ?? 0}%`
+                : `${test.lastAttempt.score ?? 0} / ${test.lastAttempt.maxScore ?? 0} балів`}
             </span>
             <span className={`text-xs font-medium ${
               test.lastAttempt.passed ? 'text-green-400' : 'text-red-400'
@@ -163,14 +158,13 @@ function TestCard({ test }: { test: StudentTest }) {
         </div>
       )}
 
-      {/* Action button */}
       {status.available || activeAttemptId ? (
         <button
           onClick={handleAction}
           disabled={isActionLoading}
           className={`w-full text-center text-sm mt-auto px-6 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
-            activeAttemptId 
-              ? 'bg-blue-500 hover:bg-blue-600 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)]' 
+            activeAttemptId
+              ? 'bg-blue-500 hover:bg-blue-600 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)]'
               : 'btn-primary'
           }`}
         >
@@ -199,7 +193,6 @@ export default function StudentDashboard() {
   const queryClient = useQueryClient()
 
   useEffect(() => {
-    // Invalidate tests query on mount to ensure fresh status
     queryClient.invalidateQueries({ queryKey: ['student-tests'] })
   }, [queryClient])
 
@@ -213,7 +206,6 @@ export default function StudentDashboard() {
 
   return (
     <div className="animate-fade-in">
-      {/* Welcome header */}
       <div className="mb-8">
         <h1 className="font-unbounded text-2xl sm:text-3xl font-bold text-white mb-2">
           Вітаємо, {user?.name ? (user.name.split(' ').length > 1 ? user.name.split(' ')[1] : user.name) : 'Студент'} 👋
@@ -223,20 +215,18 @@ export default function StudentDashboard() {
         </p>
       </div>
 
-      {/* Error state */}
       {error && (
         <div className="glass-card p-6 border-red-500/30 text-center mb-6">
           <p className="text-red-400">Помилка завантаження тестів. Спробуйте оновити сторінку.</p>
         </div>
       )}
 
-      {/* Tests grid */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
       ) : tests && tests.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {tests.map((test) => (
             <TestCard key={test.id} test={test} />
           ))}

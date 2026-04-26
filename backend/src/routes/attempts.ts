@@ -19,9 +19,6 @@ const answerSchema = z.object({
   answerIds: z.array(z.string().uuid()),
 });
 
-/**
- * Fisher-Yates shuffle for answer IDs
- */
 function shuffleArray<T>(arr: T[]): T[] {
   const result = [...arr];
   for (let i = result.length - 1; i > 0; i--) {
@@ -31,27 +28,21 @@ function shuffleArray<T>(arr: T[]): T[] {
   return result;
 }
 
-/**
- * Check if attempt has timed out. Returns true if timed out.
- */
 function isTimedOut(startedAt: Date, timeLimitMin: number): boolean {
   if (timeLimitMin <= 0) return false;
   return Date.now() - startedAt.getTime() > timeLimitMin * 60 * 1000;
 }
 
-/**
- * Finish an attempt: calculate score and save.
- */
 async function finishAttempt(
   attemptId: string,
   reason: 'NORMAL' | 'TIMEOUT' | 'EXIT'
-): Promise<{ 
-  score: number; 
-  maxScore: number; 
-  percentage: number; 
-  passed: boolean | null; 
-  passThreshold: number | null; 
-  scoringMode: string; 
+): Promise<{
+  score: number;
+  maxScore: number;
+  percentage: number;
+  passed: boolean | null;
+  passThreshold: number | null;
+  scoringMode: string;
   showResultMode: string;
 }> {
   const attempt = await withDbRetry(() => prisma.attempt.findUnique({
@@ -65,7 +56,7 @@ async function finishAttempt(
           passThreshold: true,
           scoringMode: true,
           showResultMode: true,
-        }
+        },
       },
       attemptQuestions: {
         select: {
@@ -74,14 +65,14 @@ async function finishAttempt(
               type: true,
               category: { select: { pointsWeight: true } },
               answers: { select: { id: true, isCorrect: true } },
-            }
+            },
           },
           attemptAnswers: {
-            select: { answerId: true, selected: true }
-          }
-        }
-      }
-    }
+            select: { answerId: true, selected: true },
+          },
+        },
+      },
+    },
   }));
 
   if (!attempt) throw new Error('Attempt not found');
@@ -91,9 +82,7 @@ async function finishAttempt(
       question: {
         type: aq.question.type as 'SINGLE' | 'MULTI',
         answers: aq.question.answers,
-        category: {
-          pointsWeight: aq.question.category.pointsWeight,
-        },
+        category: { pointsWeight: aq.question.category.pointsWeight },
       },
       attemptAnswers: aq.attemptAnswers,
     })),
@@ -102,63 +91,46 @@ async function finishAttempt(
 
   await withDbRetry(() => prisma.attempt.update({
     where: { id: attemptId },
-    data: {
-      finishedAt: new Date(),
-      finishReason: reason,
-      score,
-      maxScore,
-    },
+    data: { finishedAt: new Date(), finishReason: reason, score, maxScore },
   }));
 
   const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100 * 100) / 100 : 0;
   const passed =
     attempt.test.passThreshold !== null
-      ? (attempt.test.scoringMode === 'PERCENTAGE'
+      ? attempt.test.scoringMode === 'PERCENTAGE'
         ? percentage >= attempt.test.passThreshold
-        : score >= attempt.test.passThreshold)
+        : score >= attempt.test.passThreshold
       : null;
 
-  return { 
-    score, 
-    maxScore, 
-    percentage, 
-    passed, 
-    passThreshold: attempt.test.passThreshold, 
+  return {
+    score,
+    maxScore,
+    percentage,
+    passed,
+    passThreshold: attempt.test.passThreshold,
     scoringMode: attempt.test.scoringMode,
-    showResultMode: attempt.test.showResultMode
+    showResultMode: attempt.test.showResultMode,
   };
 }
 
-/**
- * Format a question for the student (shuffled answers, no isCorrect info)
- */
 async function getStudentQuestion(attemptId: string, index: number) {
   const [attempt, aq] = await Promise.all([
     prisma.attempt.findUnique({
       where: { id: attemptId },
-      include: {
-        attemptQuestions: { select: { id: true } } // needed for total count
-      }
+      include: { attemptQuestions: { select: { id: true } } },
     }),
     prisma.attemptQuestion.findFirst({
       where: { attemptId, orderIndex: index },
       include: {
-        question: {
-          include: {
-            answers: { select: { id: true, text: true } },
-          },
-        },
+        question: { include: { answers: { select: { id: true, text: true } } } },
       },
-    })
+    }),
   ]);
 
   if (!attempt || !aq) return null;
 
-  const total = attempt.attemptQuestions.length;
-  const { question, answerOrder } = aq;
   const answersMap = new Map(aq.question.answers.map((a) => [a.id, a.text]));
-
-  const orderedAnswers = (answerOrder as string[])
+  const orderedAnswers = (aq.answerOrder as string[])
     .map((answerId) => {
       const text = answersMap.get(answerId);
       return text ? { id: answerId, text } : null;
@@ -176,7 +148,6 @@ async function getStudentQuestion(attemptId: string, index: number) {
   };
 }
 
-// POST /api/attempts — STUDENT only
 router.post(
   '/',
   authorize('STUDENT'),
@@ -184,7 +155,6 @@ router.post(
     const { testId } = startAttemptSchema.parse(req.body);
     const userId = req.user!.userId;
 
-    // Fetch test with all needed relations
     const test = await prisma.test.findUnique({
       where: { id: testId },
       include: {
@@ -199,13 +169,11 @@ router.post(
       return;
     }
 
-    // Validate test is open
     if (test.status !== 'OPEN') {
       res.status(403).json({ error: 'Test is not open' });
       return;
     }
 
-    // Validate time window
     const now = new Date();
     if (test.openFrom && now < test.openFrom) {
       res.status(403).json({ error: 'Test has not started yet' });
@@ -216,7 +184,6 @@ router.post(
       return;
     }
 
-    // Validate student belongs to an assigned group
     const testGroupIds = test.groups.map((tg) => tg.groupId);
     const studentGroups = await prisma.userGroup.findMany({
       where: { userId, groupId: { in: testGroupIds } },
@@ -226,7 +193,6 @@ router.post(
       return;
     }
 
-    // Check attempts remaining
     const completedAttempts = await prisma.attempt.count({
       where: { studentId: userId, testId, finishedAt: { not: null } },
     });
@@ -235,37 +201,26 @@ router.post(
       return;
     }
 
-    // Check for an active (unfinished) attempt
     const activeAttempt = await prisma.attempt.findFirst({
       where: { studentId: userId, testId, finishedAt: null },
     });
     if (activeAttempt) {
-      res.status(409).json({
-        error: 'У вас вже є активна спроба',
-        attemptId: activeAttempt.id,
-      });
+      res.status(409).json({ error: 'У вас вже є активна спроба', attemptId: activeAttempt.id });
       return;
     }
 
-    // Sample questions
     let testQuestionIds = test.questions.map((tq) => tq.questionId);
     let sampledQuestionIds: string[];
 
     if (test.samplingMode === 'BY_CATEGORY') {
       sampledQuestionIds = await sampleByCategory(
-        test.categoryQuotas.map((cq) => ({
-          categoryId: cq.categoryId,
-          quota: cq.quota,
-        })),
+        test.categoryQuotas.map((cq) => ({ categoryId: cq.categoryId, quota: cq.quota })),
         testQuestionIds,
         prisma
       );
     } else {
-      // If sampling FROM_BANK and no questions were manually assigned
       if (testQuestionIds.length === 0) {
-        const allQuestions = await prisma.question.findMany({
-          select: { id: true },
-        });
+        const allQuestions = await prisma.question.findMany({ select: { id: true } });
         testQuestionIds = allQuestions.map(q => q.id);
       }
       sampledQuestionIds = sampleFromBank(testQuestionIds, test.questionsCount);
@@ -276,13 +231,10 @@ router.post(
       return;
     }
 
-    // Create attempt with AttemptQuestion records
-    // Fetch questions in bulk
     const questionsWithAnswers = await prisma.question.findMany({
       where: { id: { in: sampledQuestionIds } },
       include: { answers: { select: { id: true } } },
     });
-
     const questionMap = new Map(questionsWithAnswers.map(q => [q.id, q]));
 
     const attempt = await prisma.attempt.create({
@@ -293,11 +245,7 @@ router.post(
           create: sampledQuestionIds.map((questionId, index) => {
             const q = questionMap.get(questionId);
             const answerOrder = shuffleArray(q?.answers.map((a) => a.id) ?? []);
-            return {
-              questionId,
-              orderIndex: index,
-              answerOrder,
-            };
+            return { questionId, orderIndex: index, answerOrder };
           }),
         },
       },
@@ -314,7 +262,6 @@ router.post(
   })
 );
 
-// GET /api/attempts/:id/question — STUDENT only, current question
 router.get(
   '/:id/question',
   authorize('STUDENT'),
@@ -329,11 +276,7 @@ router.get(
         attemptQuestions: {
           orderBy: { orderIndex: 'asc' },
           include: {
-            question: {
-              include: {
-                answers: { select: { id: true, text: true } },
-              },
-            },
+            question: { include: { answers: { select: { id: true, text: true } } } },
           },
         },
       },
@@ -345,7 +288,9 @@ router.get(
     }
 
     if (attempt.finishedAt) {
-      const percentage = attempt.maxScore ? Math.round((attempt.score ?? 0) / (attempt.maxScore ?? 0) * 100 * 10) / 10 : 0;
+      const percentage = attempt.maxScore
+        ? Math.round(((attempt.score ?? 0) / (attempt.maxScore ?? 0)) * 100 * 10) / 10
+        : 0;
       res.json({
         finished: true,
         score: attempt.score,
@@ -356,7 +301,6 @@ router.get(
       return;
     }
 
-    // Auto-finish if timed out
     if (isTimedOut(attempt.startedAt, attempt.test.timeLimitMin)) {
       const result = await finishAttempt(id, 'TIMEOUT');
       res.json({ finished: true, ...result });
@@ -364,24 +308,24 @@ router.get(
     }
 
     const question = await getStudentQuestion(id, attempt.currentQuestionIndex);
-    
+
     res.json({
       finished: false,
       testId: attempt.testId,
       currentQuestion: question,
       questionsTotal: attempt.attemptQuestions.length,
-      timeLeft: attempt.test.timeLimitMin > 0
-        ? Math.max(
-            0,
-            attempt.test.timeLimitMin * 60 -
-              Math.floor((Date.now() - attempt.startedAt.getTime()) / 1000)
-          )
-        : null,
+      timeLeft:
+        attempt.test.timeLimitMin > 0
+          ? Math.max(
+              0,
+              attempt.test.timeLimitMin * 60 -
+                Math.floor((Date.now() - attempt.startedAt.getTime()) / 1000)
+            )
+          : null,
     });
   })
 );
 
-// POST /api/attempts/:id/answer — STUDENT only
 router.post(
   '/:id/answer',
   authorize('STUDENT'),
@@ -394,7 +338,7 @@ router.post(
       where: { id },
       include: {
         test: { select: { id: true, timeLimitMin: true, showResultMode: true } },
-        _count: { select: { attemptQuestions: true } }
+        _count: { select: { attemptQuestions: true } },
       },
     });
 
@@ -402,28 +346,18 @@ router.post(
       res.status(404).json({ error: 'Attempt not found' });
       return;
     }
-
     if (attempt.studentId !== userId) {
       res.status(403).json({ error: 'Not your attempt' });
       return;
     }
-
     if (attempt.finishedAt) {
       res.status(400).json({ error: 'Attempt already finished' });
       return;
     }
 
-    // Fetch ONLY the current AttemptQuestion based on currentQuestionIndex
     const currentAq = await prisma.attemptQuestion.findFirst({
-      where: {
-        attemptId: id,
-        orderIndex: attempt.currentQuestionIndex
-      },
-      include: {
-        question: {
-          include: { answers: { select: { id: true } } },
-        },
-      }
+      where: { attemptId: id, orderIndex: attempt.currentQuestionIndex },
+      include: { question: { include: { answers: { select: { id: true } } } } },
     });
 
     if (!currentAq) {
@@ -433,17 +367,15 @@ router.post(
 
     const currentIndex = attempt.currentQuestionIndex;
 
-    // Verify questionId
     if (currentAq.questionId !== questionId) {
-      res.status(409).json({ 
+      res.status(409).json({
         error: 'Question mismatch',
         currentIndex,
-        currentQuestion: await getStudentQuestion(id, currentIndex)
+        currentQuestion: await getStudentQuestion(id, currentIndex),
       });
       return;
     }
 
-    // Validate answer IDs belong to this question
     const validAnswerIds = new Set(currentAq.question.answers.map((a) => a.id));
     for (const answerId of answerIds) {
       if (!validAnswerIds.has(answerId)) {
@@ -454,13 +386,8 @@ router.post(
 
     const selectedSet = new Set(answerIds);
 
-    // Upsert AttemptAnswer records for all answers of this question
     await prisma.$transaction([
-      // Delete existing answers for this attempt question
-      prisma.attemptAnswer.deleteMany({
-        where: { attemptQuestionId: currentAq.id },
-      }),
-      // Create new answer records
+      prisma.attemptAnswer.deleteMany({ where: { attemptQuestionId: currentAq.id } }),
       prisma.attemptAnswer.createMany({
         data: currentAq.question.answers.map((a) => ({
           attemptQuestionId: currentAq.id,
@@ -468,44 +395,32 @@ router.post(
           selected: selectedSet.has(a.id),
         })),
       }),
-      // Mark question as answered
-      prisma.attemptQuestion.update({
-        where: { id: currentAq.id },
-        data: { answeredAt: new Date() },
-      }),
-      // Advance currentQuestionIndex
-      prisma.attempt.update({
-        where: { id },
-        data: { currentQuestionIndex: currentIndex + 1 },
-      }),
+      prisma.attemptQuestion.update({ where: { id: currentAq.id }, data: { answeredAt: new Date() } }),
+      prisma.attempt.update({ where: { id }, data: { currentQuestionIndex: currentIndex + 1 } }),
     ]);
 
-    // Check timeout AFTER saving (so the last answer is counted)
     const showResultMode = (attempt.test as any).showResultMode;
 
     if (isTimedOut(attempt.startedAt, (attempt.test as any).timeLimitMin)) {
       const { score, maxScore } = await finishAttempt(id, 'TIMEOUT');
-      
-      if (showResultMode === 'ADMIN_ONLY') {
-        res.json({ finished: true, reason: 'TIMEOUT', showResultMode: 'ADMIN_ONLY' });
-      } else {
-        res.json({ finished: true, reason: 'TIMEOUT', score, maxScore });
-      }
+      res.json(
+        showResultMode === 'ADMIN_ONLY'
+          ? { finished: true, reason: 'TIMEOUT', showResultMode: 'ADMIN_ONLY' }
+          : { finished: true, reason: 'TIMEOUT', score, maxScore }
+      );
       return;
     }
 
-    // Check if this was the last question
     const nextIndex = currentIndex + 1;
     const isComplete = nextIndex >= attempt._count.attemptQuestions;
 
     if (isComplete) {
       const result = await finishAttempt(id, 'NORMAL');
-      
-      if (showResultMode === 'ADMIN_ONLY') {
-        res.json({ finished: true, showResultMode: 'ADMIN_ONLY' });
-      } else {
-        res.json({ finished: true, ...result });
-      }
+      res.json(
+        showResultMode === 'ADMIN_ONLY'
+          ? { finished: true, showResultMode: 'ADMIN_ONLY' }
+          : { finished: true, ...result }
+      );
       return;
     }
 
@@ -513,18 +428,18 @@ router.post(
     res.json({
       finished: false,
       nextQuestion,
-      timeLeft: attempt.test.timeLimitMin > 0
-        ? Math.max(
-            0,
-            attempt.test.timeLimitMin * 60 -
-              Math.floor((Date.now() - attempt.startedAt.getTime()) / 1000)
-          )
-        : null,
+      timeLeft:
+        attempt.test.timeLimitMin > 0
+          ? Math.max(
+              0,
+              attempt.test.timeLimitMin * 60 -
+                Math.floor((Date.now() - attempt.startedAt.getTime()) / 1000)
+            )
+          : null,
     });
   })
 );
 
-// POST /api/attempts/:id/finish — STUDENT only, force finish
 router.post(
   '/:id/finish',
   authorize('STUDENT'),
@@ -534,37 +449,33 @@ router.post(
 
     const attempt = await prisma.attempt.findUnique({
       where: { id },
-      include: {
-        test: { select: { showResultMode: true } }
-      }
+      include: { test: { select: { showResultMode: true, timeLimitMin: true } } },
     });
 
     if (!attempt) {
       res.status(404).json({ error: 'Attempt not found' });
       return;
     }
-
     if (attempt.studentId !== userId) {
       res.status(403).json({ error: 'Not your attempt' });
       return;
     }
-
     if (attempt.finishedAt) {
       res.status(400).json({ error: 'Attempt already finished' });
       return;
     }
 
-    const result = await finishAttempt(id, 'EXIT');
-    
-    if (attempt.test.showResultMode === 'ADMIN_ONLY') {
-      res.json({ done: true, showResultMode: 'ADMIN_ONLY' });
-    } else {
-      res.json({ done: true, ...result });
-    }
+    const reason = isTimedOut(attempt.startedAt, attempt.test.timeLimitMin) ? 'TIMEOUT' : 'EXIT';
+    const result = await finishAttempt(id, reason);
+
+    res.json(
+      result.showResultMode === 'ADMIN_ONLY'
+        ? { showResultMode: 'ADMIN_ONLY' }
+        : result
+    );
   })
 );
 
-// GET /api/attempts/:id/result
 router.get(
   '/:id/result',
   asyncHandler(async (req, res) => {
@@ -583,22 +494,16 @@ router.get(
       res.status(404).json({ error: 'Attempt not found' });
       return;
     }
-
-    // Authorization: student can only see their own attempt; admin/teacher can see all
     if (user.role === 'STUDENT' && attempt.studentId !== user.userId) {
       res.status(403).json({ error: 'Not your attempt' });
       return;
     }
-
     if (!attempt.finishedAt) {
       res.status(400).json({ error: 'Attempt not yet finished' });
       return;
     }
 
-    // Respect showResultMode
-    const showResultMode = attempt.test.showResultMode;
-
-    if (user.role === 'STUDENT' && showResultMode === 'ADMIN_ONLY') {
+    if (user.role === 'STUDENT' && attempt.test.showResultMode === 'ADMIN_ONLY') {
       res.json({
         attemptId: attempt.id,
         testId: attempt.testId,
@@ -612,13 +517,13 @@ router.get(
     const s = attempt.score ?? 0;
     const ms = attempt.maxScore ?? 0;
     const percentage = ms > 0 ? Math.round((s / ms) * 100 * 100) / 100 : 0;
-    
-    let passed = null;
-    if (attempt.test.passThreshold !== null && attempt.finishedAt !== null) {
-      passed = attempt.test.scoringMode === 'PERCENTAGE'
-        ? percentage >= attempt.test.passThreshold
-        : s >= attempt.test.passThreshold;
-    }
+
+    const passed =
+      attempt.test.passThreshold !== null
+        ? attempt.test.scoringMode === 'PERCENTAGE'
+          ? percentage >= attempt.test.passThreshold
+          : s >= attempt.test.passThreshold
+        : null;
 
     res.json({
       attemptId: attempt.id,
@@ -628,9 +533,7 @@ router.get(
       startedAt: attempt.startedAt,
       finishedAt: attempt.finishedAt,
       finishReason: attempt.finishReason,
-      timeSpentSec: attempt.finishedAt
-        ? Math.round((attempt.finishedAt.getTime() - attempt.startedAt.getTime()) / 1000)
-        : 0,
+      timeSpentSec: Math.round((attempt.finishedAt.getTime() - attempt.startedAt.getTime()) / 1000),
       score: s,
       maxScore: ms,
       percentage,
@@ -642,17 +545,12 @@ router.get(
   })
 );
 
-// DELETE /api/attempts/:id — ADMIN ONLY
 router.delete(
   '/:id',
   authorize('ADMIN'),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
-    
-    await prisma.attempt.delete({
-      where: { id }
-    });
-
+    await prisma.attempt.delete({ where: { id } });
     res.status(204).send();
   })
 );
