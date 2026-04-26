@@ -15,7 +15,6 @@ export const generateCertificate = (
   const PURPLE = [124, 58, 237] as const
   const PURPLEL = [167, 139, 250] as const
   const GOLD = [251, 191, 36] as const
-  const DIM = [71, 85, 105] as const
 
   const fill = (c: readonly [number, number, number]) => doc.setFillColor(c[0], c[1], c[2])
   const draw = (c: readonly [number, number, number]) => doc.setDrawColor(c[0], c[1], c[2])
