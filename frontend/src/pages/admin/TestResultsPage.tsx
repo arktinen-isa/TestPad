@@ -478,13 +478,15 @@ export default function TestResultsPage() {
               display: none !important; 
             }
             .print-only { 
-              display: block !important; 
+              display: flex !important; 
+              flex-direction: column !important;
               width: 100% !important; 
               padding: 20mm !important; 
               margin: 0 !important;
               position: static !important;
+              min-height: 275mm !important;
               height: auto !important;
-              min-height: 0 !important;
+              background: white !important;
             }
             main { padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; display: block !important; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -559,14 +561,10 @@ export default function TestResultsPage() {
           </tbody>
         </table>
 
-        <div className="mt-auto border-t-4 border-black pt-4 flex justify-between items-end">
+        <div className="mt-auto border-t-4 border-black pt-4">
           <div className="text-[9px] text-gray-500 max-w-md">
             <p className="font-bold text-black mb-1 italic">Довідка:</p>
             Цей протокол згенеровано автоматично системою GradeX. Дані є офіційним підтвердженням результатів тестування та перевірені алгоритмами анти-чит системи на наявність підозрілих подій та маніпуляцій з вікном браузера.
-          </div>
-          <div className="text-right">
-             <div className="w-48 h-px bg-black mb-1"></div>
-             <p className="text-[9px] font-bold uppercase tracking-widest">Офіційна печатка Gradex</p>
           </div>
         </div>
       </div>
