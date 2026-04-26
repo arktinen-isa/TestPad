@@ -163,6 +163,7 @@ function TestCard({ test }: { test: StudentTest }) {
       )}
 
       {/* Action button */}
+      {status.available || activeAttemptId ? (
         <button
           onClick={handleAction}
           disabled={isActionLoading}
@@ -185,7 +186,7 @@ function TestCard({ test }: { test: StudentTest }) {
           disabled
           className="w-full px-6 py-3 rounded-xl font-semibold text-slate-500 bg-white/5 border border-white/10 cursor-not-allowed text-sm"
         >
-          {test.status === 'CLOSED' ? 'Тест закрито' : (attemptsLeft <= 0 ? 'Спроб немає' : 'Очікування')}
+          {test.status === 'CLOSED' ? 'Тест закрито' : (test.maxAttempts - (test.attemptsUsed || 0) <= 0 ? 'Спроб немає' : 'Очікування')}
         </button>
       )}
     </div>
