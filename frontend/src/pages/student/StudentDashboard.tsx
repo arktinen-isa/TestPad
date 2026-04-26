@@ -92,7 +92,7 @@ function TestCard({ test }: { test: StudentTest }) {
       user.name,
       test.title,
       score,
-      new Date(test.lastAttempt.finishedAt!).toLocaleDateString('uk-UA'),
+      test.lastAttempt.finishedAt || '',
       test.logoUrl
     )
   }

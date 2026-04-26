@@ -28,14 +28,18 @@ app.set('trust proxy', 1);
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-      "script-src": ["'self'", "'unsafe-eval'", "'unsafe-inline'"],
-      "connect-src": ["'self'", config.frontendUrl || '*'],
-      "img-src": ["'self'", "data:", "blob:", "*"],
+      "default-src": ["'self'"],
+      "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
       "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      "img-src": ["'self'", "data:", "blob:", "*"],
       "font-src": ["'self'", "https://fonts.gstatic.com"],
+      "connect-src": ["'self'", "*"],
+      "frame-src": ["'none'"],
+      "object-src": ["'none'"],
+      "upgrade-insecure-requests": [],
     },
   },
+  crossOriginEmbedderPolicy: false,
 }));
 
 // CORS — only allow configured frontend origin

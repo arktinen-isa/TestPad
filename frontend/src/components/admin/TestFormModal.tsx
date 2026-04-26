@@ -113,12 +113,6 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // ONLY allow save if we are on the last tab (scoring)
-    if (activeTab !== 'scoring') {
-      console.log('Skipping submit because activeTab is:', activeTab)
-      return
-    }
-
     setLoading(true)
     setError(null)
     try {
@@ -485,23 +479,9 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
           {/* Footer */}
           <div className="flex gap-3 mt-6 pt-5 border-t border-white/10">
             <button type="button" onClick={onClose} className="flex-1 btn-ghost">Скасувати</button>
-            {activeTab !== 'scoring' ? (
-              <button
-                type="button"
-                onClick={() => {
-                  const order: Array<'basic' | 'timing' | 'questions' | 'scoring'> = ['basic', 'timing', 'questions', 'scoring']
-                  const idx = order.indexOf(activeTab)
-                  setActiveTab(order[idx + 1])
-                }}
-                className="flex-1 btn-secondary"
-              >
-                Далі →
-              </button>
-            ) : (
-              <button type="submit" disabled={loading} className="flex-1 btn-secondary disabled:opacity-50">
-                {loading ? 'Збереження...' : 'Зберегти тест'}
-              </button>
-            )}
+            <button type="submit" disabled={loading} className="flex-1 btn-secondary disabled:opacity-50">
+              {loading ? 'Збереження...' : 'Зберегти тест'}
+            </button>
           </div>
         </form>
       </div>
