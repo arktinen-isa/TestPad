@@ -169,9 +169,9 @@ export default function TestTake() {
   }
 
   return (
-    <div className="flex flex-col min-h-[60vh]">
-      {/* Top bar (Always visible) */}
-      <div className="flex-shrink-0 border-b border-white/10 bg-dark-bg/60 backdrop-blur-md px-6 py-3 z-30 sticky top-0">
+    <div className="fixed top-16 left-0 right-0 bottom-0 bg-dark-bg flex flex-col z-30">
+      {/* Top bar (Sticky) */}
+      <div className="flex-shrink-0 border-b border-white/10 bg-dark-bg/60 backdrop-blur-md px-6 py-3">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
           {/* Test title */}
           <div className="flex-1 min-w-0">
@@ -331,7 +331,7 @@ export default function TestTake() {
       </div>
 
       {/* Bottom bar (Sticky footer) */}
-      <div className="sticky bottom-0 border-t border-white/10 bg-dark-bg/95 backdrop-blur-xl px-6 py-4 -mx-4 sm:-mx-6 -mb-8 z-40 shadow-[0_-10px_20px_rgba(0,0,0,0.4)]">
+      <div className="flex-shrink-0 border-t border-white/10 bg-dark-bg/95 backdrop-blur-xl px-6 py-4 shadow-[0_-10px_20px_rgba(0,0,0,0.4)]">
         <div className="max-w-3xl mx-auto flex items-center justify-between gap-4">
           <button
             onClick={() => setShowExitModal(true)}
