@@ -31,16 +31,20 @@ if (process.env['NODE_ENV'] === 'production') {
   prisma = global.__prisma;
 }
 
-export async function withDbRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+export async function withDbRetry<T>(fn: () => Promise<T>, maxRetries = 5): Promise<T> {
   let lastErr;
   for (let i = 0; i < maxRetries; i++) {
     try {
       return await fn();
     } catch (err: any) {
       lastErr = err;
+      const errMsg = err.message || '';
       // MySQL 1615: Prepared statement needs to be re-prepared
-      if (err.message?.includes('1615')) {
-         await new Promise(r => setTimeout(r, 100 * (i + 1)));
+      // This is common in shared environments or with low table_open_cache
+      if (errMsg.includes('1615') || errMsg.includes('re-prepared')) {
+         // Exponential backoff
+         const delay = Math.min(200 * Math.pow(2, i), 2000);
+         await new Promise(r => setTimeout(r, delay));
          continue;
       }
       throw err;
