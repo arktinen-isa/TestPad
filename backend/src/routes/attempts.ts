@@ -555,7 +555,12 @@ router.post(
     }
 
     const result = await finishAttempt(id, 'EXIT');
-    res.json({ done: true, ...result });
+    
+    if (attempt.test.showResultMode === 'ADMIN_ONLY') {
+      res.json({ done: true, showResultMode: 'ADMIN_ONLY' });
+    } else {
+      res.json({ done: true, ...result });
+    }
   })
 );
 

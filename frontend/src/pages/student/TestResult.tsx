@@ -5,6 +5,14 @@ import apiClient from '../../api/client'
 import { useTestStore } from '../../store/testStore'
 import { AttemptResult } from '../../types'
 import { PASS_MESSAGES, FAIL_MESSAGES } from '../../constants/messages'
+ 
+function getPlural(n: number, one: string, few: string, many: string) {
+  const lastDigit = Math.floor(n) % 10;
+  const lastTwoDigits = Math.floor(n) % 100;
+  if (lastDigit === 1 && lastTwoDigits !== 11) return one;
+  if (lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 10 || lastTwoDigits >= 20)) return few;
+  return many;
+}
 
 function formatDuration(seconds: number): string {
   if (!seconds) return '—'
@@ -60,7 +68,7 @@ export default function TestResult() {
 
   const displayScore = useMemo(() => {
     if (scoringMode === 'SUM') {
-      return `${score} / ${maxScore}`
+      return `${score} / ${maxScore} ${getPlural(maxScore || 0, 'бал', 'бали', 'балів')}`
     }
     return `${percentage}%`
   }, [scoringMode, score, maxScore, percentage])

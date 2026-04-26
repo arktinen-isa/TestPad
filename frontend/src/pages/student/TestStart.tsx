@@ -5,6 +5,14 @@ import apiClient from '../../api/client'
 import { getApiError } from '../../api/errors'
 import { useTestStore } from '../../store/testStore'
 import { StudentTest } from '../../types'
+ 
+function getPlural(n: number, one: string, few: string, many: string) {
+  const lastDigit = n % 10;
+  const lastTwoDigits = n % 100;
+  if (lastDigit === 1 && lastTwoDigits !== 11) return one;
+  if (lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 10 || lastTwoDigits >= 20)) return few;
+  return many;
+}
 
 export default function TestStart() {
   const { testId } = useParams<{ testId: string }>()
@@ -119,7 +127,7 @@ export default function TestStart() {
             </svg>
             <p className="text-purple-300 text-sm">
               Прохідний бал: <span className="font-semibold text-white">
-                {test.passThreshold}{test.scoringMode === 'PERCENTAGE' ? '%' : ' балів'}
+                {test.passThreshold}{test.scoringMode === 'PERCENTAGE' ? '%' : ` ${getPlural(test.passThreshold, 'бал', 'бали', 'балів')}`}
               </span>
             </p>
           </div>

@@ -152,7 +152,7 @@ function TestCard({ test }: { test: StudentTest }) {
             <span className="text-sm font-semibold text-white">
               {test.scoringMode === 'PERCENTAGE' 
                 ? `${test.lastAttempt.percentage ?? 0}%` 
-                : `${test.lastAttempt.score ?? 0} / ${test.lastAttempt.maxScore ?? 0} балів`}
+                : `${test.lastAttempt.score ?? 0} / ${test.lastAttempt.maxScore ?? 0} ${getPlural(test.lastAttempt.maxScore ?? 0, 'бал', 'бали', 'балів')}`}
             </span>
             <span className={`text-xs font-medium ${
               test.lastAttempt.passed ? 'text-green-400' : 'text-red-400'
@@ -236,7 +236,7 @@ export default function StudentDashboard() {
           {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
       ) : tests && tests.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
           {tests.map((test) => (
             <TestCard key={test.id} test={test} />
           ))}
