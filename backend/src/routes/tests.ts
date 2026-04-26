@@ -76,6 +76,7 @@ router.get(
           scoringMode: true,
           showResultMode: true,
           allowCertificate: true,
+          passThreshold: true,
           logoUrl: true,
           attempts: {
             where: user.role === 'STUDENT'
@@ -87,7 +88,6 @@ router.get(
               id: true,
               score: true,
               maxScore: true,
-              percentage: true,
               finishedAt: true,
             }
           },
