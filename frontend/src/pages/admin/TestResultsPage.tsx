@@ -22,7 +22,7 @@ function formatDate(d?: string) {
 function formatDuration(secs?: number) {
   if (!secs) return '—'
   const m = Math.floor(secs / 60)
-  const s = secs % 60
+  const s = Math.floor(secs % 60)
   return `${m}хв ${s}с`
 }
 
@@ -203,13 +203,13 @@ export default function TestResultsPage() {
       <div className="flex items-start gap-4">
         <button
           onClick={() => navigate('/admin/tests')}
-          className="mt-1 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+          className="mt-1 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-all no-print"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <div>
+        <div className="no-print">
           <h1 className="font-unbounded text-2xl font-bold text-white mb-1">
             {data?.test.title ?? 'Результати тесту'}
           </h1>
@@ -221,7 +221,7 @@ export default function TestResultsPage() {
 
       {/* Stats row */}
       {data?.stats && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 no-print">
           <div className="glass-card p-5">
             <p className="text-slate-400 text-sm mb-1">Середній бал</p>
             <p className="font-unbounded text-2xl font-bold text-white">
@@ -243,7 +243,7 @@ export default function TestResultsPage() {
       )}
 
       {/* Filters + actions */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3 no-print">
         <select
           value={groupFilter}
           onChange={(e) => { setGroupFilter(e.target.value); setPage(1) }}
@@ -306,10 +306,10 @@ export default function TestResultsPage() {
       </div>
 
       {/* Question difficulty stats */}
-      {showStats && testId && <QuestionStatsPanel testId={testId} />}
+      {showStats && testId && <div className="no-print"><QuestionStatsPanel testId={testId} /></div>}
 
       {/* Table */}
-      <div className="glass-card overflow-hidden">
+      <div className="glass-card overflow-hidden no-print">
         {isLoading ? (
           <div className="p-8 text-center">
             <div className="w-8 h-8 border-2 border-purple-accent border-t-transparent rounded-full animate-spin mx-auto" />
@@ -405,7 +405,7 @@ export default function TestResultsPage() {
                 })}
                 {(!data?.attempts || data.attempts.length === 0) && (
                   <tr>
-                    <td colSpan={9} className="px-5 py-10 text-center text-slate-400">
+                    <td colSpan={10} className="px-5 py-10 text-center text-slate-400">
                       Результатів не знайдено
                     </td>
                   </tr>
@@ -418,7 +418,7 @@ export default function TestResultsPage() {
 
       {/* Pagination */}
       {data && data.total > 30 && (
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex items-center justify-center gap-3 no-print">
           <button
             disabled={page === 1}
             onClick={() => setPage((p) => p - 1)}
@@ -439,7 +439,7 @@ export default function TestResultsPage() {
         </div>
       )}
 
-       {suspiciousModal && (
+      {suspiciousModal && (
         <SuspiciousModal
           attemptId={suspiciousModal.attemptId}
           studentName={suspiciousModal.studentName}
@@ -467,65 +467,99 @@ export default function TestResultsPage() {
           </div>
         </div>
       )}
+
       {/* Print-only Report Template */}
-      <div className="print-only p-10 bg-white text-black min-h-screen">
-        <div className="flex justify-between items-start border-b-2 border-black pb-6 mb-8">
+      <div className="print-only p-12 bg-white text-black min-h-screen">
+        <style>{`
+          @media print {
+            body { background: white !important; color: black !important; padding: 0 !important; margin: 0 !important; }
+            .no-print, aside, nav, button, .admin-sidebar, #admin-sidebar, .sidebar, .glass-card, .btn-ghost, .btn-secondary, .btn-danger, header, .pagination { 
+              display: none !important; 
+            }
+            .print-only { display: block !important; position: absolute; left: 0; top: 0; width: 100%; border: none !important; padding: 40px !important; }
+            main { padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          }
+        `}</style>
+        
+        <div className="flex justify-between items-start border-b-4 border-black pb-6 mb-8">
           <div>
-            <h1 className="text-3xl font-black uppercase mb-1">GradeX Report</h1>
-            <p className="text-sm font-bold uppercase tracking-widest text-[#7c3aed]">Офіційний звіт результатів</p>
+            <h1 className="text-4xl font-black uppercase mb-1 tracking-tighter">GradeX Report</h1>
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#7c3aed]">Протокол тестування</p>
           </div>
-          <div className="text-right text-xs">
-            <p>Дата звіту: {new Date().toLocaleDateString('uk-UA')}</p>
-            <p>ID тесту: {testId}</p>
-          </div>
-        </div>
-
-        <div className="mb-10">
-          <h2 className="text-xl font-bold mb-4">{data?.test.title}</h2>
-          <div className="grid grid-cols-2 gap-8 text-sm">
-            <div className="p-4 border border-black/10 rounded-lg">
-              <p className="text-gray-500 uppercase text-[10px] font-bold mb-1">Предмет</p>
-              <p className="font-bold">{data?.test.subject || 'Не вказано'}</p>
-            </div>
-            <div className="p-4 border border-black/10 rounded-lg">
-              <p className="text-gray-500 uppercase text-[10px] font-bold mb-1">Статистика групи</p>
-              <p className="font-bold">Середній бал: {data?.stats.avgPct.toFixed(1)}%</p>
-              <p className="font-bold">Успішність: {data?.stats.passCount} / {data?.total}</p>
-            </div>
+          <div className="text-right text-[10px] font-mono">
+            <p>ДАТА: {new Date().toLocaleDateString('uk-UA')}</p>
+            <p>ID: {testId ? testId.substring(0, 8).toUpperCase() : '—'}</p>
           </div>
         </div>
 
-        <h3 className="text-lg font-bold mb-4 bg-black text-white px-3 py-1 inline-block">Результати студентів</h3>
-        <table className="w-full text-sm mb-10">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="text-left py-2 px-3 border border-gray-300">ПІБ Студента</th>
-              <th className="text-left py-2 px-3 border border-gray-300">Група</th>
-              <th className="text-center py-2 px-3 border border-gray-300">Бал (%)</th>
-              <th className="text-center py-2 px-3 border border-gray-300">Час</th>
-              <th className="text-center py-2 px-3 border border-gray-300">Статус</th>
+        <div className="mb-12">
+          <h2 className="text-2xl font-black mb-6 border-l-4 border-black pl-4">{data?.test.title}</h2>
+          <div className="grid grid-cols-2 gap-10 text-sm">
+            <div className="p-5 border-2 border-black rounded-none">
+              <p className="text-gray-500 uppercase text-[9px] font-black mb-1">Дисципліна</p>
+              <p className="font-bold text-base">{data?.test.subject || '—'}</p>
+            </div>
+            <div className="p-5 border-2 border-black rounded-none">
+              <p className="text-gray-500 uppercase text-[9px] font-black mb-1">Підсумок групи</p>
+              <div className="flex justify-between">
+                <div>
+                  <p className="text-[10px]">Середній бал</p>
+                  <p className="font-bold text-lg">{data?.stats.avgPct.toFixed(1)}%</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px]">Склали</p>
+                  <p className="font-bold text-lg text-green-600">{data?.stats.passCount} / {data?.total}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h3 className="text-sm font-black mb-4 bg-black text-white px-4 py-1.5 uppercase tracking-widest">Відомість результатів</h3>
+        <table className="w-full text-xs mb-12 border-collapse">
+          <thead>
+            <tr className="bg-gray-100 border-2 border-black">
+              <th className="text-left font-black p-3 border-r-2 border-black">ПІБ СТУДЕНТА</th>
+              <th className="text-left font-black p-3 border-r-2 border-black">ГРУПА</th>
+              <th className="text-center font-black p-3 border-r-2 border-black">РЕЗУЛЬТАТ (%)</th>
+              <th className="text-center font-black p-3 border-r-2 border-black">ЧАС ТЕСТУ</th>
+              <th className="text-center font-black p-3">СТАТУС</th>
             </tr>
           </thead>
           <tbody>
-            {data?.attempts.map(a => (
-              <tr key={a.id}>
-                <td className="py-2 px-3 border border-gray-300">{a.user?.name ?? '—'}</td>
-                <td className="py-2 px-3 border border-gray-300">{a.user?.group?.name || '—'}</td>
-                <td className="py-2 px-3 border border-gray-300 text-center">
-                   {(a.maxScore ?? 0) > 0 ? (((a.score ?? 0) / (a.maxScore ?? 1)) * 100).toFixed(1) : 0}%
-                </td>
-                <td className="py-2 px-3 border border-gray-300 text-center">{formatDuration(a.finishedAt ? (new Date(a.finishedAt).getTime() - new Date(a.startedAt).getTime())/1000 : 0)}</td>
-                <td className="py-2 px-3 border border-gray-300 text-center font-bold">
-                  {a.passed ? 'ЗАРАХ.' : 'НЕЗАР.'}
-                </td>
-              </tr>
-            ))}
+            {data?.attempts.map(a => {
+              const pct = (a.maxScore ?? 0) > 0 ? ((a.score ?? 0) / (a.maxScore ?? 1)) * 100 : 0
+              return (
+                <tr key={a.id} className="border-b-2 border-x-2 border-black">
+                  <td className="p-3 border-r-2 border-black font-bold">{a.user?.name ?? '—'}</td>
+                  <td className="p-3 border-r-2 border-black">{a.user?.group?.name || '—'}</td>
+                  <td className="p-3 border-r-2 border-black text-center whitespace-nowrap">
+                    <span className="font-black text-sm">{pct.toFixed(1)}%</span>
+                    <span className="text-[10px] text-gray-500 ml-1">({a.score} / {a.maxScore})</span>
+                  </td>
+                  <td className="p-3 border-r-2 border-black text-center font-mono">
+                    {formatDuration(a.finishedAt ? (new Date(a.finishedAt).getTime() - new Date(a.startedAt).getTime())/1000 : 0)}
+                  </td>
+                  <td className={`p-3 text-center font-black ${a.passed ? 'text-green-700' : 'text-red-700'}`}>
+                    {a.passed ? 'ЗАРАХОВАНО' : 'НЕ ЗАРАХОВАНО'}
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
 
-        <p className="text-[10px] text-gray-400 mt-20 border-t pt-2">
-          Цей документ згенеровано автоматично системою GradeX. Дані захищені та перевірені на наявність підозрілих подій.
-        </p>
+        <div className="mt-auto border-t-4 border-black pt-4 flex justify-between items-end">
+          <div className="text-[9px] text-gray-500 max-w-md">
+            <p className="font-bold text-black mb-1 italic">Довідка:</p>
+            Цей протокол згенеровано автоматично системою GradeX. Дані є офіційним підтвердженням результатів тестування та перевірені алгоритмами анти-чит системи на наявність підозрілих подій та маніпуляцій з вікном браузера.
+          </div>
+          <div className="text-right">
+             <div className="w-48 h-px bg-black mb-1"></div>
+             <p className="text-[9px] font-bold uppercase tracking-widest">Офіційна печатка Gradex</p>
+          </div>
+        </div>
       </div>
     </div>
   )
