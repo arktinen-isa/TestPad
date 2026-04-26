@@ -469,15 +469,24 @@ export default function TestResultsPage() {
       )}
 
       {/* Print-only Report Template */}
-      <div className="print-only p-12 bg-white text-black min-h-screen">
+      <div className="print-only p-12 bg-white text-black">
         <style>{`
           @media print {
-            body { background: white !important; color: black !important; padding: 0 !important; margin: 0 !important; }
+            @page { size: auto; margin: 0; }
+            body { background: white !important; color: black !important; padding: 0 !important; margin: 0 !important; overflow: visible !important; }
             .no-print, aside, nav, button, .admin-sidebar, #admin-sidebar, .sidebar, .glass-card, .btn-ghost, .btn-secondary, .btn-danger, header, .pagination { 
               display: none !important; 
             }
-            .print-only { display: block !important; position: absolute; left: 0; top: 0; width: 100%; border: none !important; padding: 40px !important; }
-            main { padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; }
+            .print-only { 
+              display: block !important; 
+              width: 100% !important; 
+              padding: 20mm !important; 
+              margin: 0 !important;
+              position: static !important;
+              height: auto !important;
+              min-height: 0 !important;
+            }
+            main { padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; display: block !important; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           }
         `}</style>
