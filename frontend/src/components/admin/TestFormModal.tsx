@@ -120,6 +120,7 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
         ...form,
         openFrom: (form.openFrom && form.openFrom.trim() !== '') ? new Date(form.openFrom).toISOString() : null,
         openUntil: (form.openUntil && form.openUntil.trim() !== '') ? new Date(form.openUntil).toISOString() : null,
+        categoryQuotas: form.categoryQuotas.filter(cq => cq.categoryId !== ''),
       }
       await onSave(dataToSave as any, initial?.id)
       onClose()

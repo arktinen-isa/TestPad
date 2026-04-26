@@ -79,6 +79,9 @@ router.get(
           passThreshold: true,
           logoUrl: true,
           groups: { select: { groupId: true } },
+          samplingMode: true,
+          categoryQuotas: { select: { categoryId: true, quota: true } },
+          multiScoringMode: true,
           attempts: {
             where: user.role === 'STUDENT'
               ? { studentId: user.userId, finishedAt: { not: null } }

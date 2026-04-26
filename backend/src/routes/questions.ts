@@ -136,8 +136,33 @@ router.delete(
       return res.status(400).json({ error: 'ids array is required' });
     }
 
-    await prisma.question.deleteMany({
-      where: { id: { in: ids } },
+    await prisma.$transaction(async (tx) => {
+      // 1. Find all answers for these questions to clean up AttemptAnswer
+      const answers = await tx.answer.findMany({
+        where: { questionId: { in: ids } },
+        select: { id: true }
+      });
+      const answerIds = answers.map(a => a.id);
+      
+      // 2. Find all AttemptQuestions for these questions
+      const attemptQuestions = await tx.attemptQuestion.findMany({
+        where: { questionId: { in: ids } },
+        select: { id: true }
+      });
+      const aqIds = attemptQuestions.map(aq => aq.id);
+
+      // 3. Delete dependencies
+      if (answerIds.length > 0) {
+        await tx.attemptAnswer.deleteMany({ where: { answerId: { in: answerIds } } });
+      }
+      if (aqIds.length > 0) {
+        await tx.attemptAnswer.deleteMany({ where: { attemptQuestionId: { in: aqIds } } });
+        await tx.attemptQuestion.deleteMany({ where: { id: { in: aqIds } } });
+      }
+      
+      // 4. Delete questions (cascades to answers and testQuestions)
+      await tx.testQuestion.deleteMany({ where: { questionId: { in: ids } } });
+      await tx.question.deleteMany({ where: { id: { in: ids } } });
     });
 
     res.status(204).send();
@@ -276,8 +301,22 @@ router.delete(
       return;
     }
 
-    await prisma.question.delete({
-      where: { id },
+    await prisma.$transaction(async (tx) => {
+      const answers = await tx.answer.findMany({ where: { questionId: id }, select: { id: true } });
+      const answerIds = answers.map(a => a.id);
+      const attemptQuestions = await tx.attemptQuestion.findMany({ where: { questionId: id }, select: { id: true } });
+      const aqIds = attemptQuestions.map(aq => aq.id);
+
+      if (answerIds.length > 0) {
+        await tx.attemptAnswer.deleteMany({ where: { answerId: { in: answerIds } } });
+      }
+      if (aqIds.length > 0) {
+        await tx.attemptAnswer.deleteMany({ where: { attemptQuestionId: { in: aqIds } } });
+        await tx.attemptQuestion.deleteMany({ where: { id: { in: aqIds } } });
+      }
+
+      await tx.testQuestion.deleteMany({ where: { questionId: id } });
+      await tx.question.delete({ where: { id } });
     });
 
     res.status(204).send();
