@@ -4,8 +4,7 @@ import apiClient from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
 import { StudentTest } from '../../types'
 import { useTestStore } from '../../store/testStore'
-import { useState, useEffect } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { generateCertificate } from '../../utils/certificateGenerator'
 
 function getPlural(n: number, one: string, few: string, many: string) {
@@ -234,7 +233,6 @@ function TestCard({ test }: { test: StudentTest }) {
 
 export default function StudentDashboard() {
   const { user } = useAuthStore()
-  const queryClient = useQueryClient()
 
   // REMOVED: queryClient.invalidateQueries on every mount for performance
   // We rely on staleTime and manual invalidation when starting/finishing tests

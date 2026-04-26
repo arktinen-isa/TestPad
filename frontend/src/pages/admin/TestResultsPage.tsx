@@ -509,10 +509,10 @@ export default function TestResultsPage() {
           <tbody>
             {data?.attempts.map(a => (
               <tr key={a.id}>
-                <td className="py-2 px-3 border border-gray-300">{a.student.name}</td>
-                <td className="py-2 px-3 border border-gray-300">{a.student.groups[0]?.group.name || '—'}</td>
+                <td className="py-2 px-3 border border-gray-300">{a.user?.name ?? '—'}</td>
+                <td className="py-2 px-3 border border-gray-300">{a.user?.group?.name || '—'}</td>
                 <td className="py-2 px-3 border border-gray-300 text-center">
-                   {a.maxScore > 0 ? ((a.score / a.maxScore) * 100).toFixed(1) : 0}%
+                   {(a.maxScore ?? 0) > 0 ? (((a.score ?? 0) / (a.maxScore ?? 1)) * 100).toFixed(1) : 0}%
                 </td>
                 <td className="py-2 px-3 border border-gray-300 text-center">{formatDuration(a.finishedAt ? (new Date(a.finishedAt).getTime() - new Date(a.startedAt).getTime())/1000 : 0)}</td>
                 <td className="py-2 px-3 border border-gray-300 text-center font-bold">

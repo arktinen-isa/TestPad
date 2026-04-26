@@ -44,7 +44,7 @@ export default function TestTake() {
       document.removeEventListener('fullscreenchange', handleFsChange)
       document.removeEventListener('webkitfullscreenchange', handleFsChange)
     }
-  }, [attemptId, isFinished, logSuspiciousEvent])
+  }, [attemptId, isFinished])
 
   const enterFullscreen = () => {
     const el = document.documentElement
@@ -166,14 +166,6 @@ export default function TestTake() {
     }
   }, [isFinished, testId, navigate])
 
-  const handleReturnToFullscreen = async () => {
-    setShowExitModal(false)
-    try {
-      await document.documentElement.requestFullscreen()
-    } catch {
-      // ignore
-    }
-  }
 
   const handleConfirmExit = async () => {
     setShowExitModal(false)

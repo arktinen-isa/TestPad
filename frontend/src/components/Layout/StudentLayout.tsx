@@ -1,5 +1,6 @@
 import { Outlet, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
+import Logo from '../Logo'
 
 export default function StudentLayout() {
   const { user, logout } = useAuthStore()
@@ -18,17 +19,9 @@ export default function StudentLayout() {
           {/* Logo */}
           <button 
             onClick={() => navigate('/student/dashboard')}
-            className="flex items-center gap-3 hover:opacity-80 transition-opacity duration-200"
+            className="flex items-center hover:opacity-80 transition-opacity duration-200"
           >
-            <div className="w-8 h-8 rounded-lg bg-purple-accent/20 border border-purple-accent/30 flex items-center justify-center">
-              <svg width="16" height="16" viewBox="0 0 32 32" fill="none">
-                <path d="M16 3L3 10v12l13 7 13-7V10L16 3z" stroke="#a855f7" strokeWidth="2" fill="none"/>
-                <path d="M16 3v19M3 10l13 7 13-7" stroke="#a855f7" strokeWidth="2"/>
-              </svg>
-            </div>
-            <span className="font-unbounded text-sm font-bold text-white">
-              GradeX
-            </span>
+            <Logo size={28} />
           </button>
 
           {/* User info + logout */}

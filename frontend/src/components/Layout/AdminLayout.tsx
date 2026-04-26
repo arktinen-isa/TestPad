@@ -1,5 +1,6 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
+import Logo from '../Logo'
 
 const navLinks = [
   {
@@ -84,18 +85,8 @@ export default function AdminLayout() {
       <aside className="fixed left-0 top-0 bottom-0 w-64 z-40 border-r border-white/10 backdrop-blur-md bg-dark-bg/90 flex flex-col">
         {/* Sidebar header */}
         <div className="p-6 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-purple-accent/20 border border-purple-accent/30 flex items-center justify-center flex-shrink-0">
-              <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
-                <path d="M16 3L3 10v12l13 7 13-7V10L16 3z" stroke="#a855f7" strokeWidth="2" fill="none"/>
-                <path d="M16 3v19M3 10l13 7 13-7" stroke="#a855f7" strokeWidth="2"/>
-              </svg>
-            </div>
-            <div>
-              <p className="font-unbounded text-sm font-bold text-white leading-tight">GradeX</p>
-              <p className="text-xs text-slate-400">Адмін панель</p>
-            </div>
-          </div>
+          <Logo size={36} />
+          <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-2 font-bold px-1">Адмін панель</p>
         </div>
 
         {/* Navigation */}

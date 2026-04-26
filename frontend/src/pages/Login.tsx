@@ -1,6 +1,7 @@
 import { useState, FormEvent, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import Logo from '../components/Logo'
 
 const SLOGANS = [
   { e: '😅', t: 'Тест не кусається. Майже.' },
@@ -104,16 +105,8 @@ export default function Login() {
       <div className="relative w-full max-w-md animate-fade-in">
         {/* Logo / University branding */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-purple-accent/20 border border-purple-accent/30 mb-4">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-              <path d="M16 3L3 10v12l13 7 13-7V10L16 3z" stroke="#a855f7" strokeWidth="1.5" fill="none" />
-              <path d="M16 3v19M3 10l13 7 13-7" stroke="#a855f7" strokeWidth="1.5" />
-            </svg>
-          </div>
-          <h2 className="font-unbounded text-3xl font-bold text-white mb-1">
-            GradeX
-          </h2>
-          <p className="text-slate-400 text-sm">
+          <Logo className="justify-center mb-4" size={64} />
+          <p className="text-slate-400 text-sm mt-2">
             Інформаційна система оцінювання результатів навчання
           </p>
         </div>
