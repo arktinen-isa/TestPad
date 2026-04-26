@@ -215,8 +215,76 @@ router.delete(
   authorize('ADMIN'),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
+    const currentUser = req.user!;
 
-    await prisma.user.delete({ where: { id } });
+    if (id === currentUser.userId) {
+      res.status(400).json({ error: 'Ви не можете видалити самого себе' });
+      return;
+    }
+
+    const userToDelete = await prisma.user.findUnique({
+      where: { id },
+      include: { _count: { select: { createdTests: true, attempts: true } } }
+    });
+
+    if (!userToDelete) {
+      res.status(404).json({ error: 'Користувача не знайдено' });
+      return;
+    }
+
+    // Safety: don't allow deleting the last admin
+    if (userToDelete.role === 'ADMIN') {
+      const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } });
+      if (adminCount <= 1) {
+        res.status(403).json({ error: 'Неможливо видалити останнього адміністратора' });
+        return;
+      }
+    }
+
+    // Use transaction to clean up dependencies that don't have Cascade in schema
+    await prisma.$transaction(async (tx) => {
+      // 1. Handle Attempts (and their nested children)
+      const attemptIds = (await tx.attempt.findMany({
+        where: { studentId: id },
+        select: { id: true }
+      })).map(a => a.id);
+
+      if (attemptIds.length > 0) {
+        await tx.suspiciousEvent.deleteMany({ where: { attemptId: { in: attemptIds } } });
+        await tx.attemptAnswer.deleteMany({ where: { attemptQuestion: { attemptId: { in: attemptIds } } } });
+        await tx.attemptQuestion.deleteMany({ where: { attemptId: { in: attemptIds } } });
+        await tx.attempt.deleteMany({ where: { id: { in: attemptIds } } });
+      }
+
+      // 2. Handle Tests created by this user
+      const testIds = (await tx.test.findMany({
+        where: { createdById: id },
+        select: { id: true }
+      })).map(t => t.id);
+
+      for (const tId of testIds) {
+        // Cleaning up a test is complex, reuse the logic if possible or do manually
+        await tx.testQuestion.deleteMany({ where: { testId: tId } });
+        await tx.testGroup.deleteMany({ where: { testId: tId } });
+        await tx.testCategoryQuota.deleteMany({ where: { testId: tId } });
+        // Delete attempts for these tests too
+        const testAttemptIds = (await tx.attempt.findMany({
+          where: { testId: tId },
+          select: { id: true }
+        })).map(a => a.id);
+        if (testAttemptIds.length > 0) {
+          await tx.suspiciousEvent.deleteMany({ where: { attemptId: { in: testAttemptIds } } });
+          await tx.attemptAnswer.deleteMany({ where: { attemptQuestion: { attemptId: { in: testAttemptIds } } } });
+          await tx.attemptQuestion.deleteMany({ where: { attemptId: { in: testAttemptIds } } });
+          await tx.attempt.deleteMany({ where: { id: { in: testAttemptIds } } });
+        }
+        await tx.test.delete({ where: { id: tId } });
+      }
+
+      // 3. UserGroup and RefreshToken have Cascade, so just delete the user
+      await tx.user.delete({ where: { id } });
+    });
+
     res.status(204).send();
   })
 );
