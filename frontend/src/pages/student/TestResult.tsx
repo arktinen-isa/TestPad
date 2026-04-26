@@ -99,16 +99,16 @@ export default function TestResult() {
             {result?.testTitle || 'Результати тесту'}
           </h1>
 
-          {showResultMode === 'ADMIN_ONLY' ? (
+          {isConfidential ? (
             <div className="glass-card p-10 border-blue-500/20 bg-blue-500/5 backdrop-blur-xl">
               <div className="w-20 h-20 rounded-3xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto mb-8 shadow-lg shadow-blue-500/10">
                 <svg className="w-10 h-10 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138z" />
                 </svg>
               </div>
-              <h2 className="font-unbounded text-2xl font-bold text-white mb-4 tracking-tight">Результати зараз на шляху до викладача!</h2>
+              <h2 className="font-unbounded text-2xl font-bold text-white mb-4 tracking-tight">Роботу прийнято!</h2>
               <p className="text-blue-300 italic mb-8 max-w-sm mx-auto leading-relaxed">
-                Він оцінить твої старання та зовсім скоро повідомить підсумковий результат. Не зупиняйся на досягнутому!
+                Твій викладач отримав результати та оцінить твої старання зовсім скоро. Не зупиняйся на досягнутому!
               </p>
               <div className="h-1 w-24 bg-gradient-to-r from-transparent via-blue-500/50 to-transparent mx-auto" />
             </div>
@@ -163,36 +163,7 @@ export default function TestResult() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        <div className="glass-card p-6 flex items-center justify-between group hover:bg-white/5 transition-colors duration-300">
-          <div>
-            <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold mb-1">Витрачено часу</p>
-            <p className="text-white font-unbounded text-xl font-bold">{formatDuration(result?.timeSpentSec || 0)}</p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-purple-400 transition-colors">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-        </div>
 
-        <div className="glass-card p-6 flex items-center justify-between group hover:bg-white/5 transition-colors duration-300">
-          <div>
-            <p className="text-slate-400 text-[10px] uppercase tracking-widest font-bold mb-1">Завершено</p>
-            <p className={`font-unbounded text-lg font-bold ${
-              result?.finishReason === 'NORMAL' ? 'text-green-400' : 'text-orange-400'
-            }`}>
-              {result?.finishReason === 'TIMEOUT' ? 'Вичерпано час' :
-                result?.finishReason === 'EXIT' ? 'Примусово' : 'Успішно'}
-            </p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-purple-400 transition-colors">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-        </div>
-      </div>
 
       <button
         onClick={handleBackToDashboard}

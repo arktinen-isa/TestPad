@@ -239,7 +239,7 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-1.5 flex items-center justify-between">
                     <span>Дата відкриття</span>
-                    <span className="text-[10px] text-slate-500 font-normal italic">не обов'язково</span>
+                    <button type="button" onClick={() => setForm({ ...form, openFrom: '' })} className="text-[10px] text-purple-400 hover:text-purple-300 transition-colors uppercase font-bold">Очистити</button>
                   </label>
                   <input
                     type="datetime-local" value={form.openFrom}
@@ -250,7 +250,7 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-1.5 flex items-center justify-between">
                     <span>Дедлайн (закриття)</span>
-                    <span className="text-[10px] text-slate-500 font-normal italic">не обов'язково</span>
+                    <button type="button" onClick={() => setForm({ ...form, openUntil: '' })} className="text-[10px] text-purple-400 hover:text-purple-300 transition-colors uppercase font-bold">Очистити</button>
                   </label>
                   <input
                     type="datetime-local" value={form.openUntil}
