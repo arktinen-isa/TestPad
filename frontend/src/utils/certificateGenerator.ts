@@ -35,7 +35,23 @@ export const generateCertificate = (studentName: string, testTitle: string, scor
     }
   }
 
-  // Header
+  // Function to render text to a data URL using canvas (for perfect Cyrillic support)
+  const drawText = (text: string, fontSize: number, isBold: boolean, color: string) => {
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return ''
+    ctx.font = `${isBold ? 'bold ' : ''}${fontSize * 4}px "Unbounded", "Inter", Arial`
+    const metrics = ctx.measureText(text)
+    canvas.width = metrics.width + 20
+    canvas.height = fontSize * 5
+    ctx.font = `${isBold ? 'bold ' : ''}${fontSize * 4}px "Unbounded", "Inter", Arial`
+    ctx.fillStyle = color
+    ctx.textBaseline = 'middle'
+    ctx.fillText(text, 10, canvas.height / 2)
+    return canvas.toDataURL('image/png')
+  }
+
+  // Header (English is fine)
   doc.setTextColor(30, 41, 59)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(40)
@@ -49,19 +65,30 @@ export const generateCertificate = (studentName: string, testTitle: string, scor
   doc.setFontSize(14)
   doc.text('This is to certify that', 148.5, 105, { align: 'center' })
   
-  doc.setFontSize(28)
-  doc.setTextColor(124, 58, 237)
-  doc.setFont('helvetica', 'bold')
-  doc.text(studentName, 148.5, 120, { align: 'center' })
+  // Student Name (Cyrillic support)
+  const nameImg = drawText(studentName, 28, true, '#7c3aed')
+  if (nameImg) {
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')!
+    ctx.font = 'bold 112px "Unbounded", "Inter", Arial'
+    const wMatched = ctx.measureText(studentName).width / 4;
+    doc.addImage(nameImg, 'PNG', 148.5 - (wMatched / 2), 110, wMatched, 15)
+  }
   
   doc.setTextColor(30, 41, 59)
   doc.setFontSize(14)
   doc.setFont('helvetica', 'normal')
   doc.text('has successfully passed the examination', 148.5, 135, { align: 'center' })
   
-  doc.setFontSize(22)
-  doc.setFont('helvetica', 'bold')
-  doc.text(testTitle, 148.5, 150, { align: 'center' })
+  // Test Title (Cyrillic support)
+  const titleImg = drawText(testTitle, 22, true, '#1e293b')
+  if (titleImg) {
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')!
+    ctx.font = 'bold 88px "Unbounded", "Inter", Arial'
+    const wMatched = ctx.measureText(testTitle).width / 4;
+    doc.addImage(titleImg, 'PNG', 148.5 - (wMatched / 2), 140, wMatched, 12)
+  }
 
   // Footer / Result
   doc.setFontSize(14)

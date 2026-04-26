@@ -9,6 +9,21 @@ interface CategoryQuotaInput {
   quota: number
 }
 
+interface TestFormData {
+  title: string
+  subject: string
+  groupIds: string[]
+  openFrom: string
+  openUntil: string
+  timeLimitMin: number
+  maxAttempts: number
+  questionsCount: number
+  samplingMode: string
+  categoryQuotas: CategoryQuotaInput[]
+  scoringMode: string
+  multiScoringMode: string
+  passThreshold: number | ''
+  showResultMode: string
   status: TestStatus
   allowCertificate: boolean
   logoUrl: string

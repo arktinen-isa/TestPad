@@ -61,33 +61,6 @@ function TestCard({ test }: { test: StudentTest }) {
   const status = getTestStatusInfo(test)
   const attemptsUsed = test.attemptsUsed || 0
   const attemptsLeft = test.maxAttempts - attemptsUsed
-  const activeAttemptId = useTestStore(s => s.attemptId)
-
-  const handleAction = () => {
-    if (activeAttemptId) {
-      navigate('/test/take')
-    } else {
-      navigate(`/test/${test.id}`)
-    }
-  }
-
-  const handleDownloadCertificate = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (!test.lastAttempt || !user) return
-    
-    const score = test.scoringMode === 'PERCENTAGE' 
-      ? `${test.lastAttempt.percentage}%` 
-      : `${test.lastAttempt.score} / ${test.lastAttempt.maxScore}`
-      
-    generateCertificate(
-      user.name,
-      test.title,
-      score,
-      new Date(test.lastAttempt.finishedAt!).toLocaleDateString('uk-UA'),
-      test.logoUrl
-    )
-  }
-  const attemptsLeft = test.maxAttempts - attemptsUsed
   const activeAttemptId = test.lastAttempt && !test.lastAttempt.finishedAt ? test.lastAttempt.id : null
   const [isActionLoading, setIsActionLoading] = useState(false)
   const { resumeAttempt } = useTestStore()
@@ -106,6 +79,23 @@ function TestCard({ test }: { test: StudentTest }) {
     } else {
       navigate(`/student/test/${test.id}/start`)
     }
+  }
+
+  const handleDownloadCertificate = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!test.lastAttempt || !user) return
+    
+    const score = test.scoringMode === 'PERCENTAGE' 
+      ? `${test.lastAttempt.percentage}%` 
+      : `${test.lastAttempt.score} / ${test.lastAttempt.maxScore}`
+      
+    generateCertificate(
+      user.name,
+      test.title,
+      score,
+      new Date(test.lastAttempt.finishedAt!).toLocaleDateString('uk-UA'),
+      test.logoUrl
+    )
   }
 
   return (
@@ -203,7 +193,12 @@ function TestCard({ test }: { test: StudentTest }) {
 
       {test.logoUrl && (
         <div className="absolute top-4 right-4 w-12 h-12 pointer-events-none opacity-20 group-hover:opacity-40 transition-opacity">
-          <img src={test.logoUrl} alt="Logo" className="w-full h-full object-contain filter grayscale" />
+          <img 
+            src={test.logoUrl} 
+            alt="" 
+            className="w-full h-full object-contain filter grayscale" 
+            onError={(e) => (e.currentTarget.style.display = 'none')}
+          />
         </div>
       )}
 
@@ -253,7 +248,6 @@ export default function StudentDashboard() {
     },
     staleTime: 1000 * 60, // 1 minute of stale time to reduce server load
     gcTime: 1000 * 60 * 5, // Keep in cache for 5 minutes
-  })
   })
 
   return (

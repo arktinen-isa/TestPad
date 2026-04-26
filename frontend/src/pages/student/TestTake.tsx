@@ -28,6 +28,32 @@ export default function TestTake() {
   const [selectedAnswers, setSelectedAnswers] = useState<string[]>([])
   const [showExitModal, setShowExitModal] = useState(false)
   const [animKey, setAnimKey] = useState(0)
+  const [isFullScreen, setIsFullScreen] = useState(!!document.fullscreenElement)
+
+  useEffect(() => {
+    const handleFsChange = () => {
+      const isFs = !!document.fullscreenElement
+      setIsFullScreen(isFs)
+      if (!isFs && !isFinished) {
+        logSuspiciousEvent(attemptId!, 'WINDOW_RESIZE')
+      }
+    }
+    document.addEventListener('fullscreenchange', handleFsChange)
+    document.addEventListener('webkitfullscreenchange', handleFsChange)
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange)
+      document.removeEventListener('webkitfullscreenchange', handleFsChange)
+    }
+  }, [attemptId, isFinished, logSuspiciousEvent])
+
+  const enterFullscreen = () => {
+    const el = document.documentElement
+    if (el.requestFullscreen) {
+      el.requestFullscreen().catch(() => {})
+    } else if ((el as any).webkitRequestFullscreen) {
+      (el as any).webkitRequestFullscreen()
+    }
+  }
   const [isSubmitting, setIsSubmitting] = useState(false)
   const attemptIdRef = useRef(attemptId)
   attemptIdRef.current = attemptId
@@ -207,6 +233,27 @@ export default function TestTake() {
   return (
     <div className="fixed inset-0 bg-[#0F0A1E] text-white flex flex-col z-[1000] overflow-hidden select-none" onContextMenu={(e) => e.preventDefault()}>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,#3B2A6B_0%,#0F0A1E_80%)] opacity-60 pointer-events-none" />
+      
+      {!isFullScreen && !isFinished && (
+        <div className="fixed inset-0 z-[9999] bg-[#0F0A1E]/95 backdrop-blur-2xl flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+          <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mb-8 ring-8 ring-red-500/20 animate-pulse">
+            <svg className="w-12 h-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-3xl font-black font-unbounded text-white mb-4 tracking-tighter">ПОВНОЕКРАННИЙ РЕЖИМ ПОРУШЕНО</h2>
+          <p className="text-slate-400 max-w-sm mb-10 text-lg leading-relaxed">
+            Для продовження тестування необхідно повернутися у повноекранний режим. Це правило безпеки було активоване автоматично.
+          </p>
+          <button 
+            onClick={enterFullscreen} 
+            className="btn-secondary px-12 py-5 text-xl shadow-[0_0_50px_rgba(124,58,237,0.4)] hover:shadow-[0_0_70px_rgba(124,58,237,0.6)] active:scale-95 transition-all"
+          >
+            Повернутись у тест
+          </button>
+          <p className="text-white/20 text-[10px] mt-12 uppercase tracking-widest">GradeX Security Protocol v2.4</p>
+        </div>
+      )}
       
       {/* Header / Progress Bar */}
       <div className="flex-shrink-0 bg-[#160D33]/60 backdrop-blur-3xl border-b border-white/5 px-6 py-4 shadow-2xl relative z-[1001]">
