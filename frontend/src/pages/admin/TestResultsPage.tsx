@@ -121,19 +121,26 @@ function QuestionStatsPanel({ testId }: { testId: string }) {
       </div>
       <div className="divide-y divide-white/5">
         {stats.map((q) => (
-          <div key={q.questionId} className="px-5 py-3 flex items-center gap-4">
+          <div key={q.questionId} className="px-5 py-3 flex items-center gap-4 group">
             <div className="flex-1 min-w-0">
-              <p className="text-white text-sm truncate">{q.questionText}</p>
+              <div className="flex items-center gap-2 mb-0.5">
+                <p className="text-white text-sm truncate font-medium group-hover:text-purple-300 transition-colors">{q.questionText}</p>
+                {q.correctPct < 40 && (
+                  <span className="flex-shrink-0 px-2 py-0.5 rounded-md bg-red-500/10 border border-red-500/20 text-red-400 text-[9px] font-black uppercase tracking-tighter animate-pulse">
+                    Складне
+                  </span>
+                )}
+              </div>
               <p className="text-slate-500 text-xs">{q.totalAnswered} відповідей</p>
             </div>
             <div className="flex-shrink-0 text-right">
-              <div className="text-sm font-semibold mb-1"
+              <div className="text-sm font-black mb-1.5 font-unbounded"
                 style={{ color: q.correctPct >= 75 ? '#4ade80' : q.correctPct >= 40 ? '#facc15' : '#f87171' }}>
-                {q.correctPct.toFixed(0)}%
+                {Math.round(q.correctPct)}%
               </div>
-              <div className="w-20 h-1.5 bg-white/10 rounded-full overflow-hidden">
+              <div className="w-24 h-1.5 bg-white/10 rounded-full overflow-hidden">
                 <div
-                  className="h-full rounded-full transition-all"
+                  className="h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(0,0,0,0.5)]"
                   style={{
                     width: `${q.correctPct}%`,
                     background: q.correctPct >= 75 ? '#4ade80' : q.correctPct >= 40 ? '#facc15' : '#f87171',
@@ -284,7 +291,17 @@ export default function TestResultsPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          Експорт CSV
+          CSV
+        </button>
+
+        <button
+          onClick={() => window.print()}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-purple-accent hover:bg-purple-600 transition-all shadow-[0_0_15px_rgba(124,58,237,0.3)]"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+          Звіт PDF
         </button>
       </div>
 
@@ -450,6 +467,66 @@ export default function TestResultsPage() {
           </div>
         </div>
       )}
+      {/* Print-only Report Template */}
+      <div className="print-only p-10 bg-white text-black min-h-screen">
+        <div className="flex justify-between items-start border-b-2 border-black pb-6 mb-8">
+          <div>
+            <h1 className="text-3xl font-black uppercase mb-1">GradeX Report</h1>
+            <p className="text-sm font-bold uppercase tracking-widest text-[#7c3aed]">Офіційний звіт результатів</p>
+          </div>
+          <div className="text-right text-xs">
+            <p>Дата звіту: {new Date().toLocaleDateString('uk-UA')}</p>
+            <p>ID тесту: {testId}</p>
+          </div>
+        </div>
+
+        <div className="mb-10">
+          <h2 className="text-xl font-bold mb-4">{data?.test.title}</h2>
+          <div className="grid grid-cols-2 gap-8 text-sm">
+            <div className="p-4 border border-black/10 rounded-lg">
+              <p className="text-gray-500 uppercase text-[10px] font-bold mb-1">Предмет</p>
+              <p className="font-bold">{data?.test.subject || 'Не вказано'}</p>
+            </div>
+            <div className="p-4 border border-black/10 rounded-lg">
+              <p className="text-gray-500 uppercase text-[10px] font-bold mb-1">Статистика групи</p>
+              <p className="font-bold">Середній бал: {data?.stats.avgPct.toFixed(1)}%</p>
+              <p className="font-bold">Успішність: {data?.stats.passCount} / {data?.total}</p>
+            </div>
+          </div>
+        </div>
+
+        <h3 className="text-lg font-bold mb-4 bg-black text-white px-3 py-1 inline-block">Результати студентів</h3>
+        <table className="w-full text-sm mb-10">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="text-left py-2 px-3 border border-gray-300">ПІБ Студента</th>
+              <th className="text-left py-2 px-3 border border-gray-300">Група</th>
+              <th className="text-center py-2 px-3 border border-gray-300">Бал (%)</th>
+              <th className="text-center py-2 px-3 border border-gray-300">Час</th>
+              <th className="text-center py-2 px-3 border border-gray-300">Статус</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data?.attempts.map(a => (
+              <tr key={a.id}>
+                <td className="py-2 px-3 border border-gray-300">{a.student.name}</td>
+                <td className="py-2 px-3 border border-gray-300">{a.student.groups[0]?.group.name || '—'}</td>
+                <td className="py-2 px-3 border border-gray-300 text-center">
+                   {a.maxScore > 0 ? ((a.score / a.maxScore) * 100).toFixed(1) : 0}%
+                </td>
+                <td className="py-2 px-3 border border-gray-300 text-center">{formatDuration(a.finishedAt ? (new Date(a.finishedAt).getTime() - new Date(a.startedAt).getTime())/1000 : 0)}</td>
+                <td className="py-2 px-3 border border-gray-300 text-center font-bold">
+                  {a.passed ? 'ЗАРАХ.' : 'НЕЗАР.'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <p className="text-[10px] text-gray-400 mt-20 border-t pt-2">
+          Цей документ згенеровано автоматично системою GradeX. Дані захищені та перевірені на наявність підозрілих подій.
+        </p>
+      </div>
     </div>
   )
 }

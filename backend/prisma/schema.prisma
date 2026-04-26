@@ -54,6 +54,9 @@ enum FinishReason {
 enum SuspiciousEventType {
   FULLSCREEN_EXIT
   TAB_SWITCH
+  WINDOW_BLUR
+  WINDOW_RESIZE
+  SCREENSHOT_ATTEMPT
 }
 
 model User {
@@ -148,6 +151,8 @@ model Test {
   showResultMode   ShowResultMode   @default(AFTER_FINISH)
   multiScoringMode MultiScoringMode @default(ALL_OR_NOTHING)
   createdAt        DateTime         @default(now())
+  allowCertificate Boolean          @default(true)
+  logoUrl          String?
 
   createdBy      User                @relation(fields: [createdById], references: [id])
   groups         TestGroup[]

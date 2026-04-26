@@ -9,22 +9,9 @@ interface CategoryQuotaInput {
   quota: number
 }
 
-interface TestFormData {
-  title: string
-  subject: string
-  groupIds: string[]
-  openFrom: string
-  openUntil: string
-  timeLimitMin: number
-  maxAttempts: number
-  questionsCount: number
-  samplingMode: string
-  categoryQuotas: CategoryQuotaInput[]
-  scoringMode: string
-  multiScoringMode: string
-  passThreshold: number | ''
-  showResultMode: string
   status: TestStatus
+  allowCertificate: boolean
+  logoUrl: string
 }
 
 interface TestFormModalProps {
@@ -53,6 +40,8 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
     passThreshold: initial?.passThreshold ?? 60,
     showResultMode: initial?.showResultMode || 'AFTER_FINISH',
     status: initial?.status || 'DRAFT',
+    allowCertificate: initial?.allowCertificate ?? true,
+    logoUrl: initial?.logoUrl || '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -191,21 +180,53 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
           {activeTab === 'basic' && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">Назва тесту</label>
+              <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Назва тесту</label>
+              <input
+                type="text"
+                required
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                className="glass-input"
+                placeholder="Наприклад: Основи JavaScript"
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Предмет</label>
                 <input
-                  type="text" required value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  className="glass-input" placeholder="Модульний контроль №1"
+                  type="text"
+                  value={form.subject}
+                  onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                  className="glass-input"
+                  placeholder="Наприклад: Програмування"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">Предмет</label>
+                <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Брендування (URL логотипу)</label>
                 <input
-                  type="text" value={form.subject}
-                  onChange={(e) => setForm({ ...form, subject: e.target.value })}
-                  className="glass-input" placeholder="Математичний аналіз"
+                  type="text"
+                  value={form.logoUrl}
+                  onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
+                  className="glass-input"
+                  placeholder="PNG без фону..."
                 />
               </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-4 bg-purple-accent/5 border border-purple-accent/20 rounded-2xl">
+              <input
+                type="checkbox"
+                id="allowCertificate"
+                checked={form.allowCertificate}
+                onChange={(e) => setForm({ ...form, allowCertificate: e.target.checked })}
+                className="w-5 h-5 rounded border-white/20 bg-white/5 text-purple-accent focus:ring-purple-500/50"
+              />
+              <label htmlFor="allowCertificate" className="flex-1 cursor-pointer">
+                <span className="block text-sm font-bold text-white">Дозволити видачу сертифікату</span>
+                <span className="block text-slate-400 text-[10px]">Стимулює студентів покращувати результати</span>
+              </label>
+            </div>
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">Групи</label>
                 <div className="flex flex-wrap gap-2">

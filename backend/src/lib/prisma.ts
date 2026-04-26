@@ -8,7 +8,7 @@ declare global {
 let prisma: PrismaClient;
 
 const dbUrl = process.env['DATABASE_URL'];
-const connectionLimit = 5;
+const connectionLimit = 15;
 const poolTimeout = 20;
 
 const prismaOptions = {

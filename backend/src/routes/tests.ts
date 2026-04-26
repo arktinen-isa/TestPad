@@ -30,6 +30,8 @@ const createTestSchema = z.object({
   groupIds: z.array(z.string().uuid()).optional(),
   questionIds: z.array(z.string().uuid()).optional(),
   categoryQuotas: z.array(categoryQuotaSchema).optional(),
+  allowCertificate: z.boolean().optional().default(true),
+  logoUrl: z.string().optional().nullable(),
 });
 
 const updateTestSchema = createTestSchema.partial();
@@ -142,8 +144,9 @@ router.post(
         samplingMode: data.samplingMode,
         scoringMode: data.scoringMode,
         passThreshold: data.passThreshold,
-        showResultMode: data.showResultMode,
         multiScoringMode: data.multiScoringMode,
+        allowCertificate: data.allowCertificate,
+        logoUrl: data.logoUrl,
         groups: data.groupIds
           ? { create: data.groupIds.map((groupId) => ({ groupId })) }
           : undefined,
@@ -244,6 +247,8 @@ router.patch(
     if (data.passThreshold !== undefined) updatePayload['passThreshold'] = data.passThreshold;
     if (data.showResultMode !== undefined) updatePayload['showResultMode'] = data.showResultMode;
     if (data.multiScoringMode !== undefined) updatePayload['multiScoringMode'] = data.multiScoringMode;
+    if (data.allowCertificate !== undefined) updatePayload['allowCertificate'] = data.allowCertificate;
+    if (data.logoUrl !== undefined) updatePayload['logoUrl'] = data.logoUrl;
 
     if (data.groupIds !== undefined) {
       await prisma.testGroup.deleteMany({ where: { testId: id } });

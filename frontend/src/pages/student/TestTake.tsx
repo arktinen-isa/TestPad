@@ -70,11 +70,42 @@ export default function TestTake() {
         }).catch(() => {})
       }
     }
+    const handleResize = () => {
+      if (attemptIdRef.current && !document.fullscreenElement) {
+        apiClient.post('/events', {
+          attemptId: attemptIdRef.current,
+          eventType: 'WINDOW_RESIZE',
+        }).catch(() => {})
+      }
+    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Block Ctrl+C, Ctrl+V, F12, PrintScreen etc.
+      const isCtrlOrMeta = e.ctrlKey || e.metaKey
+      if (isCtrlOrMeta && (e.key === 'c' || e.key === 'v' || e.key === 'p' || e.key === 'u')) {
+        e.preventDefault()
+      }
+      if (e.key === 'F12' || (isCtrlOrMeta && e.shiftKey && e.key === 'I')) {
+        e.preventDefault()
+      }
+      if (e.key === 'PrintScreen') {
+        e.preventDefault()
+        apiClient.post('/events', {
+          attemptId: attemptIdRef.current,
+          eventType: 'SCREENSHOT_ATTEMPT',
+        }).catch(() => {})
+      }
+    }
+
     document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('blur', handleBlur)
+    window.addEventListener('resize', handleResize)
+    window.addEventListener('keydown', handleKeyDown)
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('blur', handleBlur)
+      window.removeEventListener('resize', handleResize)
+      window.removeEventListener('keydown', handleKeyDown)
     }
   }, [])
 

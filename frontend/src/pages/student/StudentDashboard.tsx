@@ -6,6 +6,7 @@ import { StudentTest } from '../../types'
 import { useTestStore } from '../../store/testStore'
 import { useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { generateCertificate } from '../../utils/certificateGenerator'
 
 function getPlural(n: number, one: string, few: string, many: string) {
   const lastDigit = n % 10;
@@ -56,8 +57,36 @@ function SkeletonCard() {
 
 function TestCard({ test }: { test: StudentTest }) {
   const navigate = useNavigate()
+  const { user } = useAuthStore()
   const status = getTestStatusInfo(test)
   const attemptsUsed = test.attemptsUsed || 0
+  const attemptsLeft = test.maxAttempts - attemptsUsed
+  const activeAttemptId = useTestStore(s => s.attemptId)
+
+  const handleAction = () => {
+    if (activeAttemptId) {
+      navigate('/test/take')
+    } else {
+      navigate(`/test/${test.id}`)
+    }
+  }
+
+  const handleDownloadCertificate = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!test.lastAttempt || !user) return
+    
+    const score = test.scoringMode === 'PERCENTAGE' 
+      ? `${test.lastAttempt.percentage}%` 
+      : `${test.lastAttempt.score} / ${test.lastAttempt.maxScore}`
+      
+    generateCertificate(
+      user.name,
+      test.title,
+      score,
+      new Date(test.lastAttempt.finishedAt!).toLocaleDateString('uk-UA'),
+      test.logoUrl
+    )
+  }
   const attemptsLeft = test.maxAttempts - attemptsUsed
   const activeAttemptId = test.lastAttempt && !test.lastAttempt.finishedAt ? test.lastAttempt.id : null
   const [isActionLoading, setIsActionLoading] = useState(false)
@@ -141,20 +170,40 @@ function TestCard({ test }: { test: StudentTest }) {
       )}
 
       {test.lastAttempt?.finishedAt && test.showResultMode !== 'ADMIN_ONLY' && (
-        <div className="px-3 py-2 rounded-xl bg-white/5 border border-white/10">
-          <p className="text-xs text-slate-400 mb-0.5">Остання спроба:</p>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-white">
-              {test.scoringMode === 'PERCENTAGE'
-                ? `${test.lastAttempt.percentage ?? 0}%`
-                : `${test.lastAttempt.score ?? 0} / ${test.lastAttempt.maxScore ?? 0} балів`}
-            </span>
-            <span className={`text-xs font-medium ${
-              test.lastAttempt.passed ? 'text-green-400' : 'text-red-400'
-            }`}>
-              {test.lastAttempt.passed ? ' (Складено ✓)' : ' (Не складено ✗)'}
-            </span>
+        <div className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between group/result">
+          <div>
+            <p className="text-xs text-slate-400 mb-0.5">Остання спроба:</p>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-white">
+                {test.scoringMode === 'PERCENTAGE'
+                  ? `${test.lastAttempt.percentage ?? 0}%`
+                  : `${test.lastAttempt.score ?? 0} / ${test.lastAttempt.maxScore ?? 0} балів`}
+              </span>
+              <span className={`text-xs font-medium ${
+                test.lastAttempt.passed ? 'text-green-400' : 'text-red-400'
+              }`}>
+                {test.lastAttempt.passed ? ' (Складено ✓)' : ' (Не складено ✗)'}
+              </span>
+            </div>
           </div>
+
+          {test.allowCertificate && test.lastAttempt.passed && (
+            <button
+              onClick={handleDownloadCertificate}
+              className="p-2 rounded-xl bg-purple-500/10 text-purple-400 hover:bg-purple-500 hover:text-white transition-all duration-300"
+              title="Завантажити сертифікат"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </button>
+          )}
+        </div>
+      )}
+
+      {test.logoUrl && (
+        <div className="absolute top-4 right-4 w-12 h-12 pointer-events-none opacity-20 group-hover:opacity-40 transition-opacity">
+          <img src={test.logoUrl} alt="Logo" className="w-full h-full object-contain filter grayscale" />
         </div>
       )}
 
@@ -192,9 +241,9 @@ export default function StudentDashboard() {
   const { user } = useAuthStore()
   const queryClient = useQueryClient()
 
-  useEffect(() => {
-    queryClient.invalidateQueries({ queryKey: ['student-tests'] })
-  }, [queryClient])
+  // REMOVED: queryClient.invalidateQueries on every mount for performance
+  // We rely on staleTime and manual invalidation when starting/finishing tests
+
 
   const { data: tests, isLoading, error } = useQuery<StudentTest[]>({
     queryKey: ['student-tests'],
@@ -202,6 +251,9 @@ export default function StudentDashboard() {
       const res = await apiClient.get('/tests')
       return res.data.data
     },
+    staleTime: 1000 * 60, // 1 minute of stale time to reduce server load
+    gcTime: 1000 * 60 * 5, // Keep in cache for 5 minutes
+  })
   })
 
   return (

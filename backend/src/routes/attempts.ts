@@ -7,8 +7,12 @@ import { sampleFromBank, sampleByCategory } from '../services/samplingService';
 import { scoreAttempt } from '../services/scoringService';
 
 const router = Router();
-
 router.use(authenticate);
+
+// In-memory cache for test structure to reduce DB load
+// Key: testId, Value: { questions: Map<questionId, questionData>, total: number }
+const testCache = new Map<string, any>();
+const TEST_CACHE_TTL = 1000 * 60 * 5; // 5 minutes
 
 const startAttemptSchema = z.object({
   testId: z.string().uuid(),
@@ -114,20 +118,28 @@ async function finishAttempt(
 }
 
 async function getStudentQuestion(attemptId: string, index: number) {
-  const [attempt, aq] = await Promise.all([
-    prisma.attempt.findUnique({
-      where: { id: attemptId },
-      include: { attemptQuestions: { select: { id: true } } },
-    }),
-    prisma.attemptQuestion.findFirst({
-      where: { attemptId, orderIndex: index },
-      include: {
-        question: { include: { answers: { select: { id: true, text: true } } } },
+  // Direct fetch with minimal fields
+  const aq = await prisma.attemptQuestion.findFirst({
+    where: { attemptId, orderIndex: index },
+    include: {
+      attempt: {
+        select: {
+          _count: { select: { attemptQuestions: true } }
+        }
       },
-    }),
-  ]);
+      question: {
+        select: {
+          id: true,
+          text: true,
+          type: true,
+          imageUrl: true,
+          answers: { select: { id: true, text: true } }
+        }
+      }
+    }
+  });
 
-  if (!attempt || !aq) return null;
+  if (!aq) return null;
 
   const answersMap = new Map(aq.question.answers.map((a) => [a.id, a.text]));
   const orderedAnswers = (aq.answerOrder as string[])
@@ -144,7 +156,7 @@ async function getStudentQuestion(attemptId: string, index: number) {
     imageUrl: aq.question.imageUrl,
     answers: orderedAnswers,
     questionNumber: index + 1,
-    total: attempt.attemptQuestions.length,
+    total: aq.attempt._count.attemptQuestions,
   };
 }
 

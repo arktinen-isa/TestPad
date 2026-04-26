@@ -64,6 +64,8 @@ export interface Test {
   showResultMode: string
   multiScoringMode: string
   createdAt: string
+  allowCertificate: boolean
+  logoUrl?: string
   groups?: { groupId: string; group: Group }[]
   categoryQuotas?: (CategoryQuota & { category?: Category })[]
 }
@@ -132,6 +134,8 @@ export interface StudentTest {
   scoringMode: string
   passThreshold?: number
   showResultMode: string
+  allowCertificate: boolean
+  logoUrl?: string
   lastAttempt?: AttemptResult
 }
 
