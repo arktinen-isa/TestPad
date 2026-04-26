@@ -24,8 +24,19 @@ const app = express();
 // Trust proxy for rate-limiting
 app.set('trust proxy', 1);
 
-// Security headers
-app.use(helmet());
+// Security headers - optimized for React SPA with Google Fonts
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      "script-src": ["'self'", "'unsafe-eval'", "'unsafe-inline'"],
+      "connect-src": ["'self'", config.frontendUrl || '*'],
+      "img-src": ["'self'", "data:", "blob:", "*"],
+      "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      "font-src": ["'self'", "https://fonts.gstatic.com"],
+    },
+  },
+}));
 
 // CORS — only allow configured frontend origin
 app.use(

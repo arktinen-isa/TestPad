@@ -31,13 +31,14 @@ export default function TestStart() {
 
   const handleStart = async () => {
     if (!testId) return
+
+    // IMMEDIATE Fullscreen for Chrome (must be absolute first to avoid losing user gesture)
+    if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(() => {})
+    }
+
     setStartError(null)
     try {
-      // FULLSCREEN ON START
-      if (document.documentElement.requestFullscreen) {
-        await document.documentElement.requestFullscreen().catch(() => {})
-      }
-      
       await startAttempt(testId)
       navigate(`/student/test/${testId}/take`, { replace: true })
     } catch (err: unknown) {

@@ -110,15 +110,18 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     // ONLY allow save if we are on the last tab (scoring)
-    if (activeTab !== 'scoring') return
+    if (activeTab !== 'scoring') {
+      console.log('Skipping submit because activeTab is:', activeTab)
+      return
+    }
 
     setLoading(true)
     setError(null)
     try {
       const dataToSave = {
         ...form,
-        openFrom: form.openFrom ? new Date(form.openFrom).toISOString() : null,
-        openUntil: form.openUntil ? new Date(form.openUntil).toISOString() : null,
+        openFrom: (form.openFrom && form.openFrom.trim() !== '') ? new Date(form.openFrom).toISOString() : null,
+        openUntil: (form.openUntil && form.openUntil.trim() !== '') ? new Date(form.openUntil).toISOString() : null,
       }
       await onSave(dataToSave as any, initial?.id)
       onClose()
@@ -176,7 +179,14 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form
+          onSubmit={handleSubmit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && activeTab !== 'scoring') {
+              e.preventDefault()
+            }
+          }}
+        >
           {/* Basic tab */}
           {activeTab === 'basic' && (
             <div className="space-y-4">

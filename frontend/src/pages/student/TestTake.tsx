@@ -230,7 +230,7 @@ export default function TestTake() {
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto custom-scrollbar relative z-[1001]">
-        {isLoading && (
+        {isLoading ? (
           <div className="max-w-3xl mx-auto px-6 py-12 space-y-12 animate-pulse">
             <div className="space-y-4">
               <div className="h-4 w-32 bg-white/5 rounded-full" />
@@ -243,27 +243,23 @@ export default function TestTake() {
               ))}
             </div>
           </div>
-        )}
-        {!currentQuestion && !isLoading && !isFinished && (
-          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-            <div className="glass-card p-8 max-w-md">
-              <div className="w-16 h-16 bg-red-500/10 border border-red-500/30 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <h2 className="title-md mb-2">Питання не знайдені</h2>
-              <p className="text-slate-400 mb-8">Не вдалося завантажити питання для цього тесту. Будь ласка, зверніться до викладача.</p>
-              <button onClick={() => navigate('/student/dashboard')} className="w-full btn-secondary">
-                До кабінету
-              </button>
-            </div>
+        ) : !currentQuestion && !isFinished ? (
+          <div className="min-h-full flex flex-col items-center justify-center p-6 text-center">
+             <div className="glass-card p-10 max-w-md w-full border-red-500/20 bg-red-500/5">
+                <div className="w-20 h-20 bg-red-500/10 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-red-500/20">
+                  <svg className="w-10 h-10 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h2 className="font-unbounded text-2xl font-bold text-white mb-4">Помилка завантаження</h2>
+                <p className="text-slate-400 mb-8 leading-relaxed">Питань для цього тесту не знайдено. Будь ласка, зверніться до викладача.</p>
+                <button onClick={() => navigate('/student/dashboard')} className="w-full btn-ghost py-4">До кабінету</button>
+             </div>
           </div>
-        )}
-
-        <div className="max-w-3xl mx-auto px-4 py-8">
-          {currentQuestion && (
-            <div key={animKey} className="animate-slide-in">
+        ) : (
+          <div className="max-w-3xl mx-auto px-6 py-12 pb-32">
+            {currentQuestion && (
+              <div key={animKey} className="animate-fade-in-up">
                 <div className="flex items-center gap-4 mb-8">
                   <div className="px-4 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-[10px] font-black uppercase tracking-widest shadow-[0_0_15px_rgba(168,85,247,0.1)]">
                     Питання {currentQuestion.questionNumber}
