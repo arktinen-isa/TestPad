@@ -64,6 +64,7 @@ async function finishAttempt(
           multiScoringMode: true,
           passThreshold: true,
           scoringMode: true,
+          showResultMode: true,
         }
       },
       attemptQuestions: {
@@ -622,13 +623,16 @@ router.get(
       startedAt: attempt.startedAt,
       finishedAt: attempt.finishedAt,
       finishReason: attempt.finishReason,
+      timeSpentSec: attempt.finishedAt
+        ? Math.round((attempt.finishedAt.getTime() - attempt.startedAt.getTime()) / 1000)
+        : 0,
       score: s,
       maxScore: ms,
       percentage,
       passed,
       passThreshold: attempt.test.passThreshold,
       scoringMode: attempt.test.scoringMode,
-      showResultMode: 'IMMEDIATE',
+      showResultMode: attempt.test.showResultMode,
     });
   })
 );

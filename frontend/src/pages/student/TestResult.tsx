@@ -50,7 +50,7 @@ export default function TestResult() {
   const passThreshold = result?.passThreshold ?? storeThreshold
   const scoringMode = result?.scoringMode ?? storeScoringMode
   const passed = result?.passed ?? storePassed ?? (percentage >= (passThreshold ?? 60))
-  const showResultMode = result?.showResultMode || storeShowResultMode || 'ADMIN_ONLY'
+  const showResultMode = result?.showResultMode || storeShowResultMode || 'AFTER_FINISH'
 
   const motivationalMessage = useMemo(() => {
     const list = passed ? PASS_MESSAGES : FAIL_MESSAGES
@@ -58,7 +58,7 @@ export default function TestResult() {
   }, [passed])
 
   const displayScore = useMemo(() => {
-    if (scoringMode === 'POINTS') {
+    if (scoringMode === 'SUM') {
       return `${score} / ${maxScore}`
     }
     return `${percentage}%`

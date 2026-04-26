@@ -58,6 +58,7 @@ function TestCard({ test }: { test: StudentTest }) {
   const navigate = useNavigate()
   const status = getTestStatusInfo(test)
   const attemptsUsed = test.attemptsUsed || 0
+  const attemptsLeft = test.maxAttempts - attemptsUsed
   const activeAttemptId = test.lastAttempt && !test.lastAttempt.finishedAt ? test.lastAttempt.id : null
   const [isActionLoading, setIsActionLoading] = useState(false)
   const { resumeAttempt } = useTestStore()
