@@ -57,7 +57,20 @@ router.get(
         where,
         skip,
         take: limit,
-        select: { id: true, name: true, email: true, role: true, createdAt: true },
+        select: { 
+          id: true, 
+          name: true, 
+          email: true, 
+          role: true, 
+          createdAt: true,
+          groups: {
+            select: {
+              group: {
+                select: { id: true, name: true }
+              }
+            }
+          }
+        },
         orderBy: { createdAt: 'desc' },
       }),
       prisma.user.count({ where }),

@@ -8,8 +8,7 @@ export interface User {
   email: string
   role: Role
   createdAt: string
-  groupId?: string
-  group?: Group
+  groups?: { group: { id: string, name: string } }[]
 }
 
 export interface Group {

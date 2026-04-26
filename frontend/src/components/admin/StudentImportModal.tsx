@@ -116,7 +116,7 @@ export default function StudentImportModal({ groupName, onClose, onImport }: Stu
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar min-h-0">
           {/* Step 1: Upload */}
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-3">
@@ -234,7 +234,7 @@ export default function StudentImportModal({ groupName, onClose, onImport }: Stu
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-5 border-t border-white/10 bg-slate-900/80 backdrop-blur-sm flex gap-3 flex-shrink-0">
+        <div className="px-6 py-5 border-t border-white/10 bg-slate-900/95 backdrop-blur-sm flex gap-3 flex-shrink-0 relative z-10">
           <button onClick={onClose} className="flex-1 btn-ghost h-11 text-sm font-semibold">
             Скасувати
           </button>

@@ -271,7 +271,16 @@ export default function UsersPage() {
                             {u.name.charAt(0).toUpperCase()}
                           </span>
                         </div>
-                        <span className="text-white font-medium">{u.name}</span>
+                        <div className="flex flex-col">
+                          <span className="text-white font-medium">{u.name}</span>
+                          {u.role === 'STUDENT' && u.groups && u.groups.length > 0 && (
+                            <div className="mt-0.5">
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20 uppercase tracking-wider">
+                                {u.groups[0].group.name}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="px-5 py-4 text-slate-400 text-sm">{u.email}</td>
