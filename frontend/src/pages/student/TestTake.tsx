@@ -96,13 +96,17 @@ export default function TestTake() {
         }).catch(() => {})
       }
     }
+    let resizeTimeout: any = null
     const handleResize = () => {
-      if (attemptIdRef.current && !document.fullscreenElement) {
-        apiClient.post('/events', {
-          attemptId: attemptIdRef.current,
-          eventType: 'WINDOW_RESIZE',
-        }).catch(() => {})
-      }
+      if (resizeTimeout) clearTimeout(resizeTimeout)
+      resizeTimeout = setTimeout(() => {
+        if (attemptIdRef.current && !document.fullscreenElement) {
+          apiClient.post('/events', {
+            attemptId: attemptIdRef.current,
+            eventType: 'WINDOW_RESIZE',
+          }).catch(() => {})
+        }
+      }, 1000)
     }
     const handleKeyDown = (e: KeyboardEvent) => {
       // Block Ctrl+C, Ctrl+V, F12, PrintScreen etc.

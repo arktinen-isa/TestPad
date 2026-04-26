@@ -63,17 +63,33 @@ router.get(
         where,
         skip,
         take: limit,
-        include: {
-          createdBy: { select: { id: true, name: true } },
-          _count: { select: { questions: true } },
-          groups: { select: { groupId: true } },
-          categoryQuotas: true,
+        select: {
+          id: true,
+          title: true,
+          subject: true,
+          status: true,
+          timeLimitMin: true,
+          maxAttempts: true,
+          questionsCount: true,
+          openFrom: true,
+          openUntil: true,
+          scoringMode: true,
+          showResultMode: true,
+          allowCertificate: true,
+          logoUrl: true,
           attempts: {
             where: user.role === 'STUDENT'
               ? { studentId: user.userId, finishedAt: { not: null } }
               : undefined,
             orderBy: { startedAt: 'desc' },
             take: 1,
+            select: {
+              id: true,
+              score: true,
+              maxScore: true,
+              percentage: true,
+              finishedAt: true,
+            }
           },
         },
         orderBy: { createdAt: 'desc' },
@@ -338,7 +354,14 @@ router.get(
         where: { testId: id, finishedAt: { not: null } },
         skip,
         take: limit,
-        include: {
+        select: {
+          id: true,
+          startedAt: true,
+          finishedAt: true,
+          finishReason: true,
+          score: true,
+          maxScore: true,
+          suspiciousEventsCount: true,
           student: {
             select: {
               id: true,
