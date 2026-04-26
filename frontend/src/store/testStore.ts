@@ -151,7 +151,7 @@ export const useTestStore = create<TestStore>((set, get) => ({
             maxScore,
             percentage,
             passed,
-            showResultMode: 'IMMEDIATE'
+            showResultMode: 'AFTER_FINISH'
           })
         }
       } else {

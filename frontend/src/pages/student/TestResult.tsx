@@ -50,7 +50,8 @@ export default function TestResult() {
   const passThreshold = result?.passThreshold ?? storeThreshold
   const scoringMode = result?.scoringMode ?? storeScoringMode
   const passed = result?.passed ?? storePassed ?? (percentage >= (passThreshold ?? 60))
-  const showResultMode = result?.showResultMode || storeShowResultMode || 'AFTER_FINISH'
+  const showResultMode = result?.showResultMode || storeShowResultMode || 'ADMIN_ONLY'
+  const isConfidential = showResultMode === 'ADMIN_ONLY' || (score === null && storeScore === null)
 
   const motivationalMessage = useMemo(() => {
     const list = passed ? PASS_MESSAGES : FAIL_MESSAGES
@@ -103,7 +104,7 @@ export default function TestResult() {
             {result?.testTitle || 'Результати тесту'}
           </h1>
 
-          {showResultMode === 'ADMIN_ONLY' ? (
+          {isConfidential ? (
             <div className="glass-card p-10 border-blue-500/20 bg-blue-500/5 backdrop-blur-xl">
               <div className="w-20 h-20 rounded-3xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto mb-8 shadow-lg shadow-blue-500/10">
                 <svg className="w-10 h-10 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
