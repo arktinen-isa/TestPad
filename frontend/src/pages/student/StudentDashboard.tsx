@@ -4,6 +4,8 @@ import apiClient from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
 import { StudentTest } from '../../types'
 import { useTestStore } from '../../store/testStore'
+import { useState, useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 
 function getPlural(n: number, one: string, few: string, many: string) {
   const lastDigit = n % 10;
@@ -56,22 +58,24 @@ function TestCard({ test }: { test: StudentTest }) {
   const navigate = useNavigate()
   const status = getTestStatusInfo(test)
   const attemptsUsed = test.attemptsUsed || 0
-  const attemptsLeft = Math.max(0, test.maxAttempts - attemptsUsed)
   const activeAttemptId = test.lastAttempt && !test.lastAttempt.finishedAt ? test.lastAttempt.id : null
+  const [isActionLoading, setIsActionLoading] = useState(false)
   const { resumeAttempt } = useTestStore()
 
   const handleAction = async () => {
+    setIsActionLoading(true)
     if (activeAttemptId) {
       try {
         await resumeAttempt(activeAttemptId)
-        
         navigate(`/student/test/${test.id}/take`)
       } catch {
-        // Fallback to start if resume fails
         navigate(`/student/test/${test.id}/start`)
+      } finally {
+        setIsActionLoading(false)
       }
     } else {
       navigate(`/student/test/${test.id}/start`)
+      // Not setting loading false here as we navigate away immediately to a non-take page
     }
   }
 
@@ -159,15 +163,21 @@ function TestCard({ test }: { test: StudentTest }) {
       )}
 
       {/* Action button */}
-      {status.available || activeAttemptId ? (
         <button
           onClick={handleAction}
-          className={`w-full text-center text-sm mt-auto px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
+          disabled={isActionLoading}
+          className={`w-full text-center text-sm mt-auto px-6 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
             activeAttemptId 
               ? 'bg-blue-500 hover:bg-blue-600 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)]' 
               : 'btn-primary'
           }`}
         >
+          {isActionLoading && (
+            <svg className="animate-spin h-4 w-4 text-current" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+          )}
           {activeAttemptId ? 'Продовжити тест →' : 'Розпочати тест →'}
         </button>
       ) : (
@@ -184,6 +194,12 @@ function TestCard({ test }: { test: StudentTest }) {
 
 export default function StudentDashboard() {
   const { user } = useAuthStore()
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    // Invalidate tests query on mount to ensure fresh status
+    queryClient.invalidateQueries({ queryKey: ['student-tests'] })
+  }, [queryClient])
 
   const { data: tests, isLoading, error } = useQuery<StudentTest[]>({
     queryKey: ['student-tests'],

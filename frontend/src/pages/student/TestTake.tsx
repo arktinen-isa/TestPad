@@ -330,8 +330,8 @@ export default function TestTake() {
         </div>
       </div>
 
-      {/* Bottom bar */}
-      <div className="flex-shrink-0 border-t border-white/10 bg-dark-bg/90 backdrop-blur-md px-6 py-4">
+      {/* Bottom bar (Sticky footer) */}
+      <div className="sticky bottom-0 border-t border-white/10 bg-dark-bg/95 backdrop-blur-xl px-6 py-4 -mx-4 sm:-mx-6 -mb-8 z-40 shadow-[0_-10px_20px_rgba(0,0,0,0.4)]">
         <div className="max-w-3xl mx-auto flex items-center justify-between gap-4">
           <button
             onClick={() => setShowExitModal(true)}

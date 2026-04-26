@@ -193,7 +193,7 @@ export const useTestStore = create<TestStore>((set, get) => ({
         passed,
         passThreshold,
         scoringMode,
-        showResultMode: response.data.showResultMode || (score !== null ? 'IMMEDIATE' : 'ADMIN_ONLY'),
+        showResultMode: response.data.showResultMode,
         currentQuestion: null,
         isLoading: false,
       })

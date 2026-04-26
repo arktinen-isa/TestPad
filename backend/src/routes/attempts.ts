@@ -52,6 +52,7 @@ async function finishAttempt(
   passed: boolean | null; 
   passThreshold: number | null; 
   scoringMode: string; 
+  showResultMode: string;
 }> {
   const attempt = await withDbRetry(() => prisma.attempt.findUnique({
     where: { id: attemptId },
@@ -122,7 +123,8 @@ async function finishAttempt(
     percentage, 
     passed, 
     passThreshold: attempt.test.passThreshold, 
-    scoringMode: attempt.test.scoringMode 
+    scoringMode: attempt.test.scoringMode,
+    showResultMode: attempt.test.showResultMode
   };
 }
 
@@ -552,12 +554,7 @@ router.post(
     }
 
     const result = await finishAttempt(id, 'EXIT');
-    
-    if (attempt.test.showResultMode === 'ADMIN_ONLY') {
-      res.json({ done: true, showResultMode: 'ADMIN_ONLY' });
-    } else {
-      res.json({ done: true, ...result });
-    }
+    res.json({ done: true, ...result });
   })
 );
 
