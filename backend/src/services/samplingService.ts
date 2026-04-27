@@ -50,7 +50,9 @@ export async function sampleByCategory(
       select: { id: true },
     });
 
-    const eligible = questions.map((q) => q.id);
+    const eligible = questions
+      .map((q) => q.id)
+      .filter((id) => testQuestionIds.length === 0 || testQuestionSet.has(id));
     const picked = sampleFromBank(eligible, quota);
     sampled.push(...picked);
   }
