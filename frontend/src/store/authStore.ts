@@ -16,6 +16,8 @@ interface AuthActions {
   logout: () => void
   init: () => void
   setUser: (user: User) => void
+  setAccessToken: (token: string) => void
+  setRefreshToken: (token: string) => void
   clearError: () => void
 }
 
@@ -75,6 +77,15 @@ export const useAuthStore = create<AuthStore>((set) => ({
   setUser: (user: User) => {
     localStorage.setItem('user', JSON.stringify(user))
     set({ user })
+  },
+
+  setAccessToken: (token: string) => {
+    localStorage.setItem('accessToken', token)
+    set({ accessToken: token })
+  },
+
+  setRefreshToken: (token: string) => {
+    localStorage.setItem('refreshToken', token)
   },
 
   clearError: () => set({ error: null }),

@@ -90,7 +90,7 @@ router.post(
 
     // Rotate: revoke old token, issue new one
     await prisma.$transaction([
-      prisma.refreshToken.delete({ where: { token: refreshToken } }),
+      prisma.refreshToken.deleteMany({ where: { token: refreshToken } }),
       prisma.refreshToken.create({
         data: { userId: payload.userId, token: newRefreshToken, expiresAt },
       }),

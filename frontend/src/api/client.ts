@@ -1,4 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
+import { useAuthStore } from '../store/authStore'
 
 const apiClient = axios.create({
   baseURL: '/api',
@@ -60,9 +61,7 @@ apiClient.interceptors.response.use(
       const refreshToken = localStorage.getItem('refreshToken')
 
       if (!refreshToken) {
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
+        useAuthStore.getState().logout()
         window.location.href = '/login'
         return Promise.reject(error)
       }
@@ -71,8 +70,10 @@ apiClient.interceptors.response.use(
         const response = await axios.post('/api/auth/refresh', { refreshToken })
         const { accessToken, refreshToken: newRefreshToken } = response.data
 
-        localStorage.setItem('accessToken', accessToken)
-        localStorage.setItem('refreshToken', newRefreshToken)
+        // Update store and localStorage
+        const authStore = useAuthStore.getState()
+        authStore.setAccessToken(accessToken)
+        authStore.setRefreshToken(newRefreshToken)
 
         if (originalRequest.headers) {
           originalRequest.headers.Authorization = `Bearer ${accessToken}`
@@ -80,12 +81,16 @@ apiClient.interceptors.response.use(
 
         processQueue(null, accessToken)
         return apiClient(originalRequest)
-      } catch (refreshError) {
+      } catch (refreshError: any) {
         processQueue(refreshError as AxiosError, null)
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
-        window.location.href = '/login'
+        
+        // Only logout if the refresh request itself returns 401 or 403
+        // This prevents logout on 429 (rate limit) or 500 (server error)
+        if (refreshError.response?.status === 401 || refreshError.response?.status === 403) {
+          useAuthStore.getState().logout()
+          window.location.href = '/login'
+        }
+        
         return Promise.reject(refreshError)
       } finally {
         isRefreshing = false
