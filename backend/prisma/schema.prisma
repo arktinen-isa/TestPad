@@ -120,6 +120,8 @@ model Question {
   attemptQuestions AttemptQuestion[]
 
   @@index([categoryId])
+  @@index([type])
+  @@index([createdAt])
 }
 
 model Answer {
@@ -162,6 +164,7 @@ model Test {
 
   @@index([status])
   @@index([createdById])
+  @@index([createdAt])
 }
 
 model TestGroup {
@@ -195,6 +198,7 @@ model TestCategoryQuota {
   category QuestionCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@id([testId, categoryId])
+  @@index([categoryId])
 }
 
 model Attempt {
@@ -216,6 +220,7 @@ model Attempt {
 
   @@index([studentId, testId])
   @@index([testId])
+  @@index([startedAt])
 }
 
 model AttemptQuestion {
@@ -243,6 +248,7 @@ model AttemptAnswer {
   answer          Answer          @relation(fields: [answerId], references: [id])
 
   @@id([attemptQuestionId, answerId])
+  @@index([answerId])
 }
 
 model SuspiciousEvent {

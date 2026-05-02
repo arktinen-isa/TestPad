@@ -17,7 +17,7 @@ const createQuestionSchema = z.object({
   text: z.string().min(1),
   type: z.enum(['SINGLE', 'MULTI']),
   categoryId: z.string().uuid(),
-  imageUrl: z.string().url().optional(),
+  imageUrl: z.string().optional(),
   answers: z.array(answerSchema).min(2),
 });
 
@@ -31,7 +31,7 @@ const updateQuestionSchema = z.object({
   text: z.string().min(1).optional(),
   type: z.enum(['SINGLE', 'MULTI']).optional(),
   categoryId: z.string().uuid().optional(),
-  imageUrl: z.string().url().nullable().optional(),
+  imageUrl: z.string().nullable().optional(),
   answers: z.array(updateAnswerSchema).min(2).optional(),
 });
 
