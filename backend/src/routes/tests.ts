@@ -45,7 +45,8 @@ router.get(
     const limit = Math.min(100, Math.max(1, parseInt(req.query['limit'] as string) || 20));
     const skip = (page - 1) * limit;
 
-    let where: Record<string, unknown> = {};
+    const statusQuery = req.query['status'] as string | undefined;
+    let where: Record<string, any> = {};
 
     if (user.role === 'STUDENT') {
       const userGroups = await prisma.userGroup.findMany({
@@ -59,6 +60,10 @@ router.get(
       };
     } else if (user.role === 'TEACHER') {
       where = { createdById: user.userId };
+    }
+
+    if (statusQuery) {
+      where.status = statusQuery;
     }
 
     const [rawTests, total] = await Promise.all([
