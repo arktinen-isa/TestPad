@@ -20,7 +20,9 @@ const startAttemptSchema = z.object({
 
 const answerSchema = z.object({
   questionId: z.string().uuid(),
-  answerIds: z.array(z.string().uuid()),
+  answerIds: z.array(z.string().uuid()).optional(),
+  matchingPairs: z.any().optional(),
+  orderingItems: z.any().optional(),
 });
 
 function shuffleArray<T>(arr: T[]): T[] {
@@ -64,9 +66,12 @@ async function finishAttempt(
       },
       attemptQuestions: {
         select: {
+          submittedAnswer: true,
           question: {
             select: {
               type: true,
+              matchingPairs: true,
+              orderingItems: true,
               category: { select: { pointsWeight: true } },
               answers: { select: { id: true, isCorrect: true } },
             },
@@ -84,11 +89,14 @@ async function finishAttempt(
   const { score, maxScore } = scoreAttempt(
     attempt.attemptQuestions.map((aq: any) => ({
       question: {
-        type: aq.question.type as 'SINGLE' | 'MULTI',
+        type: aq.question.type as any,
         answers: aq.question.answers,
+        matchingPairs: aq.question.matchingPairs,
+        orderingItems: aq.question.orderingItems,
         category: { pointsWeight: aq.question.category.pointsWeight },
       },
       attemptAnswers: aq.attemptAnswers,
+      submittedAnswer: aq.submittedAnswer,
     })),
     attempt.test.multiScoringMode as 'ALL_OR_NOTHING' | 'PARTIAL'
   );
@@ -133,6 +141,9 @@ async function getStudentQuestion(attemptId: string, index: number) {
           text: true,
           type: true,
           imageUrl: true,
+          matchingPairs: true,
+          orderingItems: true,
+          timeLimitSeconds: true,
           answers: { select: { id: true, text: true } }
         }
       }
@@ -141,20 +152,37 @@ async function getStudentQuestion(attemptId: string, index: number) {
 
   if (!aq) return null;
 
-  const answersMap = new Map(aq.question.answers.map((a) => [a.id, a.text]));
-  const orderedAnswers = (aq.answerOrder as string[])
-    .map((answerId) => {
-      const text = answersMap.get(answerId);
-      return text ? { id: answerId, text } : null;
-    })
-    .filter((a): a is { id: string; text: string } => a !== null);
+  let answers: any[] = [];
+  let matchingLeft: string[] = [];
+  let matchingRight: string[] = [];
+  let orderingItems: string[] = [];
+
+  if (aq.question.type === 'MATCHING') {
+    const pairs = (aq.question.matchingPairs as Array<{ left: string; right: string }>) || [];
+    matchingLeft = shuffleArray(pairs.map((p) => p.left));
+    matchingRight = shuffleArray(pairs.map((p) => p.right));
+  } else if (aq.question.type === 'ORDERING') {
+    orderingItems = shuffleArray((aq.question.orderingItems as string[]) || []);
+  } else {
+    const answersMap = new Map(aq.question.answers.map((a) => [a.id, a.text]));
+    answers = (aq.answerOrder as string[])
+      .map((answerId) => {
+        const text = answersMap.get(answerId);
+        return text ? { id: answerId, text } : null;
+      })
+      .filter((a): a is { id: string; text: string } => a !== null);
+  }
 
   return {
     id: aq.question.id,
     text: aq.question.text,
     type: aq.question.type,
     imageUrl: aq.question.imageUrl,
-    answers: orderedAnswers,
+    answers,
+    matchingLeft,
+    matchingRight,
+    orderingItems,
+    timeLimitSeconds: aq.question.timeLimitSeconds,
     questionNumber: index + 1,
     total: aq.attempt._count.attemptQuestions,
   };
@@ -344,7 +372,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const { id } = req.params;
     const userId = req.user!.userId;
-    const { questionId, answerIds } = answerSchema.parse(req.body);
+    const { questionId, answerIds = [], matchingPairs, orderingItems } = answerSchema.parse(req.body);
 
     const attempt = await prisma.attempt.findUnique({
       where: { id },
@@ -388,28 +416,52 @@ router.post(
       return;
     }
 
-    const validAnswerIds = new Set(currentAq.question.answers.map((a) => a.id));
-    for (const answerId of answerIds) {
-      if (!validAnswerIds.has(answerId)) {
-        res.status(400).json({ error: `Invalid answer ID: ${answerId}` });
-        return;
+    if (currentAq.question.type === 'MATCHING') {
+      await prisma.$transaction([
+        prisma.attemptQuestion.update({
+          where: { id: currentAq.id },
+          data: {
+            answeredAt: new Date(),
+            submittedAnswer: matchingPairs ? JSON.stringify(matchingPairs) : (null as any),
+          },
+        }),
+        prisma.attempt.update({ where: { id }, data: { currentQuestionIndex: currentIndex + 1 } }),
+      ]);
+    } else if (currentAq.question.type === 'ORDERING') {
+      await prisma.$transaction([
+        prisma.attemptQuestion.update({
+          where: { id: currentAq.id },
+          data: {
+            answeredAt: new Date(),
+            submittedAnswer: orderingItems ? JSON.stringify(orderingItems) : (null as any),
+          },
+        }),
+        prisma.attempt.update({ where: { id }, data: { currentQuestionIndex: currentIndex + 1 } }),
+      ]);
+    } else {
+      const validAnswerIds = new Set(currentAq.question.answers.map((a) => a.id));
+      for (const answerId of answerIds) {
+        if (!validAnswerIds.has(answerId)) {
+          res.status(400).json({ error: `Invalid answer ID: ${answerId}` });
+          return;
+        }
       }
+
+      const selectedSet = new Set(answerIds);
+
+      await prisma.$transaction([
+        prisma.attemptAnswer.deleteMany({ where: { attemptQuestionId: currentAq.id } }),
+        prisma.attemptAnswer.createMany({
+          data: currentAq.question.answers.map((a) => ({
+            attemptQuestionId: currentAq.id,
+            answerId: a.id,
+            selected: selectedSet.has(a.id),
+          })),
+        }),
+        prisma.attemptQuestion.update({ where: { id: currentAq.id }, data: { answeredAt: new Date() } }),
+        prisma.attempt.update({ where: { id }, data: { currentQuestionIndex: currentIndex + 1 } }),
+      ]);
     }
-
-    const selectedSet = new Set(answerIds);
-
-    await prisma.$transaction([
-      prisma.attemptAnswer.deleteMany({ where: { attemptQuestionId: currentAq.id } }),
-      prisma.attemptAnswer.createMany({
-        data: currentAq.question.answers.map((a) => ({
-          attemptQuestionId: currentAq.id,
-          answerId: a.id,
-          selected: selectedSet.has(a.id),
-        })),
-      }),
-      prisma.attemptQuestion.update({ where: { id: currentAq.id }, data: { answeredAt: new Date() } }),
-      prisma.attempt.update({ where: { id }, data: { currentQuestionIndex: currentIndex + 1 } }),
-    ]);
 
     const showResultMode = (attempt.test as any).showResultMode;
 

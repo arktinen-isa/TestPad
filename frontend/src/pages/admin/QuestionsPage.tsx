@@ -16,11 +16,15 @@ interface QuestionFormData {
 const TYPE_LABELS: Record<QuestionType, string> = {
   SINGLE: 'Одна відповідь',
   MULTI: 'Декілька відповідей',
+  MATCHING: 'Відповідності',
+  ORDERING: 'Послідовність',
 }
 
 const TYPE_COLORS: Record<QuestionType, string> = {
   SINGLE: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
   MULTI: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
+  MATCHING: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+  ORDERING: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
 }
 
 export default function QuestionsPage() {
@@ -36,6 +40,28 @@ export default function QuestionsPage() {
   const [targetCategoryId, setTargetCategoryId] = useState('')
   const [editQuestion, setEditQuestion] = useState<Question | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<Question | null>(null)
+
+  // Unified Category Management States
+  const [newCatName, setNewCatName] = useState('')
+  const [newCatWeight, setNewCatWeight] = useState(1)
+
+  const createCategoryMutation = useMutation({
+    mutationFn: async (data: { name: string, pointsWeight: number }) => {
+      await apiClient.post('/categories', data)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['categories'] })
+      setNewCatName('')
+      setNewCatWeight(1)
+    }
+  })
+
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiClient.delete(`/categories/${id}`)
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] })
+  })
 
   useEffect(() => {
     setPage(1)
@@ -135,6 +161,12 @@ export default function QuestionsPage() {
     XLSX.writeFile(wb, 'GradeX_Import_Template.xlsx')
   }
 
+  const handleCreateCategory = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newCatName.trim()) return
+    await createCategoryMutation.mutateAsync({ name: newCatName, pointsWeight: newCatWeight })
+  }
+
   const handleBulkCategory = async () => {
     if (!targetCategoryId || selectedIds.length === 0) return
     await bulkUpdateMutation.mutateAsync({ ids: selectedIds, data: { categoryId: targetCategoryId } })
@@ -220,152 +252,243 @@ export default function QuestionsPage() {
         </div>
       )}
 
-      {/* Filters */}
-      <div className="glass-card p-4 flex flex-wrap gap-3">
-        <div className="flex-1 min-w-48">
-          <div className="relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="glass-input pl-9 py-2 text-sm"
-              placeholder="Пошук питань..."
-            />
+      {/* Dual Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+        {/* Left Column: Categories management */}
+        <div className="lg:col-span-1 space-y-6">
+          <div className="glass-card p-5 space-y-5">
+            <h2 className="font-unbounded text-sm font-bold text-white uppercase tracking-wider">Категорії</h2>
+            
+            {/* Create Category form */}
+            <form onSubmit={handleCreateCategory} className="space-y-3">
+              <input
+                type="text"
+                required
+                value={newCatName}
+                onChange={(e) => setNewCatName(e.target.value)}
+                placeholder="Назва категорії..."
+                className="glass-input text-xs py-2.5"
+              />
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  required
+                  min={1}
+                  value={newCatWeight}
+                  onChange={(e) => setNewCatWeight(parseInt(e.target.value))}
+                  placeholder="Вага..."
+                  className="glass-input text-xs py-2.5 w-20"
+                />
+                <button
+                  type="submit"
+                  disabled={createCategoryMutation.isPending}
+                  className="btn-secondary flex-1 text-xs py-2.5"
+                >
+                  {createCategoryMutation.isPending ? '...' : 'Додати'}
+                </button>
+              </div>
+            </form>
+
+            <div className="h-px bg-white/5" />
+
+            {/* Category Listing / Quick Filters */}
+            <div className="space-y-1 max-h-96 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10">
+              <button
+                onClick={() => setCategoryFilter('')}
+                className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium transition-all flex items-center justify-between border ${
+                  categoryFilter === ''
+                    ? 'bg-purple-accent/20 border-purple-accent/30 text-white shadow-[0_0_15px_rgba(124,58,237,0.15)]'
+                    : 'text-slate-400 hover:bg-white/5 hover:text-white border-transparent'
+                }`}
+              >
+                <span>Всі категорії</span>
+              </button>
+
+              {categories?.map((c) => (
+                <div key={c.id} className="group relative flex items-center">
+                  <button
+                    onClick={() => setCategoryFilter(c.id)}
+                    className={`flex-1 text-left px-3 py-2 rounded-xl text-xs font-medium transition-all flex items-center justify-between border ${
+                      categoryFilter === c.id
+                        ? 'bg-purple-accent/20 border-purple-accent/30 text-white shadow-[0_0_15px_rgba(124,58,237,0.15)]'
+                        : 'text-slate-400 hover:bg-white/5 hover:text-white border-transparent'
+                    }`}
+                  >
+                    <span className="truncate pr-6">{c.name}</span>
+                    <span className="px-2 py-0.5 rounded-md bg-white/5 text-[10px] text-slate-400 font-bold flex-shrink-0 group-hover:opacity-0 transition-opacity">
+                      {c.pointsWeight} б.
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm(`Ви впевнені, що хочете видалити категорію "${c.name}"?`)) {
+                        deleteCategoryMutation.mutate(c.id)
+                      }
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                    title="Видалити категорію"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        <select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          className="glass-input py-2 text-sm w-auto min-w-48"
-        >
-          <option value="" className="bg-gray-900">Всі категорії</option>
-          {categories?.map((c) => (
-            <option key={c.id} value={c.id} className="bg-gray-900">
-              {c.name}
-            </option>
-          ))}
-        </select>
+        {/* Right Column: Questions Grid/List */}
+        <div className="lg:col-span-3 space-y-6">
+          {/* Filters */}
+          <div className="glass-card p-4 flex flex-wrap gap-3">
+            <div className="flex-1 min-w-48">
+              <div className="relative">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="glass-input pl-9 py-2 text-sm"
+                  placeholder="Пошук питань за текстом..."
+                />
+              </div>
+            </div>
 
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as QuestionType | '')}
-          className="glass-input py-2 text-sm w-auto min-w-36"
-        >
-          <option value="" className="bg-gray-900">Всі типи</option>
-          <option value="SINGLE" className="bg-gray-900">Одна відповідь</option>
-          <option value="MULTI" className="bg-gray-900">Декілька відповідей</option>
-        </select>
-
-      </div>
-
-      {/* Table */}
-      <div className="glass-card overflow-hidden">
-        {isLoading ? (
-          <div className="p-8 text-center">
-            <div className="w-8 h-8 border-2 border-purple-accent border-t-transparent rounded-full animate-spin mx-auto" />
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value as QuestionType | '')}
+              className="glass-input py-2 text-sm w-auto min-w-36"
+            >
+              <option value="" className="bg-gray-900">Всі типи питань</option>
+              <option value="SINGLE" className="bg-gray-900">Одна відповідь</option>
+              <option value="MULTI" className="bg-gray-900">Декілька відповідей</option>
+              <option value="MATCHING" className="bg-gray-900">Відповідності</option>
+              <option value="ORDERING" className="bg-gray-900">Послідовність</option>
+            </select>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="px-5 py-4 text-left">
-                    <input
-                      type="checkbox"
-                      className="rounded border-white/20 bg-white/5 text-purple-accent"
-                      checked={selectedIds.length > 0 && selectedIds.length === questions?.length}
-                      onChange={toggleSelectAll}
-                    />
-                  </th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Питання</th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Тип</th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Категорія</th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Вага</th>
-                  <th className="px-5 py-4 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">Дії</th>
-                </tr>
-              </thead>
-              <tbody>
-                {questions?.map((q) => (
-                  <tr key={q.id} className={`table-row ${selectedIds.includes(q.id) ? 'bg-purple-accent/5' : ''}`}>
-                    <td className="px-5 py-4">
-                      <input
-                        type="checkbox"
-                        className="rounded border-white/20 bg-white/5 text-purple-accent"
-                        checked={selectedIds.includes(q.id)}
-                        onChange={() => toggleSelect(q.id)}
-                      />
-                    </td>
-                    <td className="px-5 py-4 max-w-xs">
-                      <p className="text-white text-sm">{truncateText(q.text)}</p>
-                      <p className="text-slate-500 text-xs mt-0.5">{q.answers.length} відповідей</p>
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className={`status-badge border ${TYPE_COLORS[q.type]}`}>
-                        {TYPE_LABELS[q.type]}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-slate-400 text-sm">
-                      {q.category?.name || '—'}
-                    </td>
-                    <td className="px-5 py-4 text-slate-400 text-sm">
-                      {q.category?.pointsWeight ?? '—'} б.
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => { setEditQuestion(q); setShowModal(true) }}
-                          className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirm(q)}
-                          className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
 
-      {/* Pagination */}
-      {!isLoading && totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-4">
-          <button
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-4 py-2 rounded-xl text-sm font-medium transition-all bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10 hover:text-white disabled:opacity-50"
-          >
-            Попередня
-          </button>
-          <span className="text-slate-400 text-sm font-medium px-4">
-            Сторінка {page} з {totalPages}
-          </span>
-          <button
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="px-4 py-2 rounded-xl text-sm font-medium transition-all bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10 hover:text-white disabled:opacity-50"
-          >
-            Наступна
-          </button>
+          {/* Table */}
+          <div className="glass-card overflow-hidden">
+            {isLoading ? (
+              <div className="p-8 text-center">
+                <div className="w-8 h-8 border-2 border-purple-accent border-t-transparent rounded-full animate-spin mx-auto" />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="px-5 py-4 text-left">
+                        <input
+                          type="checkbox"
+                          className="rounded border-white/20 bg-white/5 text-purple-accent"
+                          checked={selectedIds.length > 0 && selectedIds.length === questions?.length}
+                          onChange={toggleSelectAll}
+                        />
+                      </th>
+                      <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Питання</th>
+                      <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Тип</th>
+                      <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Категорія</th>
+                      <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Вага</th>
+                      <th className="px-5 py-4 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">Дії</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {questions?.map((q) => (
+                      <tr key={q.id} className={`table-row ${selectedIds.includes(q.id) ? 'bg-purple-accent/5' : ''}`}>
+                        <td className="px-5 py-4">
+                          <input
+                            type="checkbox"
+                            className="rounded border-white/20 bg-white/5 text-purple-accent"
+                            checked={selectedIds.includes(q.id)}
+                            onChange={() => toggleSelect(q.id)}
+                          />
+                        </td>
+                        <td className="px-5 py-4 max-w-xs">
+                          <p className="text-white text-sm">{truncateText(q.text)}</p>
+                          <p className="text-slate-500 text-xs mt-0.5">
+                            {q.type === 'MATCHING' 
+                              ? `${(q.matchingPairs as any)?.length || 0} пар` 
+                              : q.type === 'ORDERING' 
+                              ? `${(q.orderingItems as any)?.length || 0} кроків` 
+                              : `${q.answers?.length || 0} відповідей`}
+                          </p>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className={`status-badge border ${TYPE_COLORS[q.type]}`}>
+                            {TYPE_LABELS[q.type]}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-slate-400 text-sm">
+                          {q.category?.name || '—'}
+                        </td>
+                        <td className="px-5 py-4 text-slate-400 text-sm">
+                          {q.category?.pointsWeight ?? '—'} б.
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => { setEditQuestion(q); setShowModal(true) }}
+                              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirm(q)}
+                              className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {questions?.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="text-center p-8 text-slate-500 text-sm">
+                          У цій категорії поки що немає питань. Створіть нове за допомогою кнопки вище.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Pagination */}
+          {!isLoading && totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-4">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-4 py-2 rounded-xl text-sm font-medium transition-all bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10 hover:text-white disabled:opacity-50"
+              >
+                Попередня
+              </button>
+              <span className="text-slate-400 text-sm font-medium px-4">
+                Сторінка {page} з {totalPages}
+              </span>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="px-4 py-2 rounded-xl text-sm font-medium transition-all bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10 hover:text-white disabled:opacity-50"
+              >
+                Наступна
+              </button>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {showModal && (
         <QuestionFormModal

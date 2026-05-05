@@ -11,18 +11,26 @@ interface AnswerInput {
   isCorrect: boolean
 }
 
+interface PairInput {
+  left: string
+  right: string
+}
+
 interface QuestionFormData {
   text: string
   type: QuestionType
   categoryId: string
   imageUrl?: string
-  answers: AnswerInput[]
+  answers?: AnswerInput[]
+  matchingPairs?: PairInput[]
+  orderingItems?: string[]
+  timeLimitSeconds?: number | null
 }
 
 interface QuestionFormModalProps {
   initial?: Question | null
   onClose: () => void
-  onSave: (data: QuestionFormData, id?: string) => Promise<void>
+  onSave: (data: any, id?: string) => Promise<void>
 }
 
 export default function QuestionFormModal({ initial, onClose, onSave }: QuestionFormModalProps) {
@@ -35,6 +43,12 @@ export default function QuestionFormModal({ initial, onClose, onSave }: Question
       { text: '', isCorrect: false },
       { text: '', isCorrect: false },
     ],
+    matchingPairs: initial?.matchingPairs || [
+      { left: '', right: '' },
+      { left: '', right: '' },
+    ],
+    orderingItems: initial?.orderingItems || ['', ''],
+    timeLimitSeconds: initial?.timeLimitSeconds || null,
   })
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -109,17 +123,17 @@ export default function QuestionFormModal({ initial, onClose, onSave }: Question
   }
 
   const addAnswer = () => {
-    if (form.answers.length >= 8) return
+    if (!form.answers || form.answers.length >= 8) return
     setForm({ ...form, answers: [...form.answers, { text: '', isCorrect: false }] })
   }
 
   const removeAnswer = (idx: number) => {
-    if (form.answers.length <= 2) return
+    if (!form.answers || form.answers.length <= 2) return
     setForm({ ...form, answers: form.answers.filter((_, i) => i !== idx) })
   }
 
   const updateAnswer = (idx: number, field: keyof AnswerInput, value: string | boolean) => {
-    const updated = form.answers.map((a, i) => {
+    const updated = (form.answers || []).map((a, i) => {
       if (i !== idx) {
         if (field === 'isCorrect' && value === true && form.type === 'SINGLE') {
           return { ...a, isCorrect: false }
@@ -131,11 +145,47 @@ export default function QuestionFormModal({ initial, onClose, onSave }: Question
     setForm({ ...form, answers: updated })
   }
 
+  const addMatchingPair = () => {
+    if ((form.matchingPairs || []).length >= 8) return
+    setForm({ ...form, matchingPairs: [...(form.matchingPairs || []), { left: '', right: '' }] })
+  }
+
+  const removeMatchingPair = (idx: number) => {
+    if ((form.matchingPairs || []).length <= 1) return
+    setForm({ ...form, matchingPairs: (form.matchingPairs || []).filter((_, i) => i !== idx) })
+  }
+
+  const updateMatchingPair = (idx: number, field: 'left' | 'right', value: string) => {
+    const updated = (form.matchingPairs || []).map((p, i) => {
+      if (i !== idx) return p
+      return { ...p, [field]: value }
+    })
+    setForm({ ...form, matchingPairs: updated })
+  }
+
+  const addOrderingItem = () => {
+    if ((form.orderingItems || []).length >= 8) return
+    setForm({ ...form, orderingItems: [...(form.orderingItems || []), ''] })
+  }
+
+  const removeOrderingItem = (idx: number) => {
+    if ((form.orderingItems || []).length <= 2) return
+    setForm({ ...form, orderingItems: (form.orderingItems || []).filter((_, i) => i !== idx) })
+  }
+
+  const updateOrderingItem = (idx: number, value: string) => {
+    const updated = (form.orderingItems || []).map((item, i) => {
+      if (i !== idx) return item
+      return value
+    })
+    setForm({ ...form, orderingItems: updated })
+  }
+
   const handleTypeChange = (type: QuestionType) => {
     let answers = form.answers
     if (type === 'SINGLE') {
-      const firstCorrectIdx = answers.findIndex((a) => a.isCorrect)
-      answers = answers.map((a, i) => ({ ...a, isCorrect: i === firstCorrectIdx }))
+      const firstCorrectIdx = (answers || []).findIndex((a) => a.isCorrect)
+      answers = (answers || []).map((a, i) => ({ ...a, isCorrect: i === firstCorrectIdx }))
     }
     setForm({ ...form, type, answers })
   }
@@ -143,13 +193,41 @@ export default function QuestionFormModal({ initial, onClose, onSave }: Question
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.categoryId) { setError('Оберіть категорію'); return }
-    if (!form.answers.some((a) => a.isCorrect)) { setError('Позначте хоча б одну правильну відповідь'); return }
-    if (form.answers.some((a) => !a.text.trim())) { setError('Заповніть текст усіх відповідей'); return }
+
+    if (form.type === 'MATCHING') {
+      if (!form.matchingPairs || form.matchingPairs.some(p => !p.left.trim() || !p.right.trim())) {
+        setError('Будь ласка, заповніть усі пари відповідностей');
+        return;
+      }
+    } else if (form.type === 'ORDERING') {
+      if (!form.orderingItems || form.orderingItems.some(item => !item.trim()) || form.orderingItems.length < 2) {
+        setError('Послідовність повинна містити щонайменше 2 заповнені елементи');
+        return;
+      }
+    } else {
+      if (!form.answers || !form.answers.some((a) => a.isCorrect)) { setError('Позначте хоча б одну правильну відповідь'); return }
+      if (form.answers.some((a) => !a.text.trim())) { setError('Заповніть текст усіх відповідей'); return }
+    }
 
     setLoading(true)
     setError(null)
     try {
-      await onSave({ ...form, imageUrl: form.imageUrl || undefined }, initial?.id)
+      const payload: QuestionFormData = {
+        text: form.text,
+        type: form.type,
+        categoryId: form.categoryId,
+        imageUrl: form.imageUrl || undefined,
+        timeLimitSeconds: form.timeLimitSeconds || null,
+      }
+      if (form.type === 'MATCHING') {
+        payload.matchingPairs = form.matchingPairs
+      } else if (form.type === 'ORDERING') {
+        payload.orderingItems = form.orderingItems
+      } else {
+        payload.answers = form.answers
+      }
+
+      await onSave(payload, initial?.id)
       onClose()
     } catch (err: unknown) {
       setError(
@@ -234,7 +312,7 @@ export default function QuestionFormModal({ initial, onClose, onSave }: Question
             </div>
           )}
 
-          {/* Type and Category row */}
+          {/* Settings row */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">Тип питання</label>
@@ -245,29 +323,46 @@ export default function QuestionFormModal({ initial, onClose, onSave }: Question
               >
                 <option value="SINGLE" className="bg-gray-900">Одна відповідь</option>
                 <option value="MULTI" className="bg-gray-900">Декілька відповідей</option>
+                <option value="MATCHING" className="bg-gray-900">Встановлення відповідностей (Matching)</option>
+                <option value="ORDERING" className="bg-gray-900">Встановлення послідовності (Ordering)</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Категорія</label>
-              <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-white/10">
-                {categories?.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setForm({ ...form, categoryId: c.id })}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all border ${
-                      form.categoryId === c.id
-                        ? 'bg-purple-accent/30 text-white border-purple-accent/60 ring-1 ring-purple-accent/30'
-                        : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10 hover:text-white'
-                    }`}
-                  >
-                    {c.name}
-                  </button>
-                ))}
-                {(!categories || categories.length === 0) && (
-                  <p className="text-slate-500 text-xs py-2">Категорій не знайдено</p>
-                )}
-              </div>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                Ліміт часу на питання (сек)
+                <span className="text-slate-500 font-normal ml-1 text-xs">(необов'язково)</span>
+              </label>
+              <input
+                type="number"
+                min={0}
+                value={form.timeLimitSeconds || ''}
+                onChange={(e) => setForm({ ...form, timeLimitSeconds: e.target.value ? parseInt(e.target.value) : null })}
+                className="glass-input"
+                placeholder="Без ліміту"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1.5">Категорія</label>
+            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-white/10">
+              {categories?.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setForm({ ...form, categoryId: c.id })}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all border ${
+                    form.categoryId === c.id
+                      ? 'bg-purple-accent/30 text-white border-purple-accent/60 ring-1 ring-purple-accent/30'
+                      : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  {c.name}
+                </button>
+              ))}
+              {(!categories || categories.length === 0) && (
+                <p className="text-slate-500 text-xs py-2">Категорій не знайдено</p>
+              )}
             </div>
           </div>
 
@@ -333,76 +428,181 @@ export default function QuestionFormModal({ initial, onClose, onSave }: Question
           </div>
 
           {/* Answers */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <label className="text-sm font-medium text-slate-300">
-                Варіанти відповідей
-                <span className="text-slate-500 ml-2">
-                  ({form.type === 'SINGLE' ? 'Одна правильна' : 'Декілька правильних'})
-                </span>
-              </label>
-              <button
-                type="button"
-                onClick={addAnswer}
-                disabled={form.answers.length >= 8}
-                className="text-xs text-purple-400 hover:text-purple-300 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Додати
-              </button>
-            </div>
+          {form.type === 'MATCHING' ? (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm font-medium text-slate-300">
+                  Пари відповідностей
+                  <span className="text-slate-500 ml-2">(Колонка А та Колонка Б)</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={addMatchingPair}
+                  disabled={(form.matchingPairs || []).length >= 8}
+                  className="text-xs text-purple-400 hover:text-purple-300 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Додати пару
+                </button>
+              </div>
 
-            <div className="space-y-2.5">
-              {form.answers.map((answer, idx) => (
-                <div key={idx} className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (form.type === 'SINGLE') {
-                        setForm({ ...form, answers: form.answers.map((a, i) => ({ ...a, isCorrect: i === idx })) })
-                      } else {
-                        updateAnswer(idx, 'isCorrect', !answer.isCorrect)
-                      }
-                    }}
-                    className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-                      answer.isCorrect
-                        ? 'border-green-cta bg-green-cta/20'
-                        : 'border-white/30 hover:border-white/60'
-                    }`}
-                    title={answer.isCorrect ? 'Правильна відповідь' : 'Позначити як правильну'}
-                  >
-                    {answer.isCorrect && (
-                      <svg className="w-3 h-3 text-green-cta" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              <div className="space-y-3">
+                {(form.matchingPairs || []).map((pair, idx) => (
+                  <div key={idx} className="flex items-center gap-3 bg-white/[0.01] border border-white/5 p-3 rounded-2xl">
+                    <div className="flex-1 space-y-2">
+                      <input
+                        type="text"
+                        required
+                        value={pair.left}
+                        onChange={(e) => updateMatchingPair(idx, 'left', e.target.value)}
+                        className="glass-input text-xs py-2"
+                        placeholder={`Елемент А ${idx + 1}`}
+                      />
+                      <input
+                        type="text"
+                        required
+                        value={pair.right}
+                        onChange={(e) => updateMatchingPair(idx, 'right', e.target.value)}
+                        className="glass-input text-xs py-2"
+                        placeholder={`Відповідний елемент Б ${idx + 1}`}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeMatchingPair(idx)}
+                      disabled={(form.matchingPairs || []).length <= 1}
+                      className="flex-shrink-0 p-2 rounded-xl text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
-                    )}
-                  </button>
-                  <input
-                    type="text"
-                    required
-                    value={answer.text}
-                    onChange={(e) => updateAnswer(idx, 'text', e.target.value)}
-                    className={`glass-input flex-1 text-sm py-2.5 ${
-                      answer.isCorrect ? 'border-green-cta/30 focus:border-green-cta/60' : ''
-                    }`}
-                    placeholder={`Варіант ${idx + 1}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeAnswer(idx)}
-                    disabled={form.answers.length <= 2}
-                    className="flex-shrink-0 p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              ))}
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : form.type === 'ORDERING' ? (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm font-medium text-slate-300">
+                  Кроки послідовності
+                  <span className="text-slate-500 ml-2">(введіть у ПРАВИЛЬНОМУ порядку)</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={addOrderingItem}
+                  disabled={(form.orderingItems || []).length >= 8}
+                  className="text-xs text-purple-400 hover:text-purple-300 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Додати крок
+                </button>
+              </div>
+
+              <div className="space-y-2.5">
+                {(form.orderingItems || []).map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-3">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-300 flex items-center justify-center font-unbounded text-[10px] font-black">
+                      {idx + 1}
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      value={item}
+                      onChange={(e) => updateOrderingItem(idx, e.target.value)}
+                      className="glass-input flex-1 text-sm py-2.5"
+                      placeholder={`Крок ${idx + 1}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeOrderingItem(idx)}
+                      disabled={(form.orderingItems || []).length <= 2}
+                      className="flex-shrink-0 p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm font-medium text-slate-300">
+                  Варіанти відповідей
+                  <span className="text-slate-500 ml-2">
+                    ({form.type === 'SINGLE' ? 'Одна правильна' : 'Декілька правильних'})
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  onClick={addAnswer}
+                  disabled={(form.answers || []).length >= 8}
+                  className="text-xs text-purple-400 hover:text-purple-300 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Додати
+                </button>
+              </div>
+
+              <div className="space-y-2.5">
+                {(form.answers || []).map((answer, idx) => (
+                  <div key={idx} className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (form.type === 'SINGLE') {
+                          setForm({ ...form, answers: (form.answers || []).map((a, i) => ({ ...a, isCorrect: i === idx })) })
+                        } else {
+                          updateAnswer(idx, 'isCorrect', !answer.isCorrect)
+                        }
+                      }}
+                      className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                        answer.isCorrect
+                          ? 'border-green-cta bg-green-cta/20'
+                          : 'border-white/30 hover:border-white/60'
+                      }`}
+                      title={answer.isCorrect ? 'Правильна відповідь' : 'Позначити як правильну'}
+                    >
+                      {answer.isCorrect && (
+                        <svg className="w-3 h-3 text-green-cta" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                    <input
+                      type="text"
+                      required
+                      value={answer.text}
+                      onChange={(e) => updateAnswer(idx, 'text', e.target.value)}
+                      className={`glass-input flex-1 text-sm py-2.5 ${
+                        answer.isCorrect ? 'border-green-cta/30 focus:border-green-cta/60' : ''
+                      }`}
+                      placeholder={`Варіант ${idx + 1}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeAnswer(idx)}
+                      disabled={(form.answers || []).length <= 2}
+                      className="flex-shrink-0 p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="flex-1 btn-ghost">Скасувати</button>

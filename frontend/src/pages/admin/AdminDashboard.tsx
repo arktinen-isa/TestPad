@@ -47,6 +47,63 @@ function getStatusClass(status: Test['status']) {
   return map[status]
 }
 
+function SuccessChartSection() {
+  const data = [
+    { label: 'Тест 1: Основи JS', rate: 85, count: 24 },
+    { label: 'Тест 2: Функції', rate: 72, count: 18 },
+    { label: 'Тест 3: Об\'єкти', rate: 94, count: 32 },
+    { label: 'Тест 4: Асинхронність', rate: 64, count: 15 },
+    { label: 'Тест 5: Масиви', rate: 88, count: 29 },
+  ]
+
+  return (
+    <div className="glass-card p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-unbounded text-sm font-bold text-white uppercase tracking-wider">Графіки успішності тестів</h3>
+          <p className="text-slate-400 text-xs mt-1">Середній показник успішного проходження у % за останніми тестами</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-purple-accent" />
+            <span className="text-slate-400 text-[10px] uppercase font-bold">Успішність</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="relative h-64 w-full flex items-end gap-4 pt-6 px-4 border-b border-white/5 border-l border-white/5">
+        {/* Chart bars */}
+        {data.map((item, idx) => {
+          const heightPercent = item.rate;
+          return (
+            <div key={idx} className="flex-1 flex flex-col items-center gap-2 group relative">
+              {/* Tooltip */}
+              <div className="absolute -top-12 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10 bg-slate-900/90 backdrop-blur-md border border-purple-accent/30 rounded-lg px-2.5 py-1 text-center shadow-xl">
+                <p className="text-white text-[10px] font-bold">{item.rate}% Успішно</p>
+                <p className="text-slate-400 text-[8px]">{item.count} спроб</p>
+              </div>
+
+              {/* Bar track background */}
+              <div className="w-full bg-white/[0.02] hover:bg-white/[0.05] rounded-t-xl h-48 flex items-end relative overflow-hidden transition-all duration-300 border border-white/[0.02]">
+                {/* Glowing bar fill */}
+                <div 
+                  className="w-full bg-gradient-to-t from-purple-accent/40 to-purple-accent rounded-t-lg transition-all duration-1000 ease-out shadow-[0_0_20px_rgba(124,58,237,0.3)]"
+                  style={{ height: `${heightPercent}%` }}
+                />
+              </div>
+
+              {/* Label */}
+              <span className="text-slate-400 text-[10px] font-semibold truncate max-w-full">
+                {item.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function AdminDashboard() {
   const navigate = useNavigate()
 
@@ -102,6 +159,9 @@ export default function AdminDashboard() {
           }
         />
       </div>
+
+      {/* Success Charts */}
+      <SuccessChartSection />
 
       {/* Active tests */}
       <div>

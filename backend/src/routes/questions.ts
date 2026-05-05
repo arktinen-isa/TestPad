@@ -15,10 +15,13 @@ const answerSchema = z.object({
 
 const createQuestionSchema = z.object({
   text: z.string().min(1),
-  type: z.enum(['SINGLE', 'MULTI']),
+  type: z.enum(['SINGLE', 'MULTI', 'MATCHING', 'ORDERING']),
   categoryId: z.string().uuid(),
   imageUrl: z.string().optional(),
-  answers: z.array(answerSchema).min(2),
+  answers: z.array(answerSchema).optional(),
+  matchingPairs: z.any().optional(),
+  orderingItems: z.any().optional(),
+  timeLimitSeconds: z.number().int().positive().nullable().optional(),
 });
 
 const updateAnswerSchema = z.object({
@@ -29,10 +32,13 @@ const updateAnswerSchema = z.object({
 
 const updateQuestionSchema = z.object({
   text: z.string().min(1).optional(),
-  type: z.enum(['SINGLE', 'MULTI']).optional(),
+  type: z.enum(['SINGLE', 'MULTI', 'MATCHING', 'ORDERING']).optional(),
   categoryId: z.string().uuid().optional(),
   imageUrl: z.string().nullable().optional(),
-  answers: z.array(updateAnswerSchema).min(2).optional(),
+  answers: z.array(updateAnswerSchema).optional(),
+  matchingPairs: z.any().optional(),
+  orderingItems: z.any().optional(),
+  timeLimitSeconds: z.number().int().positive().nullable().optional(),
 });
 
 // GET /api/questions — ADMIN+TEACHER, with filters
@@ -41,6 +47,13 @@ router.get(
   authorize('ADMIN', 'TEACHER'),
   asyncHandler(async (req, res) => {
     const user = req.user!;
+    const category = req.query['category'] as string;
+    const type = req.query['type'] as string;
+    const search = req.query['search'] as string;
+    const page = Math.max(1, parseInt(req.query['page'] as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query['limit'] as string) || 20));
+    const skip = (page - 1) * limit;
+
     const where: Record<string, unknown> = {};
 
     if (user.role === 'TEACHER') {
@@ -112,6 +125,7 @@ router.patch(
   authorize('ADMIN', 'TEACHER'),
   asyncHandler(async (req, res) => {
     const user = req.user!;
+    const { ids, data } = req.body;
     const where: any = { id: { in: ids } };
     if (user.role === 'TEACHER') {
       where['createdById'] = user.userId;
@@ -207,12 +221,15 @@ router.post(
         categoryId: data.categoryId,
         createdById: user.userId,
         imageUrl: data.imageUrl,
-        answers: {
+        answers: data.answers && data.answers.length > 0 ? {
           create: data.answers.map((a) => ({
             text: a.text,
             isCorrect: a.isCorrect,
           })),
-        },
+        } : undefined,
+        matchingPairs: data.matchingPairs,
+        orderingItems: data.orderingItems,
+        timeLimitSeconds: data.timeLimitSeconds,
       },
       include: {
         category: { select: { id: true, name: true, pointsWeight: true } },
@@ -291,16 +308,21 @@ router.patch(
     if (data.type !== undefined) updatePayload['type'] = data.type;
     if (data.categoryId !== undefined) updatePayload['categoryId'] = data.categoryId;
     if (data.imageUrl !== undefined) updatePayload['imageUrl'] = data.imageUrl;
+    if (data.matchingPairs !== undefined) updatePayload['matchingPairs'] = data.matchingPairs;
+    if (data.orderingItems !== undefined) updatePayload['orderingItems'] = data.orderingItems;
+    if (data.timeLimitSeconds !== undefined) updatePayload['timeLimitSeconds'] = data.timeLimitSeconds;
 
     // If answers provided, replace all answers
     if (data.answers !== undefined) {
       await prisma.answer.deleteMany({ where: { questionId: id } });
-      updatePayload['answers'] = {
-        create: data.answers.map((a) => ({
-          text: a.text,
-          isCorrect: a.isCorrect,
-        })),
-      };
+      if (data.answers.length > 0) {
+        updatePayload['answers'] = {
+          create: data.answers.map((a) => ({
+            text: a.text,
+            isCorrect: a.isCorrect,
+          })),
+        };
+      }
     }
 
     const question = await prisma.question.update({

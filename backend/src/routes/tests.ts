@@ -264,6 +264,7 @@ router.patch(
       return;
     }
 
+    const data = req.body;
     const updatePayload: Record<string, unknown> = {};
     if (data.title !== undefined) updatePayload['title'] = data.title;
     if (data.subject !== undefined) updatePayload['subject'] = data.subject;
@@ -283,16 +284,16 @@ router.patch(
 
     if (data.groupIds !== undefined) {
       await prisma.testGroup.deleteMany({ where: { testId: id } });
-      updatePayload['groups'] = { create: data.groupIds.map((groupId) => ({ groupId })) };
+      updatePayload['groups'] = { create: data.groupIds.map((groupId: string) => ({ groupId })) };
     }
     if (data.questionIds !== undefined) {
       await prisma.testQuestion.deleteMany({ where: { testId: id } });
-      updatePayload['questions'] = { create: data.questionIds.map((questionId) => ({ questionId })) };
+      updatePayload['questions'] = { create: data.questionIds.map((questionId: string) => ({ questionId })) };
     }
     if (data.categoryQuotas !== undefined) {
       await prisma.testCategoryQuota.deleteMany({ where: { testId: id } });
       updatePayload['categoryQuotas'] = {
-        create: data.categoryQuotas.map((cq) => ({ categoryId: cq.categoryId, quota: cq.quota })),
+        create: data.categoryQuotas.map((cq: { categoryId: string; quota: number }) => ({ categoryId: cq.categoryId, quota: cq.quota })),
       };
     }
 

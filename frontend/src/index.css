@@ -203,3 +203,6 @@
 .print-only {
   display: none;
 }
+/* Custom transition utilities */
+.transition-width { transition-property: width; transition-duration: 300ms; }
+.transition-margin { transition-property: margin; transition-duration: 300ms; }

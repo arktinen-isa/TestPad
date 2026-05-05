@@ -23,6 +23,8 @@ export type Role = (typeof Role)[keyof typeof Role];
 export const QuestionType = {
   SINGLE: 'SINGLE',
   MULTI: 'MULTI',
+  MATCHING: 'MATCHING',
+  ORDERING: 'ORDERING',
 } as const;
 export type QuestionType = (typeof QuestionType)[keyof typeof QuestionType];
 

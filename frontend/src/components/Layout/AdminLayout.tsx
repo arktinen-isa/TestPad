@@ -1,4 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import Logo from '../Logo'
 
@@ -78,11 +79,14 @@ const navLinks = [
 export default function AdminLayout() {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
+  const [collapsed, setCollapsed] = useState(false)
 
   const handleLogout = () => {
     logout()
     navigate('/login', { replace: true })
   }
+
+  const toggleSidebar = () => setCollapsed(!collapsed)
 
   const roleLabel = user?.role === 'ADMIN' ? 'Адміністратор' : 'Викладач'
   const roleColor = user?.role === 'ADMIN'
@@ -92,11 +96,18 @@ export default function AdminLayout() {
   return (
     <div className="min-h-screen bg-dark-bg bg-mesh flex">
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 bottom-0 w-64 z-40 border-r border-white/10 backdrop-blur-md bg-dark-bg/90 flex flex-col">
+      <aside className={`fixed left-0 top-0 bottom-0 ${collapsed ? 'w-20' : 'w-64'} z-40 border-r border-white/10 backdrop-blur-md bg-dark-bg/90 flex flex-col transition-width duration-300 ease-in-out`}>
         {/* Sidebar header */}
-        <div className="p-6 border-b border-white/10">
+        <div className="p-6 border-b border-white/10 flex items-center justify-between">
           <Logo size={36} />
-          <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-2 font-bold px-1">Адмін панель</p>
+          {!collapsed && <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-2 font-bold px-1">Адмін панель</p>}
+          <button onClick={toggleSidebar} className="p-2 rounded-md hover:bg-white/10 transition-colors duration-200">
+            {collapsed ? (
+              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            ) : (
+              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            )}
+          </button>
         </div>
 
         {/* Navigation */}
@@ -106,11 +117,11 @@ export default function AdminLayout() {
               key={link.to}
               to={link.to}
               className={({ isActive }) =>
-                `sidebar-link ${isActive ? 'sidebar-link-active' : ''}`
+                `flex items-center gap-2 p-2 rounded-md transition-colors duration-200 ${isActive ? 'bg-white/10' : 'hover:bg-white/5'} ${collapsed ? 'justify-center' : ''}`
               }
             >
               {link.icon}
-              {link.label}
+              {!collapsed && <span>{link.label}</span>}
             </NavLink>
           ))}
         </nav>
@@ -124,10 +135,12 @@ export default function AdminLayout() {
                   {user?.name?.charAt(0).toUpperCase() || 'A'}
                 </span>
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-white truncate leading-none">{user?.name}</p>
-                <p className="text-xs text-slate-400 mt-0.5 truncate">{user?.email}</p>
-              </div>
+              {!collapsed && (
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-white truncate leading-none">{user?.name}</p>
+                  <p className="text-xs text-slate-400 mt-0.5 truncate">{user?.email}</p>
+                </div>
+              )}
             </div>
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2">
@@ -138,7 +151,7 @@ export default function AdminLayout() {
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
-                  Профіль
+                  {collapsed ? '' : 'Профіль'}
                 </button>
                 <button
                   onClick={handleLogout}
@@ -148,7 +161,7 @@ export default function AdminLayout() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                       d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                   </svg>
-                  Вийти
+                  {collapsed ? '' : 'Вийти'}
                 </button>
               </div>
             </div>
@@ -157,7 +170,7 @@ export default function AdminLayout() {
       </aside>
 
       {/* Main area */}
-      <div className="flex-1 ml-64 flex flex-col min-h-screen">
+      <div className={`flex-1 ${collapsed ? 'ml-20' : 'ml-64'} flex flex-col min-h-screen transition-margin duration-300 ease-in-out`}>
         {/* Top bar */}
         <header className="sticky top-0 z-30 border-b border-white/10 backdrop-blur-md bg-dark-bg/80 h-16 flex items-center justify-between px-6">
           <div />

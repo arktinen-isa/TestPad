@@ -23,7 +23,13 @@ interface TestState {
 interface TestActions {
   startAttempt: (testId: string) => Promise<string>
   resumeAttempt: (attemptId: string) => Promise<void>
-  submitAnswer: (attemptId: string, questionId: string, answerIds: string[]) => Promise<void>
+  submitAnswer: (
+    attemptId: string,
+    questionId: string,
+    answerIds?: string[],
+    matchingPairs?: Array<{ left: string; right: string }>,
+    orderingItems?: string[]
+  ) => Promise<void>
   finishAttempt: (attemptId: string) => Promise<void>
   tick: () => void
   setTimeLeft: (seconds: number) => void
@@ -120,12 +126,20 @@ export const useTestStore = create<TestStore>((set, get) => ({
     }
   },
 
-  submitAnswer: async (attemptId: string, questionId: string, answerIds: string[]) => {
+  submitAnswer: async (
+    attemptId: string,
+    questionId: string,
+    answerIds?: string[],
+    matchingPairs?: Array<{ left: string; right: string }>,
+    orderingItems?: string[]
+  ) => {
     set({ isLoading: true, error: null })
     try {
       const response = await apiClient.post(`/attempts/${attemptId}/answer`, {
         questionId,
         answerIds,
+        matchingPairs,
+        orderingItems,
       })
 
       const { nextQuestion, finished, timeLeft, score, maxScore, percentage, passed, showResultMode } = response.data

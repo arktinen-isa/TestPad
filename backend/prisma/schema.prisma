@@ -17,6 +17,8 @@ enum Role {
 enum QuestionType {
   SINGLE
   MULTI
+  MATCHING
+  ORDERING
 }
 
 enum TestStatus {
@@ -111,9 +113,9 @@ model QuestionCategory {
   id           String  @id @default(uuid())
   name         String
   pointsWeight Float   @default(1.0)
-  createdById  String
+  createdById  String?
 
-  createdBy          User              @relation("CreatedCategories", fields: [createdById], references: [id])
+  createdBy          User?             @relation("CreatedCategories", fields: [createdById], references: [id])
   questions          Question[]
   testCategoryQuotas TestCategoryQuota[]
 
@@ -125,12 +127,17 @@ model Question {
   text        String       @db.Text
   type        QuestionType
   categoryId  String
-  createdById String
+  createdById String?
   imageUrl    String?
   createdAt   DateTime     @default(now())
 
+  // New optional fields for matching and ordering types
+  matchingPairs Json?   // [{ left: String, right: String }]
+  orderingItems Json?   // [String]
+  timeLimitSeconds Int?
+
   category         QuestionCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  createdBy        User              @relation("CreatedQuestions", fields: [createdById], references: [id])
+  createdBy        User?             @relation("CreatedQuestions", fields: [createdById], references: [id])
   answers          Answer[]
   testQuestions    TestQuestion[]
   attemptQuestions AttemptQuestion[]
@@ -241,12 +248,13 @@ model Attempt {
 }
 
 model AttemptQuestion {
-  id          String    @id @default(uuid())
-  attemptId   String
-  questionId  String
-  orderIndex  Int
-  answerOrder Json
-  answeredAt  DateTime?
+  id              String    @id @default(uuid())
+  attemptId       String
+  questionId      String
+  orderIndex      Int
+  answerOrder     Json
+  answeredAt      DateTime?
+  submittedAnswer Json?
 
   attempt        Attempt         @relation(fields: [attemptId], references: [id], onDelete: Cascade)
   question       Question        @relation(fields: [questionId], references: [id])

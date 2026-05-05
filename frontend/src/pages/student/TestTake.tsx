@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useTestStore } from '../../store/testStore'
 import apiClient from '../../api/client'
 import QuestionText from '../../components/QuestionText'
+import MatchingQuestion from '../../components/MatchingQuestion'
+import OrderingQuestion from '../../components/OrderingQuestion'
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60)
@@ -26,6 +28,9 @@ export default function TestTake() {
   } = useTestStore()
 
   const [selectedAnswers, setSelectedAnswers] = useState<string[]>([])
+  const [matchingAnswers, setMatchingAnswers] = useState<Array<{ left: string; right: string }>>([])
+  const [orderingAnswers, setOrderingAnswers] = useState<string[]>([])
+  const [questionTimeLeft, setQuestionTimeLeft] = useState<number | null>(null)
   const [showExitModal, setShowExitModal] = useState(false)
   const [animKey, setAnimKey] = useState(0)
   const [isFullScreen, setIsFullScreen] = useState(() => {
@@ -201,19 +206,47 @@ export default function TestTake() {
     }
   }
 
-  const handleNext = async () => {
+  const handleNext = useCallback(async () => {
     if (!attemptId || !currentQuestion || isSubmitting) return
     setIsSubmitting(true)
     try {
-      await submitAnswer(attemptId, currentQuestion.id, selectedAnswers)
+      if (currentQuestion.type === 'MATCHING') {
+        await submitAnswer(attemptId, currentQuestion.id, undefined, matchingAnswers, undefined)
+      } else if (currentQuestion.type === 'ORDERING') {
+        await submitAnswer(attemptId, currentQuestion.id, undefined, undefined, orderingAnswers)
+      } else {
+        await submitAnswer(attemptId, currentQuestion.id, selectedAnswers)
+      }
       setSelectedAnswers([])
+      setMatchingAnswers([])
+      setOrderingAnswers([])
       setAnimKey((k) => k + 1)
     } catch {
       // error handled in store
     } finally {
       setIsSubmitting(false)
     }
-  }
+  }, [attemptId, currentQuestion, selectedAnswers, matchingAnswers, orderingAnswers, submitAnswer, isSubmitting])
+
+  useEffect(() => {
+    if (currentQuestion && (currentQuestion as any).timeLimitSeconds) {
+      setQuestionTimeLeft((currentQuestion as any).timeLimitSeconds)
+    } else {
+      setQuestionTimeLeft(null)
+    }
+  }, [currentQuestion])
+
+  useEffect(() => {
+    if (questionTimeLeft === null) return
+    if (questionTimeLeft === 0) {
+      handleNext()
+      return
+    }
+    const timer = setTimeout(() => {
+      setQuestionTimeLeft((prev) => (prev !== null ? prev - 1 : null))
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [questionTimeLeft, handleNext])
 
   if (!currentQuestion && !isFinished) {
     return (
@@ -275,7 +308,27 @@ export default function TestTake() {
             </h1>
           </div>
 
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 flex items-center gap-3">
+            {questionTimeLeft !== null && (
+              <div className={`px-4 py-2 rounded-2xl border transition-all duration-500 flex items-center gap-3 ${
+                questionTimeLeft < 10
+                  ? 'bg-red-500/20 border-red-500/50 text-red-100 shadow-[0_0_20px_rgba(239,68,68,0.2)] animate-pulse'
+                  : 'bg-amber-500/10 border-amber-500/30 text-amber-200 shadow-xl'
+              }`}>
+                <div className="flex flex-col items-end">
+                  <span className="text-[9px] uppercase tracking-widest font-black opacity-50">На питання</span>
+                  <span className="font-unbounded text-base font-black tabular-nums tracking-tighter leading-none">
+                    {formatTime(questionTimeLeft)}
+                  </span>
+                </div>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${questionTimeLeft < 10 ? 'bg-red-500/20' : 'bg-amber-500/20'}`}>
+                  <svg className={`w-4 h-4 ${questionTimeLeft < 10 ? 'animate-spin text-red-400' : 'text-amber-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3" />
+                  </svg>
+                </div>
+              </div>
+            )}
+
             {timeLeft !== null ? (
               <div className={`px-4 py-2 rounded-2xl border transition-all duration-500 flex items-center gap-3 ${
                 isTimeLow 
@@ -355,7 +408,7 @@ export default function TestTake() {
                   <div className="h-px flex-1 bg-white/5" />
                   <div className="text-white/30 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-purple-500/50 animate-pulse" />
-                    {currentQuestion.type === 'SINGLE' ? 'Оберіть одну відповідь' : 'Оберіть кілька відповідей'}
+                    {currentQuestion.type === 'SINGLE' ? 'Оберіть одну відповідь' : currentQuestion.type === 'MULTI' ? 'Оберіть кілька відповідей' : currentQuestion.type === 'MATCHING' ? 'Встановіть відповідності' : 'Розставте кроки у правильному порядку'}
                   </div>
                 </div>
 
@@ -374,40 +427,55 @@ export default function TestTake() {
                 className="text-xl font-semibold text-white mb-8 leading-relaxed"
               />
 
-              <div className="space-y-3">
-                {currentQuestion.answers.map((answer) => {
-                  const isSelected = selectedAnswers.includes(answer.id)
-                  return (
-                    <button
-                      key={answer.id}
-                      onClick={() => handleSelectAnswer(answer.id)}
-                      className={`w-full flex items-center gap-4 p-4 rounded-2xl border text-left transition-all duration-200 group ${
-                        isSelected
-                          ? 'bg-purple-accent/20 border-purple-accent/60 shadow-[0_0_20px_rgba(124,58,237,0.2)]'
-                          : 'bg-white/[0.03] border-white/10 hover:bg-white/[0.07] hover:border-white/20'
-                      }`}
-                    >
-                      <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-                        isSelected ? 'border-purple-accent bg-purple-accent' : 'border-white/30 group-hover:border-white/50'
-                      }`}>
-                        {isSelected && currentQuestion.type === 'SINGLE' && (
-                          <div className="w-2.5 h-2.5 rounded-full bg-white" />
-                        )}
-                        {isSelected && currentQuestion.type === 'MULTI' && (
-                          <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </div>
-                      <span className={`text-base font-medium transition-colors duration-200 ${
-                        isSelected ? 'text-white' : 'text-slate-300 group-hover:text-white'
-                      }`}>
-                        {answer.text}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
+              {currentQuestion.type === 'MATCHING' ? (
+                <MatchingQuestion
+                  matchingLeft={(currentQuestion as any).matchingLeft || []}
+                  matchingRight={(currentQuestion as any).matchingRight || []}
+                  value={matchingAnswers}
+                  onChange={setMatchingAnswers}
+                />
+              ) : currentQuestion.type === 'ORDERING' ? (
+                <OrderingQuestion
+                  orderingItems={(currentQuestion as any).orderingItems || []}
+                  value={orderingAnswers}
+                  onChange={setOrderingAnswers}
+                />
+              ) : (
+                <div className="space-y-3">
+                  {currentQuestion.answers.map((answer) => {
+                    const isSelected = selectedAnswers.includes(answer.id)
+                    return (
+                      <button
+                        key={answer.id}
+                        onClick={() => handleSelectAnswer(answer.id)}
+                        className={`w-full flex items-center gap-4 p-4 rounded-2xl border text-left transition-all duration-200 group ${
+                          isSelected
+                            ? 'bg-purple-accent/20 border-purple-accent/60 shadow-[0_0_20px_rgba(124,58,237,0.2)]'
+                            : 'bg-white/[0.03] border-white/10 hover:bg-white/[0.07] hover:border-white/20'
+                        }`}
+                      >
+                        <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                          isSelected ? 'border-purple-accent bg-purple-accent' : 'border-white/30 group-hover:border-white/50'
+                        }`}>
+                          {isSelected && currentQuestion.type === 'SINGLE' && (
+                            <div className="w-2.5 h-2.5 rounded-full bg-white" />
+                          )}
+                          {isSelected && currentQuestion.type === 'MULTI' && (
+                            <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </div>
+                        <span className={`text-base font-medium transition-colors duration-200 ${
+                          isSelected ? 'text-white' : 'text-slate-300 group-hover:text-white'
+                        }`}>
+                          {answer.text}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -428,7 +496,13 @@ export default function TestTake() {
 
           <button
             onClick={handleNext}
-            disabled={isSubmitting || isLoading || !selectedAnswers.length}
+            disabled={isSubmitting || isLoading || (
+              currentQuestion?.type === 'MATCHING'
+                ? matchingAnswers.length === 0
+                : currentQuestion?.type === 'ORDERING'
+                ? orderingAnswers.length === 0
+                : !selectedAnswers.length
+            )}
             className="group relative px-10 py-3.5 rounded-2xl bg-gradient-to-br from-green-400 to-emerald-600 text-white font-unbounded font-black text-sm uppercase tracking-widest shadow-[0_10px_30px_rgba(52,211,153,0.3)] hover:shadow-[0_10px_40px_rgba(52,211,153,0.5)] transition-all active:scale-95 disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed"
           >
             <div className="flex items-center gap-3 relative z-10">

@@ -1,5 +1,21 @@
 export type Role = 'ADMIN' | 'TEACHER' | 'STUDENT'
-export type QuestionType = 'SINGLE' | 'MULTI'
+export type QuestionType = 'SINGLE' | 'MULTI' | 'MATCHING' | 'ORDERING'
+
+export interface Question {
+  id: string
+  text: string
+  type: QuestionType
+  categoryId: string
+  category?: Category
+  imageUrl?: string
+  answers: Answer[]
+  // New fields for matching and ordering question types
+  matchingPairs?: { left: string; right: string }[]
+  orderingItems?: string[]
+  // Optional per‑question time limit in seconds
+  timeLimitSeconds?: number
+}
+
 export type TestStatus = 'DRAFT' | 'OPEN' | 'CLOSED'
 export type FormFieldType = 'TEXT' | 'BOOLEAN' | 'INTEGER' | 'FLOAT'
 
@@ -32,15 +48,7 @@ export interface Answer {
   isCorrect?: boolean
 }
 
-export interface Question {
-  id: string
-  text: string
-  type: QuestionType
-  categoryId: string
-  category?: Category
-  imageUrl?: string
-  answers: Answer[]
-}
+
 
 export interface CategoryQuota {
   categoryId: string
