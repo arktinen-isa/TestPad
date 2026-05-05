@@ -23,11 +23,12 @@ const updateUserSchema = z.object({
   role: z.enum(['ADMIN', 'TEACHER', 'STUDENT']).optional(),
 });
 
-// GET /api/users — ADMIN only
+// GET /api/users — ADMIN+TEACHER
 router.get(
   '/',
-  authorize('ADMIN'),
+  authorize('ADMIN', 'TEACHER'),
   asyncHandler(async (req, res) => {
+    const user = req.user!;
     const role = req.query['role'] as string;
     const unassigned = req.query['unassigned'] === 'true';
     const search = req.query['search'] as string;
@@ -35,14 +36,23 @@ router.get(
     const limit = Math.min(100, Math.max(1, parseInt(req.query['limit'] as string) || 20));
     const skip = (page - 1) * limit;
 
-    const where: Record<string, any> = {};
-    if (role && ['ADMIN', 'TEACHER', 'STUDENT'].includes(role)) {
-      where['role'] = role;
-    }
-    
-    if (unassigned) {
+    if (user.role === 'TEACHER') {
       where['role'] = 'STUDENT';
-      where['groups'] = { none: {} };
+      // Find groups the teacher belongs to
+      const teacherGroups = await prisma.userGroup.findMany({
+        where: { userId: user.userId },
+        select: { groupId: true }
+      });
+      const groupIds = teacherGroups.map(tg => tg.groupId);
+      where['groups'] = { some: { groupId: { in: groupIds } } };
+    } else {
+      if (role && ['ADMIN', 'TEACHER', 'STUDENT'].includes(role)) {
+        where['role'] = role;
+      }
+      if (unassigned) {
+        where['role'] = 'STUDENT';
+        where['groups'] = { none: {} };
+      }
     }
 
     if (search) {

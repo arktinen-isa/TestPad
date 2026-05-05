@@ -32,9 +32,11 @@ export default function TestStart() {
   const handleStart = async () => {
     if (!testId) return
 
-    // IMMEDIATE Fullscreen for Chrome (must be absolute first to avoid losing user gesture)
-    if (document.documentElement.requestFullscreen) {
-      document.documentElement.requestFullscreen().catch(() => {})
+    // IMMEDIATE Fullscreen for Chrome/Mobile (must be absolute first to avoid losing user gesture)
+    const el = document.documentElement as any;
+    const requestFs = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+    if (requestFs) {
+      requestFs.call(el).catch(() => {});
     }
 
     setStartError(null)

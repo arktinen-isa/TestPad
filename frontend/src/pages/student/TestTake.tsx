@@ -28,11 +28,22 @@ export default function TestTake() {
   const [selectedAnswers, setSelectedAnswers] = useState<string[]>([])
   const [showExitModal, setShowExitModal] = useState(false)
   const [animKey, setAnimKey] = useState(0)
-  const [isFullScreen, setIsFullScreen] = useState(!!document.fullscreenElement)
+  const [isFullScreen, setIsFullScreen] = useState(() => {
+    const doc = document as any;
+    return !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
+  })
+
+  const isFullscreenSupported = !!(
+    document.documentElement.requestFullscreen ||
+    (document.documentElement as any).webkitRequestFullscreen ||
+    (document.documentElement as any).mozRequestFullScreen ||
+    (document.documentElement as any).msRequestFullscreen
+  );
 
   useEffect(() => {
     const handleFsChange = () => {
-      const isFs = !!document.fullscreenElement
+      const doc = document as any;
+      const isFs = !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
       setIsFullScreen(isFs)
       if (!isFs && !isFinished && attemptId) {
         apiClient.post('/events', { attemptId, eventType: 'WINDOW_RESIZE' }).catch(() => {})
@@ -47,11 +58,10 @@ export default function TestTake() {
   }, [attemptId, isFinished])
 
   const enterFullscreen = () => {
-    const el = document.documentElement
-    if (el.requestFullscreen) {
-      el.requestFullscreen().catch(() => {})
-    } else if ((el as any).webkitRequestFullscreen) {
-      (el as any).webkitRequestFullscreen()
+    const el = document.documentElement as any
+    const requestFs = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+    if (requestFs) {
+      requestFs.call(el).catch(() => {});
     }
   }
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -73,8 +83,10 @@ export default function TestTake() {
       }
     } finally {
       setIsSubmitting(false)
-      if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {})
+      const doc = document as any;
+      if (doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement) {
+        const exitFs = doc.exitFullscreen || doc.webkitExitFullscreen || doc.mozCancelFullScreen || doc.msExitFullscreen;
+        if (exitFs) exitFs.call(doc).catch(() => {});
       }
     }
   }, [testId, navigate, finishAttempt, isSubmitting])
@@ -160,8 +172,10 @@ export default function TestTake() {
 
   useEffect(() => {
     if (isFinished && testId) {
-      if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {})
+      const doc = document as any;
+      if (doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement) {
+        const exitFs = doc.exitFullscreen || doc.webkitExitFullscreen || doc.mozCancelFullScreen || doc.msExitFullscreen;
+        if (exitFs) exitFs.call(doc).catch(() => {});
       }
       navigate(`/student/test/${testId}/result`, {
         replace: true,
@@ -230,7 +244,7 @@ export default function TestTake() {
     <div className="fixed inset-0 bg-[#0F0A1E] text-white flex flex-col z-[1000] overflow-hidden select-none" onContextMenu={(e) => e.preventDefault()}>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,#3B2A6B_0%,#0F0A1E_80%)] opacity-60 pointer-events-none" />
       
-      {!isFullScreen && !isFinished && (
+      {!isFullScreen && !isFinished && isFullscreenSupported && (
         <div className="fixed inset-0 z-[9999] bg-[#0F0A1E]/95 backdrop-blur-2xl flex flex-col items-center justify-center p-6 text-center animate-fade-in">
           <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mb-8 ring-8 ring-red-500/20 animate-pulse">
             <svg className="w-12 h-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">

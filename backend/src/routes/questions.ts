@@ -40,12 +40,12 @@ router.get(
   '/',
   authorize('ADMIN', 'TEACHER'),
   asyncHandler(async (req, res) => {
-    const { category, type, search } = req.query;
-    const page = Math.max(1, parseInt(req.query['page'] as string) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query['limit'] as string) || 20));
-    const skip = (page - 1) * limit;
-
+    const user = req.user!;
     const where: Record<string, unknown> = {};
+
+    if (user.role === 'TEACHER') {
+      where['createdById'] = user.userId;
+    }
 
     if (category) where['categoryId'] = category as string;
     if (type && (type === 'SINGLE' || type === 'MULTI')) where['type'] = type;
@@ -81,6 +81,7 @@ router.post(
       return res.status(400).json({ error: 'Expected an array of questions' });
     }
 
+    const user = req.user!;
     const created = await Promise.all(
       questions.map((q) =>
         prisma.question.create({
@@ -88,6 +89,7 @@ router.post(
             text: q.text,
             type: q.type || 'SINGLE',
             categoryId: q.categoryId,
+            createdById: user.userId,
             imageUrl: q.imageUrl,
             answers: {
               create: q.answers.map((a: any) => ({
@@ -109,13 +111,14 @@ router.patch(
   '/bulk',
   authorize('ADMIN', 'TEACHER'),
   asyncHandler(async (req, res) => {
-    const { ids, data } = req.body;
-    if (!Array.isArray(ids)) {
-      return res.status(400).json({ error: 'Expected an array of IDs' });
+    const user = req.user!;
+    const where: any = { id: { in: ids } };
+    if (user.role === 'TEACHER') {
+      where['createdById'] = user.userId;
     }
 
     await prisma.question.updateMany({
-      where: { id: { in: ids } },
+      where,
       data: {
         ...(data.categoryId !== undefined && { categoryId: data.categoryId }),
       },
@@ -131,9 +134,15 @@ router.delete(
   authorize('ADMIN', 'TEACHER'),
   asyncHandler(async (req, res) => {
     const { ids } = req.body;
+    const user = req.user!;
 
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ error: 'ids array is required' });
+    }
+
+    const where: any = { id: { in: ids } };
+    if (user.role === 'TEACHER') {
+      where['createdById'] = user.userId;
     }
 
     await prisma.$transaction(async (tx) => {
@@ -175,6 +184,7 @@ router.post(
   authorize('ADMIN', 'TEACHER'),
   asyncHandler(async (req, res) => {
     const data = createQuestionSchema.parse(req.body);
+    const user = req.user!;
 
     // Validate category exists
     const category = await prisma.questionCategory.findUnique({
@@ -185,11 +195,17 @@ router.post(
       return;
     }
 
+    if (user.role === 'TEACHER' && category.createdById !== user.userId) {
+      res.status(403).json({ error: 'Cannot add question to a category you do not own' });
+      return;
+    }
+
     const question = await prisma.question.create({
       data: {
         text: data.text,
         type: data.type,
         categoryId: data.categoryId,
+        createdById: user.userId,
         imageUrl: data.imageUrl,
         answers: {
           create: data.answers.map((a) => ({
@@ -214,6 +230,7 @@ router.get(
   authorize('ADMIN', 'TEACHER'),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
+    const user = req.user!;
 
     const question = await prisma.question.findUnique({
       where: { id },
@@ -228,6 +245,11 @@ router.get(
       return;
     }
 
+    if (user.role === 'TEACHER' && question.createdById !== user.userId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
+    }
+
     res.json(question);
   })
 );
@@ -238,12 +260,18 @@ router.patch(
   authorize('ADMIN', 'TEACHER'),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
+    const user = req.user!;
     const data = updateQuestionSchema.parse(req.body);
 
     // Verify question exists
     const existing = await prisma.question.findUnique({ where: { id } });
     if (!existing) {
       res.status(404).json({ error: 'Question not found' });
+      return;
+    }
+
+    if (user.role === 'TEACHER' && existing.createdById !== user.userId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
       return;
     }
 
@@ -291,13 +319,19 @@ router.patch(
 // DELETE /api/questions/:id — ADMIN only (hard delete)
 router.delete(
   '/:id',
-  authorize('ADMIN'),
+  authorize('ADMIN', 'TEACHER'),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
+    const user = req.user!;
 
     const existing = await prisma.question.findUnique({ where: { id } });
     if (!existing) {
       res.status(404).json({ error: 'Question not found' });
+      return;
+    }
+
+    if (user.role === 'TEACHER' && existing.createdById !== user.userId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
       return;
     }
 

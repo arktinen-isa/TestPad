@@ -4,10 +4,10 @@ import apiClient from '../../api/client'
 import { getApiError } from '../../api/errors'
 import { Group, User } from '../../types'
 import StudentImportModal from '../../components/admin/StudentImportModal'
+import { useAuthStore } from '../../store/authStore'
 
 interface GroupFormData {
   name: string
-  year?: number
 }
 
 interface GroupModalProps {
@@ -19,7 +19,6 @@ interface GroupModalProps {
 function GroupModal({ initial, onClose, onSave }: GroupModalProps) {
   const [form, setForm] = useState<GroupFormData>({
     name: initial?.name || '',
-    year: initial?.year,
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -70,18 +69,6 @@ function GroupModal({ initial, onClose, onSave }: GroupModalProps) {
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               className="glass-input"
               placeholder="МФ-23"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Рік набору</label>
-            <input
-              type="number"
-              value={form.year || ''}
-              onChange={(e) => setForm({ ...form, year: e.target.value ? Number(e.target.value) : undefined })}
-              className="glass-input"
-              placeholder="2023"
-              min="2000"
-              max="2100"
             />
           </div>
           <div className="flex gap-3 pt-2">
@@ -351,6 +338,8 @@ function StudentsModal({ group, onClose }: StudentsModalProps) {
 
 export default function GroupsPage() {
   const qc = useQueryClient()
+  const { user } = useAuthStore()
+  const isAdmin = user?.role === 'ADMIN'
   const [showModal, setShowModal] = useState(false)
   const [editGroup, setEditGroup] = useState<Group | null>(null)
   const [studentsGroup, setStudentsGroup] = useState<Group | null>(null)
@@ -395,15 +384,17 @@ export default function GroupsPage() {
           <h1 className="font-unbounded text-2xl font-bold text-white mb-1">Групи</h1>
           <p className="text-slate-400 text-sm">Управління навчальними групами</p>
         </div>
-        <button
-          onClick={() => { setEditGroup(null); setShowModal(true) }}
-          className="btn-secondary flex items-center gap-2"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Додати групу
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => { setEditGroup(null); setShowModal(true) }}
+            className="btn-secondary flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Додати групу
+          </button>
+        )}
       </div>
 
       {/* Table */}
@@ -418,7 +409,6 @@ export default function GroupsPage() {
               <thead>
                 <tr className="border-b border-white/10">
                   <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Назва</th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Рік набору</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Студентів</th>
                   <th className="px-5 py-4 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">Дії</th>
                 </tr>
@@ -434,7 +424,6 @@ export default function GroupsPage() {
                         {g.name}
                       </button>
                     </td>
-                    <td className="px-5 py-4 text-slate-400">{g.year || '—'}</td>
                     <td className="px-5 py-4">
                       <span className="status-badge bg-blue-500/20 text-blue-400 border border-blue-500/30">
                         {g.studentCount ?? 0} студ.
@@ -452,26 +441,30 @@ export default function GroupsPage() {
                               d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                           </svg>
                         </button>
-                        <button
-                          onClick={() => { setEditGroup(g); setShowModal(true) }}
-                          className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"
-                          title="Редагувати"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirm(g)}
-                          className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                          title="Видалити"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
+                        {isAdmin && (
+                          <>
+                            <button
+                              onClick={() => { setEditGroup(g); setShowModal(true) }}
+                              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                              title="Редагувати"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirm(g)}
+                              className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                              title="Видалити"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

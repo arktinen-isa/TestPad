@@ -18,6 +18,7 @@ import eventsRouter from './routes/events';
 import dashboardRouter from './routes/dashboard';
 import uploadRouter from './routes/upload';
 import suspiciousRouter from './routes/suspicious';
+import formsRouter from './routes/forms';
 
 const app = express();
 
@@ -73,6 +74,7 @@ app.use('/api/events', eventsRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/upload', uploadRouter);
 app.use('/api/suspicious', suspiciousRouter);
+app.use('/api/forms', formsRouter);
 
 // Serve React SPA — must be after all API routes
 const frontendDist = path.join(__dirname, '..', 'public');

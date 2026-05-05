@@ -1,6 +1,7 @@
 export type Role = 'ADMIN' | 'TEACHER' | 'STUDENT'
 export type QuestionType = 'SINGLE' | 'MULTI'
 export type TestStatus = 'DRAFT' | 'OPEN' | 'CLOSED'
+export type FormFieldType = 'TEXT' | 'BOOLEAN' | 'INTEGER' | 'FLOAT'
 
 export interface User {
   id: string
@@ -14,7 +15,6 @@ export interface User {
 export interface Group {
   id: string
   name: string
-  year?: number
   studentCount?: number
   students?: User[]
 }
@@ -156,4 +156,40 @@ export interface PaginatedResponse<T> {
   total: number
   page: number
   limit: number
+}
+
+export interface Form {
+  id: string
+  title: string
+  description?: string
+  createdById: string
+  createdAt: string
+  status: TestStatus
+  fields?: FormField[]
+}
+
+export interface FormField {
+  id: string
+  formId: string
+  label: string
+  type: FormFieldType
+  order: number
+  required: boolean
+}
+
+export interface FormSubmission {
+  id: string
+  formId: string
+  userId: string
+  submittedAt: string
+  user?: User
+  values?: FormFieldValue[]
+}
+
+export interface FormFieldValue {
+  id: string
+  submissionId: string
+  fieldId: string
+  value: string
+  field?: FormField
 }

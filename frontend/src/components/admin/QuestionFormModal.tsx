@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import apiClient from '../../api/client'
 import { getApiError } from '../../api/errors'
 import { Question, Category, QuestionType } from '../../types'
+import QuestionText from '../QuestionText'
 
 interface AnswerInput {
   id?: string
@@ -39,6 +40,49 @@ export default function QuestionFormModal({ initial, onClose, onSave }: Question
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [selectedLang, setSelectedLang] = useState('javascript')
+
+  const LANGUAGES = [
+    { id: 'javascript', name: 'JS' },
+    { id: 'python', name: 'Python' },
+    { id: 'cpp', name: 'C++' },
+    { id: 'java', name: 'Java' },
+    { id: 'sql', name: 'SQL' },
+    { id: 'html', name: 'HTML' },
+    { id: 'css', name: 'CSS' },
+    { id: 'bash', name: 'Bash' },
+    { id: 'php', name: 'PHP' },
+    { id: 'csharp', name: 'C#' },
+  ]
+
+  const insertCodeBlock = () => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const text = form.text
+    const selection = text.substring(start, end)
+    
+    const before = text.substring(0, start)
+    const after = text.substring(end)
+    
+    // Ensure block starts on new line if needed
+    const prefix = (before.length > 0 && !before.endsWith('\n')) ? '\n' : ''
+    const newText = `${before}${prefix}\`\`\`${selectedLang}\n${selection || '...код тут...'}\n\`\`\`\n${after}`
+    
+    setForm({ ...form, text: newText })
+    
+    setTimeout(() => {
+      textarea.focus()
+      const startOffset = prefix.length + 4 + selectedLang.length // \n```lang\n
+      textarea.setSelectionRange(
+        start + startOffset,
+        start + startOffset + (selection ? selection.length : 9)
+      )
+    }, 0)
+  }
 
   const { data: categories } = useQuery<Category[]>({
     queryKey: ['categories'],
@@ -138,22 +182,57 @@ export default function QuestionFormModal({ initial, onClose, onSave }: Question
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Question text */}
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">
-              Текст питання
-              <span className="text-slate-500 font-normal ml-2">
-                (для коду огорніть у ```мова\n...\n```)
-              </span>
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-sm font-medium text-slate-300">
+                Текст питання
+                <span className="text-slate-500 font-normal ml-2 text-xs">
+                  (підтримує Markdown)
+                </span>
+              </label>
+              
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedLang}
+                  onChange={(e) => setSelectedLang(e.target.value)}
+                  className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[10px] text-slate-300 outline-none hover:bg-white/10 transition-colors"
+                >
+                  {LANGUAGES.map(l => (
+                    <option key={l.id} value={l.id} className="bg-slate-900">{l.name}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={insertCodeBlock}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-accent/10 border border-purple-accent/20 text-purple-400 hover:bg-purple-accent/20 transition-all text-[10px] font-bold"
+                >
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                  </svg>
+                  ВСТАВИТИ КОД
+                </button>
+              </div>
+            </div>
             <textarea
               required
+              ref={textareaRef}
               value={form.text}
               onChange={(e) => setForm({ ...form, text: e.target.value })}
               className="glass-input resize-none font-mono text-sm"
               rows={4}
               placeholder="Введіть текст питання або код..."
             />
-          </div>
+
+          {/* Preview */}
+          {form.text && (
+            <div>
+              <label className="block text-[10px] uppercase tracking-widest font-black text-slate-500 mb-2">
+                Попередній перегляд
+              </label>
+              <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+                <QuestionText text={form.text} className="text-sm text-slate-300" />
+              </div>
+            </div>
+          )}
 
           {/* Type and Category row */}
           <div className="grid grid-cols-2 gap-4">

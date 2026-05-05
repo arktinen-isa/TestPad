@@ -20,6 +20,11 @@ import QuestionsPage from './pages/admin/QuestionsPage'
 import TestsPage from './pages/admin/TestsPage'
 import TestResultsPage from './pages/admin/TestResultsPage'
 import CategoriesPage from './pages/admin/CategoriesPage'
+import FormsPage from './pages/admin/FormsPage'
+import FormEditor from './pages/admin/FormEditor'
+import FormResultsPage from './pages/admin/FormResultsPage'
+import StudentFormsPage from './pages/student/StudentFormsPage'
+import FormFillPage from './pages/student/FormFillPage'
 import ProfilePage from './pages/ProfilePage'
 
 interface ProtectedRouteProps {
@@ -93,6 +98,8 @@ export default function App() {
           <Route path="test/:testId/start" element={<TestStart />} />
           <Route path="test/:testId/take" element={<TestTake />} />
           <Route path="test/:testId/result" element={<TestResult />} />
+          <Route path="forms" element={<StudentFormsPage />} />
+          <Route path="forms/:id" element={<FormFillPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
 
@@ -113,6 +120,10 @@ export default function App() {
           <Route path="categories" element={<CategoriesPage />} />
           <Route path="tests" element={<TestsPage />} />
           <Route path="tests/:testId/results" element={<TestResultsPage />} />
+          <Route path="forms" element={<FormsPage />} />
+          <Route path="forms/new" element={<FormEditor />} />
+          <Route path="forms/:id/edit" element={<FormEditor />} />
+          <Route path="forms/:id/results" element={<FormResultsPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
 

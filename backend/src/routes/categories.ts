@@ -21,8 +21,12 @@ const updateCategorySchema = z.object({
 // GET /api/categories — authenticated
 router.get(
   '/',
-  asyncHandler(async (_req, res) => {
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const where = user.role === 'TEACHER' ? { createdById: user.userId } : {};
+
     const categories = await prisma.questionCategory.findMany({
+      where,
       include: {
         _count: { select: { questions: true } },
       },
@@ -44,11 +48,13 @@ router.post(
   authorize('ADMIN', 'TEACHER'),
   asyncHandler(async (req, res) => {
     const data = createCategorySchema.parse(req.body);
+    const user = req.user!;
 
     const category = await prisma.questionCategory.create({
       data: {
         name: data.name,
         pointsWeight: data.pointsWeight,
+        createdById: user.userId,
       },
     });
 
@@ -62,7 +68,19 @@ router.patch(
   authorize('ADMIN', 'TEACHER'),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
+    const user = req.user!;
     const data = updateCategorySchema.parse(req.body);
+
+    const existing = await prisma.questionCategory.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ error: 'Category not found' });
+      return;
+    }
+
+    if (user.role === 'TEACHER' && existing.createdById !== user.userId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
+    }
 
     const category = await prisma.questionCategory.update({
       where: { id },
@@ -79,9 +97,22 @@ router.patch(
 // DELETE /api/categories/:id — ADMIN only
 router.delete(
   '/:id',
-  authorize('ADMIN'),
+  authorize('ADMIN', 'TEACHER'),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
+    const user = req.user!;
+
+    const existing = await prisma.questionCategory.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ error: 'Category not found' });
+      return;
+    }
+
+    if (user.role === 'TEACHER' && existing.createdById !== user.userId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
+    }
+
     await prisma.questionCategory.delete({ where: { id } });
     res.status(204).send();
   })

@@ -59,6 +59,13 @@ enum SuspiciousEventType {
   SCREENSHOT_ATTEMPT
 }
 
+enum FormFieldType {
+  TEXT
+  BOOLEAN
+  INTEGER
+  FLOAT
+}
+
 model User {
   id           String   @id @default(uuid())
   name         String
@@ -69,7 +76,11 @@ model User {
 
   groups        UserGroup[]
   createdTests  Test[]
+  createdCategories QuestionCategory[] @relation("CreatedCategories")
+  createdQuestions  Question[]         @relation("CreatedQuestions")
+  createdForms      Form[]             @relation("CreatedForms")
   attempts      Attempt[]
+  formSubmissions FormSubmission[]
   refreshTokens RefreshToken[]
 
   @@index([role])
@@ -78,7 +89,6 @@ model User {
 model Group {
   id   String  @id @default(uuid())
   name String
-  year Int?
 
   users      UserGroup[]
   testGroups TestGroup[]
@@ -101,25 +111,32 @@ model QuestionCategory {
   id           String  @id @default(uuid())
   name         String
   pointsWeight Float   @default(1.0)
+  createdById  String
 
+  createdBy          User              @relation("CreatedCategories", fields: [createdById], references: [id])
   questions          Question[]
   testCategoryQuotas TestCategoryQuota[]
+
+  @@index([createdById])
 }
 
 model Question {
-  id         String       @id @default(uuid())
-  text       String       @db.Text
-  type       QuestionType
-  categoryId String
-  imageUrl   String?
-  createdAt  DateTime     @default(now())
+  id          String       @id @default(uuid())
+  text        String       @db.Text
+  type        QuestionType
+  categoryId  String
+  createdById String
+  imageUrl    String?
+  createdAt   DateTime     @default(now())
 
   category         QuestionCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdBy        User              @relation("CreatedQuestions", fields: [createdById], references: [id])
   answers          Answer[]
   testQuestions    TestQuestion[]
   attemptQuestions AttemptQuestion[]
 
   @@index([categoryId])
+  @@index([createdById])
   @@index([type])
   @@index([createdAt])
 }
@@ -272,5 +289,62 @@ model RefreshToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model Form {
+  id           String   @id @default(uuid())
+  title        String
+  description  String?  @db.Text
+  createdById  String
+  createdAt    DateTime @default(now())
+  status       TestStatus @default(DRAFT)
+
+  createdBy    User          @relation("CreatedForms", fields: [createdById], references: [id])
+  fields       FormField[]
+  submissions  FormSubmission[]
+
+  @@index([createdById])
+  @@index([status])
+}
+
+model FormField {
+  id        String        @id @default(uuid())
+  formId    String
+  label     String
+  type      FormFieldType
+  order     Int
+  required  Boolean       @default(true)
+
+  form      Form          @relation(fields: [formId], references: [id], onDelete: Cascade)
+  values    FormFieldValue[]
+
+  @@index([formId, order])
+}
+
+model FormSubmission {
+  id          String   @id @default(uuid())
+  formId      String
+  userId      String
+  submittedAt DateTime @default(now())
+
+  form        Form              @relation(fields: [formId], references: [id], onDelete: Cascade)
+  user        User              @relation(fields: [userId], references: [id])
+  values      FormFieldValue[]
+
+  @@index([formId])
+  @@index([userId])
+}
+
+model FormFieldValue {
+  id             String         @id @default(uuid())
+  submissionId   String
+  fieldId        String
+  value          String?        @db.Text
+
+  submission     FormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  field          FormField      @relation(fields: [fieldId], references: [id])
+
+  @@index([submissionId])
+  @@index([fieldId])
 }
 

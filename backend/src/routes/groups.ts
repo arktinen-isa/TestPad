@@ -10,12 +10,10 @@ router.use(authenticate);
 
 const createGroupSchema = z.object({
   name: z.string().min(1).max(255),
-  year: z.number().int().optional(),
 });
 
 const updateGroupSchema = z.object({
   name: z.string().min(1).max(255).optional(),
-  year: z.number().int().nullable().optional(),
 });
 
 const addStudentSchema = z.object({
@@ -26,10 +24,20 @@ const addStudentSchema = z.object({
 router.get(
   '/',
   authorize('ADMIN', 'TEACHER'),
-  asyncHandler(async (_req, res) => {
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const where = user.role === 'TEACHER' 
+      ? { users: { some: { userId: user.userId } } } 
+      : {};
+
     const groups = await prisma.group.findMany({
+      where,
       include: {
-        _count: { select: { users: true } },
+        _count: { 
+          select: { 
+            users: { where: { user: { role: 'STUDENT' } } } 
+          } 
+        },
       },
       orderBy: { name: 'asc' },
     });
@@ -37,7 +45,6 @@ router.get(
     res.json(groups.map((g) => ({
       id: g.id,
       name: g.name,
-      year: g.year,
       studentCount: g._count.users,
     })));
   })
@@ -53,7 +60,6 @@ router.post(
     const group = await prisma.group.create({
       data: {
         name: data.name,
-        year: data.year,
       },
     });
 
@@ -86,11 +92,20 @@ router.get(
       return;
     }
 
+    const user = req.user!;
+    if (user.role === 'TEACHER') {
+      const hasAccess = group.users.some(ug => ug.userId === user.userId);
+      if (!hasAccess) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+    }
+
     res.json({
       id: group.id,
       name: group.name,
-      year: group.year,
-      students: group.users.map((ug) => ug.user),
+      students: group.users.filter(ug => ug.user.role === 'STUDENT').map((ug) => ug.user),
+      teachers: group.users.filter(ug => ug.user.role === 'TEACHER').map((ug) => ug.user),
     });
   })
 );
@@ -107,7 +122,6 @@ router.patch(
       where: { id },
       data: {
         ...(data.name !== undefined && { name: data.name }),
-        ...(data.year !== undefined && { year: data.year }),
       },
     });
 
@@ -126,29 +140,41 @@ router.delete(
   })
 );
 
-// POST /api/groups/:id/students — ADMIN, add student
+// POST /api/groups/:id/students — ADMIN+TEACHER, add student
 router.post(
   '/:id/students',
-  authorize('ADMIN'),
+  authorize('ADMIN', 'TEACHER'),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { studentId } = addStudentSchema.parse(req.body);
+    const currentUser = req.user!;
 
     // Verify group exists
-    const group = await prisma.group.findUnique({ where: { id } });
+    const group = await prisma.group.findUnique({ 
+      where: { id },
+      include: { users: true }
+    });
     if (!group) {
       res.status(404).json({ error: 'Group not found' });
       return;
     }
 
-    // Verify user exists and is a student
+    // RBAC for Teacher
+    if (currentUser.role === 'TEACHER' && !group.users.some(ug => ug.userId === currentUser.userId)) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
+    }
+
+    // Verify user exists
     const user = await prisma.user.findUnique({ where: { id: studentId } });
     if (!user) {
       res.status(404).json({ error: 'User not found' });
       return;
     }
-    if (user.role !== 'STUDENT') {
-      res.status(400).json({ error: 'User is not a student' });
+    
+    // Only allow adding students for teachers
+    if (currentUser.role === 'TEACHER' && user.role !== 'STUDENT') {
+      res.status(400).json({ error: 'Teachers can only add students to groups' });
       return;
     }
 
@@ -156,16 +182,34 @@ router.post(
       data: { userId: studentId, groupId: id },
     });
 
-    res.status(201).json({ message: 'Student added to group' });
+    res.status(201).json({ message: 'User added to group' });
   })
 );
 
-// DELETE /api/groups/:id/students/:studentId — ADMIN
+// DELETE /api/groups/:id/students/:studentId — ADMIN+TEACHER
 router.delete(
   '/:id/students/:studentId',
-  authorize('ADMIN'),
+  authorize('ADMIN', 'TEACHER'),
   asyncHandler(async (req, res) => {
     const { id, studentId } = req.params;
+    const currentUser = req.user!;
+
+    // Verify access
+    if (currentUser.role === 'TEACHER') {
+      const access = await prisma.userGroup.findUnique({
+        where: { userId_groupId: { userId: currentUser.userId, groupId: id } }
+      });
+      if (!access) {
+        res.status(403).json({ error: 'Insufficient permissions' });
+        return;
+      }
+      
+      const targetUser = await prisma.user.findUnique({ where: { id: studentId } });
+      if (targetUser?.role !== 'STUDENT') {
+        res.status(403).json({ error: 'Teachers can only remove students' });
+        return;
+      }
+    }
 
     await prisma.userGroup.delete({
       where: {

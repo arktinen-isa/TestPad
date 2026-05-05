@@ -56,6 +56,8 @@ router.get(
         status: 'OPEN',
         groups: { some: { groupId: { in: groupIds } } },
       };
+    } else if (user.role === 'TEACHER') {
+      where = { createdById: user.userId };
     }
 
     const [rawTests, total] = await Promise.all([
@@ -228,6 +230,11 @@ router.get(
       }
     }
 
+    if (user.role === 'TEACHER' && test.createdById !== user.userId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
+    }
+
     const responseData: Record<string, any> = { ...test, questionsInBankCount: test.questions.length };
 
     if (user.role === 'STUDENT') {
@@ -245,11 +252,15 @@ router.patch(
   authorize('ADMIN', 'TEACHER'),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const data = updateTestSchema.parse(req.body);
-
+    const user = req.user!;
     const existing = await prisma.test.findUnique({ where: { id } });
     if (!existing) {
       res.status(404).json({ error: 'Test not found' });
+      return;
+    }
+
+    if (user.role === 'TEACHER' && existing.createdById !== user.userId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
       return;
     }
 
@@ -304,13 +315,19 @@ router.patch(
 
 router.delete(
   '/:id',
-  authorize('ADMIN'),
+  authorize('ADMIN', 'TEACHER'),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
+    const user = req.user!;
 
     const existing = await prisma.test.findUnique({ where: { id } });
     if (!existing) {
       res.status(404).json({ error: 'Test not found' });
+      return;
+    }
+
+    if (user.role === 'TEACHER' && existing.createdById !== user.userId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
       return;
     }
 
@@ -352,6 +369,12 @@ router.get(
     const test = await prisma.test.findUnique({ where: { id } });
     if (!test) {
       res.status(404).json({ error: 'Test not found' });
+      return;
+    }
+
+    const user = req.user!;
+    if (user.role === 'TEACHER' && test.createdById !== user.userId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
       return;
     }
 
@@ -440,6 +463,12 @@ router.get(
       return;
     }
 
+    const user = req.user!;
+    if (user.role === 'TEACHER' && test.createdById !== user.userId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
+    }
+
     const attemptWhere: Record<string, unknown> = { testId: id, finishedAt: { not: null } };
     if (groupId) {
       attemptWhere['student'] = { groups: { some: { groupId } } };
@@ -504,6 +533,18 @@ router.get(
   authorize('ADMIN', 'TEACHER'),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
+    const user = req.user!;
+
+    const test = await prisma.test.findUnique({ where: { id } });
+    if (!test) {
+      res.status(404).json({ error: 'Test not found' });
+      return;
+    }
+
+    if (user.role === 'TEACHER' && test.createdById !== user.userId) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
+    }
 
     const usedAqs = await prisma.attemptQuestion.findMany({
       where: { attempt: { testId: id, finishedAt: { not: null } } },
