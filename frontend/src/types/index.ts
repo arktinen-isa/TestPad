@@ -88,6 +88,7 @@ export interface AttemptResult {
   finishedAt: string | null
   timeSpentSec?: number
   testTitle?: string
+  testId?: string
   passThreshold?: number | null
   scoringMode?: string
   finishReason?: string | null

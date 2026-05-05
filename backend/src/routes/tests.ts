@@ -254,6 +254,51 @@ router.get(
   })
 );
 
+router.get(
+  '/:id/leaderboard',
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const rawAttempts = await prisma.attempt.findMany({
+      where: { testId: id, finishedAt: { not: null } },
+      orderBy: [
+        { percentage: 'desc' },
+        { score: 'desc' },
+        { finishedAt: 'asc' },
+      ],
+      select: {
+        id: true,
+        studentId: true,
+        score: true,
+        maxScore: true,
+        percentage: true,
+        finishedAt: true,
+        startedAt: true,
+        student: { select: { id: true, name: true } },
+      },
+    });
+
+    // Group by student to keep only the best attempt per student
+    const bestAttemptsMap = new Map<string, typeof rawAttempts[0]>();
+    for (const att of rawAttempts) {
+      if (!bestAttemptsMap.has(att.studentId)) {
+        bestAttemptsMap.set(att.studentId, att);
+      } else {
+        const existing = bestAttemptsMap.get(att.studentId)!;
+        if ((att.percentage ?? 0) > (existing.percentage ?? 0)) {
+          bestAttemptsMap.set(att.studentId, att);
+        }
+      }
+    }
+
+    const leaderboard = Array.from(bestAttemptsMap.values())
+      .sort((a, b) => (b.percentage ?? 0) - (a.percentage ?? 0))
+      .slice(0, 10);
+
+    res.json(leaderboard);
+  })
+);
+
 router.patch(
   '/:id',
   authorize('ADMIN', 'TEACHER'),

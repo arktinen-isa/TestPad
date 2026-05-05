@@ -5,6 +5,7 @@ import apiClient from '../../api/client'
 import QuestionText from '../../components/QuestionText'
 import MatchingQuestion from '../../components/MatchingQuestion'
 import OrderingQuestion from '../../components/OrderingQuestion'
+import { renderLatex } from '../../utils/latexRenderer'
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60)
@@ -466,11 +467,12 @@ export default function TestTake() {
                             </svg>
                           )}
                         </div>
-                        <span className={`text-base font-medium transition-colors duration-200 ${
-                          isSelected ? 'text-white' : 'text-slate-300 group-hover:text-white'
-                        }`}>
-                          {answer.text}
-                        </span>
+                        <span 
+                          className={`text-base font-medium transition-colors duration-200 ${
+                            isSelected ? 'text-white' : 'text-slate-300 group-hover:text-white'
+                          }`}
+                          dangerouslySetInnerHTML={{ __html: renderLatex(answer.text) }}
+                        />
                       </button>
                     )
                   })}
