@@ -12,12 +12,16 @@ const formFieldSchema = z.object({
   label: z.string().min(1).max(500),
   type: z.enum(['TEXT', 'BOOLEAN', 'INTEGER', 'FLOAT']),
   required: z.boolean().default(true),
+  correctAnswer: z.string().nullable().optional(),
 });
 
 const createFormSchema = z.object({
   title: z.string().min(1).max(255),
   description: z.string().optional(),
   status: z.enum(['DRAFT', 'OPEN', 'CLOSED']).default('DRAFT'),
+  groupId: z.string().nullable().optional(),
+  openFrom: z.string().nullable().optional(),
+  openUntil: z.string().nullable().optional(),
   fields: z.array(formFieldSchema),
 });
 
@@ -28,19 +32,31 @@ router.get(
   '/',
   asyncHandler(async (req, res) => {
     const user = req.user!;
-    let where: Record<string, unknown> = {};
+    let where: Record<string, any> = {};
 
     if (user.role === 'TEACHER') {
       where = { createdById: user.userId };
     } else if (user.role === 'STUDENT') {
-      where = { status: 'OPEN' };
+      const userGroups = await prisma.userGroup.findMany({
+        where: { userId: user.userId },
+        select: { groupId: true }
+      });
+      const groupIds = userGroups.map(ug => ug.groupId);
+      where = {
+        status: 'OPEN',
+        OR: [
+          { groupId: null },
+          { groupId: { in: groupIds } }
+        ]
+      };
     }
 
     const forms = await prisma.form.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       include: {
-        _count: { select: { submissions: true } }
+        group: { select: { id: true, name: true } },
+        _count: { select: { submissions: true, fields: true } }
       }
     });
 
@@ -53,7 +69,7 @@ router.post(
   '/',
   authorize('ADMIN', 'TEACHER'),
   asyncHandler(async (req, res) => {
-    const { title, description, status, fields } = createFormSchema.parse(req.body);
+    const { title, description, status, groupId, openFrom, openUntil, fields } = createFormSchema.parse(req.body);
     const user = req.user!;
 
     const form = await prisma.form.create({
@@ -61,12 +77,16 @@ router.post(
         title,
         description,
         status,
+        groupId: groupId ?? null,
+        openFrom: openFrom ? new Date(openFrom) : null,
+        openUntil: openUntil ? new Date(openUntil) : null,
         createdById: user.userId,
         fields: {
           create: fields.map((f, i) => ({
             label: f.label,
             type: f.type,
             required: f.required,
+            correctAnswer: f.correctAnswer ?? null,
             order: i,
           })),
         },
@@ -113,7 +133,7 @@ router.patch(
   asyncHandler(async (req, res) => {
     const { id } = req.params;
     const user = req.user!;
-    const { title, description, status, fields } = updateFormSchema.parse(req.body);
+    const { title, description, status, groupId, openFrom, openUntil, fields } = updateFormSchema.parse(req.body);
 
     const existing = await prisma.form.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ error: 'Form not found' });
@@ -127,12 +147,16 @@ router.patch(
         title,
         description,
         status,
+        groupId: groupId !== undefined ? groupId : undefined,
+        openFrom: openFrom !== undefined ? (openFrom ? new Date(openFrom) : null) : undefined,
+        openUntil: openUntil !== undefined ? (openUntil ? new Date(openUntil) : null) : undefined,
         fields: fields ? {
           deleteMany: {},
           create: fields.map((f, i) => ({
             label: f.label,
             type: f.type,
             required: f.required,
+            correctAnswer: f.correctAnswer ?? null,
             order: i,
           })),
         } : undefined,
@@ -158,7 +182,34 @@ router.post(
     });
 
     if (!form || form.status !== 'OPEN') {
-      return res.status(404).json({ error: 'Form not available' });
+      return res.status(404).json({ error: 'Форма не знайдена або закрита' });
+    }
+
+    // 1. Enforce 1 attempt limit
+    const existingSubmission = await prisma.formSubmission.findFirst({
+      where: { formId: id, userId: user.userId }
+    });
+    if (existingSubmission) {
+      return res.status(400).json({ error: 'Ви вже заповнили цю форму (дозволено лише 1 спробу)' });
+    }
+
+    // 2. Enforce date availability
+    const now = new Date();
+    if (form.openFrom && now < form.openFrom) {
+      return res.status(400).json({ error: 'Форма ще не відкрита для заповнення' });
+    }
+    if (form.openUntil && now > form.openUntil) {
+      return res.status(400).json({ error: 'Термін заповнення форми вже минув' });
+    }
+
+    // 3. Enforce group targeting
+    if (form.groupId) {
+      const userGroup = await prisma.userGroup.findFirst({
+        where: { userId: user.userId, groupId: form.groupId }
+      });
+      if (!userGroup) {
+        return res.status(403).json({ error: 'Ви не належите до групи, якій призначена ця форма' });
+      }
     }
 
     // Validation

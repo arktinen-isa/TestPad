@@ -85,12 +85,35 @@ export default function FormsPage() {
             </div>
 
             <h3 className="font-unbounded text-base font-bold text-white mb-2 line-clamp-1">{form.title}</h3>
+            
+            <div className="flex flex-col gap-1 mb-3">
+              {form.group ? (
+                <span className="text-[10px] text-purple-300 font-extrabold uppercase">👥 Група: {form.group.name}</span>
+              ) : (
+                <span className="text-[10px] text-slate-500 font-extrabold uppercase">🌐 Спільна форма</span>
+              )}
+
+              {(form.openFrom || form.openUntil) ? (
+                <span className="text-[10px] text-amber-400 font-bold">
+                  📅 {form.openFrom ? new Date(form.openFrom).toLocaleDateString('uk-UA') : '—'} - {form.openUntil ? new Date(form.openUntil).toLocaleDateString('uk-UA') : '∞'}
+                </span>
+              ) : (
+                <span className="text-[10px] text-slate-500 font-bold">♾️ Без обмежень у часі</span>
+              )}
+            </div>
+
             <p className="text-slate-400 text-xs line-clamp-2 mb-4 h-8">{form.description || 'Опис відсутній'}</p>
 
             <div className="flex items-center justify-between pt-4 border-t border-white/5">
-              <div className="flex flex-col">
-                <span className="text-[10px] text-slate-500 uppercase font-black">Відповідей</span>
-                <span className="text-lg font-unbounded font-bold text-white">{(form as any)._count?.submissions || 0}</span>
+              <div className="flex gap-4">
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-500 uppercase font-black">Питань</span>
+                  <span className="text-sm font-unbounded font-bold text-white">{form._count?.fields || 0}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-500 uppercase font-black">Відповідей</span>
+                  <span className="text-sm font-unbounded font-bold text-white">{form._count?.submissions || 0}</span>
+                </div>
               </div>
               <button 
                 onClick={() => navigate(`/admin/forms/${form.id}/results`)}

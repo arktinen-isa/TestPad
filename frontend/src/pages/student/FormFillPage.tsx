@@ -9,6 +9,7 @@ export default function FormFillPage() {
   const navigate = useNavigate()
   const [values, setValues] = useState<Record<string, any>>({})
   const [error, setError] = useState<string | null>(null)
+  const [isSubmitted, setIsSubmitted] = useState(false)
 
   const { data: form, isLoading } = useQuery<Form>({
     queryKey: ['form', id],
@@ -22,7 +23,7 @@ export default function FormFillPage() {
     mutationFn: async () => {
       await apiClient.post(`/forms/${id}/submit`, { values })
     },
-    onSuccess: () => navigate('/student/forms'),
+    onSuccess: () => setIsSubmitted(true),
     onError: (err: any) => setError(err.response?.data?.error || 'Помилка надсилання')
   })
 
@@ -55,7 +56,27 @@ export default function FormFillPage() {
         </div>
       </div>
 
-      {isLoading ? (
+      {isSubmitted ? (
+        <div className="glass-card p-10 text-center space-y-6 animate-scale-up">
+          <div className="w-16 h-16 bg-green-500/15 border border-green-500/30 rounded-full flex items-center justify-center mx-auto text-green-400">
+            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div className="space-y-2">
+            <h2 className="font-unbounded text-xl font-bold text-white">Відповіді надіслано!</h2>
+            <p className="text-slate-300 text-sm max-w-md mx-auto leading-relaxed">
+              Дякуємо! Ваші відповіді успішно враховані і передані для аналізу. 👍
+            </p>
+          </div>
+          <button 
+            onClick={() => navigate('/student/forms')}
+            className="btn-secondary px-8 py-2.5 mx-auto"
+          >
+            Повернутися до форм
+          </button>
+        </div>
+      ) : isLoading ? (
         <div className="py-20 text-center">
           <div className="w-10 h-10 border-2 border-purple-accent border-t-transparent rounded-full animate-spin mx-auto" />
         </div>

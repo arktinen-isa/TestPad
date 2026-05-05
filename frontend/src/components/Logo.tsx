@@ -16,50 +16,40 @@ export const Logo: React.FC<LogoProps> = ({ className = "", size = 40, hideText 
           xmlns="http://www.w3.org/2000/svg"
           className="w-full h-full drop-shadow-[0_4px_12px_rgba(124,58,237,0.3)]"
         >
-          {/* Outer circle of 'G' */}
+          {/* Organic Circular Base 'G' */}
           <path
-            d="M 50 10 
-               C 27.9 10, 10 27.9, 10 50 
-               C 10 72.1, 27.9 90, 50 90 
-               C 66.5 90, 80.8 80, 86.8 65 
-               L 71.5 60 
-               C 67.5 70, 59.5 75, 50 75 
-               C 36.2 75, 25 63.8, 25 50 
-               C 25 36.2, 36.2 25, 50 25 
-               C 61.5 25, 71.2 32.8, 74.2 44 
-               L 50 44 
-               L 50 56 
-               L 89 56 
-               C 89.6 54, 90 52, 90 50 
-               C 90 27.9, 72.1 10, 50 10 Z"
-            fill="url(#g-gradient)"
+            d="M 72 24
+               C 60 14, 32 16, 22 36
+               C 12 56, 20 78, 44 80
+               C 66 82, 78 66, 76 48
+               L 48 48"
+            stroke="url(#g-gradient)"
+            strokeWidth="12"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
           />
 
-          {/* Underlay shadow for depth */}
+          {/* Seamlessly Integrated Intersecting 'X' — Diagonal 1 (Top-Left to Bottom-Right) */}
           <path
-            d="M 50 44 L 89 44 C 88 35, 81 28, 73.5 25.5 Z"
-            fill="white"
-            opacity="0.1"
-          />
-
-          {/* Dynamic Intersecting Diagonal 'X' - Pink Layer */}
-          <path
-            d="M 64 12
-               L 32 88
-               L 48 88
-               L 80 12 Z"
-            fill="url(#x-pink)"
+            d="M 32 20 
+               L 76 80"
+            stroke="url(#x-pink)"
+            strokeWidth="11"
+            strokeLinecap="round"
+            fill="none"
             opacity="0.85"
             style={{ mixBlendMode: 'screen' }}
           />
 
-          {/* Dynamic Intersecting Diagonal 'X' - Violet Layer */}
+          {/* Seamlessly Integrated Intersecting 'X' — Diagonal 2 (Bottom-Left to Top-Right) */}
           <path
-            d="M 36 12
-               L 68 88
-               L 52 88
-               L 20 12 Z"
-            fill="url(#x-violet)"
+            d="M 32 80 
+               L 76 20"
+            stroke="url(#x-violet)"
+            strokeWidth="11"
+            strokeLinecap="round"
+            fill="none"
             opacity="0.85"
             style={{ mixBlendMode: 'screen' }}
           />

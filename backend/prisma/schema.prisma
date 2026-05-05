@@ -99,6 +99,7 @@ model Group {
 
   users      UserGroup[]
   testGroups TestGroup[]
+  forms      Form[]
 
   @@index([name])
 }
@@ -313,13 +314,18 @@ model Form {
   createdById  String
   createdAt    DateTime @default(now())
   status       TestStatus @default(DRAFT)
+  groupId      String?
+  openFrom     DateTime?
+  openUntil    DateTime?
 
   createdBy    User          @relation("CreatedForms", fields: [createdById], references: [id])
+  group        Group?        @relation(fields: [groupId], references: [id], onDelete: SetNull)
   fields       FormField[]
   submissions  FormSubmission[]
 
   @@index([createdById])
   @@index([status])
+  @@index([groupId])
 }
 
 model FormField {
@@ -327,8 +333,9 @@ model FormField {
   formId    String
   label     String
   type      FormFieldType
-  order     Int
-  required  Boolean       @default(true)
+  order         Int
+  required      Boolean       @default(true)
+  correctAnswer String?
 
   form      Form          @relation(fields: [formId], references: [id], onDelete: Cascade)
   values    FormFieldValue[]

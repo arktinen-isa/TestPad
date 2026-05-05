@@ -29,6 +29,16 @@ export default function StudentFormsPage() {
         ) : forms?.map(form => (
           <div key={form.id} className="glass-card p-6 flex flex-col justify-between hover:border-purple-accent/30 transition-all">
             <div>
+              <div className="flex items-center gap-3 mb-2 flex-wrap">
+                <span className="px-2 py-0.5 rounded-md bg-purple-accent/15 text-purple-300 text-[10px] font-black uppercase tracking-wider">
+                  {form._count?.fields || 0} питань
+                </span>
+                {form.openUntil && (
+                  <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-400 text-[10px] font-bold">
+                    🕒 До: {new Date(form.openUntil).toLocaleDateString('uk-UA')}
+                  </span>
+                )}
+              </div>
               <h3 className="font-unbounded text-base font-bold text-white mb-2">{form.title}</h3>
               <p className="text-slate-400 text-sm mb-6">{form.description || 'Опис відсутній'}</p>
             </div>

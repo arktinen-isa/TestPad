@@ -175,7 +175,12 @@ export interface Form {
   createdById: string
   createdAt: string
   status: TestStatus
+  groupId?: string | null
+  openFrom?: string | null
+  openUntil?: string | null
+  group?: { id: string; name: string } | null
   fields?: FormField[]
+  _count?: { submissions: number; fields: number }
 }
 
 export interface FormField {
@@ -185,6 +190,7 @@ export interface FormField {
   type: FormFieldType
   order: number
   required: boolean
+  correctAnswer?: string | null
 }
 
 export interface FormSubmission {

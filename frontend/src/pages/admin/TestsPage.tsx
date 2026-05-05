@@ -29,10 +29,10 @@ const STATUS_LABELS: Record<TestStatus, string> = {
   CLOSED: 'Закрито',
 }
 
-const STATUS_CLASSES: Record<TestStatus, string> = {
-  DRAFT: 'status-badge status-draft',
-  OPEN: 'status-badge status-open',
-  CLOSED: 'status-badge status-closed',
+const STATUS_COLORS: Record<TestStatus, string> = {
+  DRAFT: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
+  OPEN: 'bg-green-500/20 text-green-400 border-green-500/30',
+  CLOSED: 'bg-red-500/20 text-red-400 border-red-500/30',
 }
 
 function formatDateTime(dateStr?: string): string {
@@ -130,86 +130,81 @@ export default function TestsPage() {
         ))}
       </div>
 
-      {/* Table */}
-      <div className="glass-card overflow-hidden">
+      {/* Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {isLoading ? (
-          <div className="p-8 text-center">
-            <div className="w-8 h-8 border-2 border-purple-accent border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="col-span-full py-20 text-center">
+            <div className="w-10 h-10 border-2 border-purple-accent border-t-transparent rounded-full animate-spin mx-auto" />
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Назва</th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Предмет</th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Статус</th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Відкрито</th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Закрито</th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Питань</th>
-                  <th className="px-5 py-4 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">Дії</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tests?.map((t) => (
-                  <tr key={t.id} className="table-row">
-                    <td className="px-5 py-4">
-                      <p className="text-white font-medium">{t.title}</p>
-                    </td>
-                    <td className="px-5 py-4 text-slate-400 text-sm">{t.subject || '—'}</td>
-                    <td className="px-5 py-4">
-                      <span className={STATUS_CLASSES[t.status]}>
-                        {STATUS_LABELS[t.status]}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-slate-400 text-sm whitespace-nowrap">{formatDateTime(t.openFrom)}</td>
-                    <td className="px-5 py-4 text-slate-400 text-sm whitespace-nowrap">{formatDateTime(t.openUntil)}</td>
-                    <td className="px-5 py-4 text-slate-400 text-sm">{t.questionsCount}</td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => navigate(`/admin/tests/${t.id}/results`)}
-                          className="p-2 rounded-lg text-slate-400 hover:text-green-400 hover:bg-green-500/10 transition-all"
-                          title="Результати"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => { setEditTest(t); setShowModal(true) }}
-                          className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"
-                          title="Редагувати"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirm(t)}
-                          className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                          title="Видалити"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {(!tests || tests.length === 0) && (
-                  <tr>
-                    <td colSpan={7} className="px-5 py-10 text-center text-slate-400">
-                      Тестів не знайдено
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+        ) : tests?.map((t) => (
+          <div key={t.id} className="glass-card p-5 group hover:border-purple-accent/30 transition-all flex flex-col justify-between">
+            <div>
+              <div className="flex items-start justify-between mb-4">
+                <span className={`status-badge border ${STATUS_COLORS[t.status]}`}>
+                  {STATUS_LABELS[t.status]}
+                </span>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button 
+                    onClick={() => { setEditTest(t); setShowModal(true) }}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                    title="Редагувати"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                  <button 
+                    onClick={() => setDeleteConfirm(t)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                    title="Видалити"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div className="mb-3">
+                <span className="text-[9px] uppercase tracking-wider font-extrabold text-purple-accent/80 block mb-0.5">
+                  {t.subject || 'Дисципліна'}
+                </span>
+                <h3 className="font-unbounded text-base font-bold text-white mb-2 line-clamp-1">{t.title}</h3>
+              </div>
+
+              <div className="space-y-1.5 text-xs text-slate-400 mb-5">
+                <div className="flex justify-between">
+                  <span>Кількість питань:</span>
+                  <span className="text-white font-medium">{t.questionsCount}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Режим вибірки:</span>
+                  <span className="text-white font-medium">{t.samplingMode === 'BY_CATEGORY' ? 'За категоріями' : 'З усього банку'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Дедлайн:</span>
+                  <span className="text-white font-medium">{formatDateTime(t.openUntil)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t border-white/5">
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-500 uppercase font-black">Режим таймера</span>
+                <span className="text-xs font-bold text-white uppercase">{t.timerMode === 'PER_QUESTION' ? 'По-питанням' : 'Глобальний'}</span>
+              </div>
+              <button 
+                onClick={() => navigate(`/admin/tests/${t.id}/results`)}
+                className="px-4 py-2 rounded-xl bg-purple-accent/10 text-purple-400 text-xs font-bold hover:bg-purple-accent/20 transition-all"
+              >
+                РЕЗУЛЬТАТИ
+              </button>
+            </div>
+          </div>
+        ))}
+        {!isLoading && tests?.length === 0 && (
+          <div className="col-span-full py-20 text-center glass-card border-dashed">
+            <p className="text-slate-500">Тестів не знайдено</p>
           </div>
         )}
       </div>

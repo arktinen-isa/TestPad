@@ -303,8 +303,10 @@ export default function QuestionsPage() {
                     }`}
                   >
                     <span className="truncate pr-6">{c.name}</span>
-                    <span className="px-2 py-0.5 rounded-md bg-white/5 text-[10px] text-slate-400 font-bold flex-shrink-0 group-hover:opacity-0 transition-opacity flex items-center gap-1">
-                      {c.pointsWeight} б.{c.timeLimitSeconds ? ` (${c.timeLimitSeconds}с)` : ''}
+                    <span className="px-2 py-0.5 rounded-md bg-white/5 text-[10px] text-slate-400 font-bold flex-shrink-0 group-hover:opacity-0 transition-opacity flex items-center gap-1.5">
+                      <span>{c.pointsWeight} б.</span>
+                      {c.timeLimitSeconds ? <span>({c.timeLimitSeconds}с)</span> : null}
+                      <span className="bg-purple-accent/20 text-purple-300 px-1 py-0.5 rounded text-[9px] font-black">{c.questionCount ?? 0} ?</span>
                     </span>
                   </button>
                   <button
