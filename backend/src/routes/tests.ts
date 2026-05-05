@@ -32,6 +32,7 @@ const createTestSchema = z.object({
   categoryQuotas: z.array(categoryQuotaSchema).optional(),
   allowCertificate: z.boolean().optional().default(true),
   logoUrl: z.string().optional().nullable(),
+  timerMode: z.enum(['GLOBAL', 'PER_QUESTION']).default('GLOBAL'),
 });
 
 const updateTestSchema = createTestSchema.partial();
@@ -157,6 +158,7 @@ router.post(
         title: data.title,
         subject: data.subject,
         createdById: user.userId,
+        timerMode: data.timerMode,
         timeLimitMin: data.timeLimitMin,
         maxAttempts: data.maxAttempts,
         openFrom: data.openFrom ? new Date(data.openFrom) : null,
@@ -268,6 +270,7 @@ router.patch(
     const updatePayload: Record<string, unknown> = {};
     if (data.title !== undefined) updatePayload['title'] = data.title;
     if (data.subject !== undefined) updatePayload['subject'] = data.subject;
+    if (data.timerMode !== undefined) updatePayload['timerMode'] = data.timerMode;
     if (data.timeLimitMin !== undefined) updatePayload['timeLimitMin'] = data.timeLimitMin;
     if (data.maxAttempts !== undefined) updatePayload['maxAttempts'] = data.maxAttempts;
     if (data.openFrom !== undefined) updatePayload['openFrom'] = data.openFrom ? new Date(data.openFrom) : data.openFrom === null ? null : undefined;

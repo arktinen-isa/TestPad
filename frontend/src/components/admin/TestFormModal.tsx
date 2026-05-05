@@ -15,6 +15,7 @@ interface TestFormData {
   groupIds: string[]
   openFrom: string
   openUntil: string
+  timerMode: 'GLOBAL' | 'PER_QUESTION'
   timeLimitMin: number
   maxAttempts: number
   questionsCount: number
@@ -42,6 +43,7 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
     groupIds: initial?.groups?.map((g: any) => g.groupId) || [],
     openFrom: initial?.openFrom ? initial.openFrom.slice(0, 16) : '',
     openUntil: initial?.openUntil ? initial.openUntil.slice(0, 16) : '',
+    timerMode: initial?.timerMode || 'GLOBAL',
     timeLimitMin: initial?.timeLimitMin || 60,
     maxAttempts: initial?.maxAttempts || 1,
     questionsCount: initial?.questionsCount || 20,
@@ -318,13 +320,15 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Обмеження часу (хв)</label>
-                  <input
-                    type="number" required min="1" max="300" value={form.timeLimitMin}
-                    onChange={(e) => setForm({ ...form, timeLimitMin: Number(e.target.value) })}
-                    className="glass-input"
-                    placeholder="Напр. 60"
-                  />
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Режим таймера</label>
+                  <select
+                    value={form.timerMode}
+                    onChange={(e) => setForm({ ...form, timerMode: e.target.value as 'GLOBAL' | 'PER_QUESTION' })}
+                    className="glass-input text-sm"
+                  >
+                    <option value="GLOBAL" className="bg-gray-900">На тест загалом</option>
+                    <option value="PER_QUESTION" className="bg-gray-900">За категоріями питань</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-1.5">Кількість спроб</label>
@@ -336,6 +340,25 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
                   />
                 </div>
               </div>
+
+              {form.timerMode === 'GLOBAL' ? (
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Обмеження часу на весь тест (хв)</label>
+                  <input
+                    type="number" required min="1" max="300" value={form.timeLimitMin}
+                    onChange={(e) => setForm({ ...form, timeLimitMin: Number(e.target.value) })}
+                    className="glass-input"
+                    placeholder="Напр. 60"
+                  />
+                </div>
+              ) : (
+                <div className="p-4 bg-purple-accent/5 border border-purple-accent/20 rounded-2xl">
+                  <p className="text-xs text-purple-400 font-bold uppercase mb-1">Режим: За категоріями питань</p>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Час на відповідь визначається окремо для кожного питання відповідно до налаштувань його категорії у Банку питань. Студенти бачитимуть зворотний відлік на кожне питання окремо.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

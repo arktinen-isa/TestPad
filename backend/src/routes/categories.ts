@@ -11,11 +11,13 @@ router.use(authenticate);
 const createCategorySchema = z.object({
   name: z.string().min(1).max(255),
   pointsWeight: z.number().positive().default(1.0),
+  timeLimitSeconds: z.number().int().positive().nullable().optional(),
 });
 
 const updateCategorySchema = z.object({
   name: z.string().min(1).max(255).optional(),
   pointsWeight: z.number().positive().optional(),
+  timeLimitSeconds: z.number().int().positive().nullable().optional(),
 });
 
 // GET /api/categories — authenticated
@@ -37,6 +39,7 @@ router.get(
       id: c.id,
       name: c.name,
       pointsWeight: c.pointsWeight,
+      timeLimitSeconds: c.timeLimitSeconds,
       questionCount: c._count.questions,
     })));
   })
@@ -54,6 +57,7 @@ router.post(
       data: {
         name: data.name,
         pointsWeight: data.pointsWeight,
+        timeLimitSeconds: data.timeLimitSeconds,
         createdById: user.userId,
       },
     });
@@ -87,6 +91,7 @@ router.patch(
       data: {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.pointsWeight !== undefined && { pointsWeight: data.pointsWeight }),
+        ...(data.timeLimitSeconds !== undefined && { timeLimitSeconds: data.timeLimitSeconds }),
       },
     });
 

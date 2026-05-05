@@ -132,6 +132,7 @@ async function getStudentQuestion(attemptId: string, index: number) {
     include: {
       attempt: {
         select: {
+          test: { select: { timerMode: true } },
           _count: { select: { attemptQuestions: true } }
         }
       },
@@ -143,7 +144,7 @@ async function getStudentQuestion(attemptId: string, index: number) {
           imageUrl: true,
           matchingPairs: true,
           orderingItems: true,
-          timeLimitSeconds: true,
+          category: { select: { timeLimitSeconds: true } },
           answers: { select: { id: true, text: true } }
         }
       }
@@ -182,7 +183,7 @@ async function getStudentQuestion(attemptId: string, index: number) {
     matchingLeft,
     matchingRight,
     orderingItems,
-    timeLimitSeconds: aq.question.timeLimitSeconds,
+    timeLimitSeconds: aq.attempt.test.timerMode === 'PER_QUESTION' ? aq.question.category?.timeLimitSeconds || null : null,
     questionNumber: index + 1,
     total: aq.attempt._count.attemptQuestions,
   };
@@ -341,7 +342,7 @@ router.get(
       return;
     }
 
-    if (isTimedOut(attempt.startedAt, attempt.test.timeLimitMin)) {
+    if (attempt.test.timerMode === 'GLOBAL' && isTimedOut(attempt.startedAt, attempt.test.timeLimitMin)) {
       const result = await finishAttempt(id, 'TIMEOUT');
       res.json({ finished: true, ...result });
       return;
@@ -355,7 +356,7 @@ router.get(
       currentQuestion: question,
       questionsTotal: attempt.attemptQuestions.length,
       timeLeft:
-        attempt.test.timeLimitMin > 0
+        attempt.test.timerMode === 'GLOBAL' && attempt.test.timeLimitMin > 0
           ? Math.max(
               0,
               attempt.test.timeLimitMin * 60 -
@@ -377,7 +378,7 @@ router.post(
     const attempt = await prisma.attempt.findUnique({
       where: { id },
       include: {
-        test: { select: { id: true, timeLimitMin: true, showResultMode: true } },
+        test: { select: { id: true, timerMode: true, timeLimitMin: true, showResultMode: true } },
         _count: { select: { attemptQuestions: true } },
       },
     });
@@ -465,7 +466,7 @@ router.post(
 
     const showResultMode = (attempt.test as any).showResultMode;
 
-    if (isTimedOut(attempt.startedAt, (attempt.test as any).timeLimitMin)) {
+    if ((attempt.test as any).timerMode === 'GLOBAL' && isTimedOut(attempt.startedAt, (attempt.test as any).timeLimitMin)) {
       const { score, maxScore } = await finishAttempt(id, 'TIMEOUT');
       res.json(
         showResultMode === 'ADMIN_ONLY'
@@ -493,7 +494,7 @@ router.post(
       finished: false,
       nextQuestion,
       timeLeft:
-        attempt.test.timeLimitMin > 0
+        (attempt.test as any).timerMode === 'GLOBAL' && attempt.test.timeLimitMin > 0
           ? Math.max(
               0,
               attempt.test.timeLimitMin * 60 -

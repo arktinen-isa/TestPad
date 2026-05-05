@@ -44,16 +44,18 @@ export default function QuestionsPage() {
   // Unified Category Management States
   const [newCatName, setNewCatName] = useState('')
   const [newCatWeight, setNewCatWeight] = useState(1)
+  const [newCatTimeLimit, setNewCatTimeLimit] = useState<number | ''>('')
   const [showCategoryModal, setShowCategoryModal] = useState(false)
 
   const createCategoryMutation = useMutation({
-    mutationFn: async (data: { name: string, pointsWeight: number }) => {
+    mutationFn: async (data: { name: string, pointsWeight: number, timeLimitSeconds: number | null }) => {
       await apiClient.post('/categories', data)
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['categories'] })
       setNewCatName('')
       setNewCatWeight(1)
+      setNewCatTimeLimit('')
     }
   })
 
@@ -152,7 +154,7 @@ export default function QuestionsPage() {
 
   const downloadTemplate = () => {
     const data = [
-      ['Текст питання', 'Назва категорії', 'Тип (SINGLE/MULTI)', 'Варіант 1', 'Вірний (1/0)', 'Варіант 2', 'Вірний (1/0)', 'Варіант 3', 'Вірний (1/0)'],
+      ['Текст питання', 'Назва категорії', 'Тип (SINGLE/MULTI/MATCHING/ORDERING)', 'Варіант 1', 'Вірний (1/0)', 'Варіант 2', 'Вірний (1/0)', 'Варіант 3', 'Вірний (1/0)'],
       ['Приклад питання з однією відповіддю', 'Загальні', 'SINGLE', 'Правильна відповідь', 1, 'Неправильна', 0, 'Ще одна неправильна', 0],
       ['Приклад питання з кількома відповідями', 'Математика', 'MULTI', 'Перша правильна', 1, 'Друга правильна', 1, 'Неправильна', 0]
     ]
@@ -165,7 +167,11 @@ export default function QuestionsPage() {
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newCatName.trim()) return
-    await createCategoryMutation.mutateAsync({ name: newCatName, pointsWeight: newCatWeight })
+    await createCategoryMutation.mutateAsync({
+      name: newCatName,
+      pointsWeight: newCatWeight,
+      timeLimitSeconds: newCatTimeLimit ? Number(newCatTimeLimit) : null
+    })
   }
 
   const handleBulkCategory = async () => {
@@ -297,8 +303,8 @@ export default function QuestionsPage() {
                     }`}
                   >
                     <span className="truncate pr-6">{c.name}</span>
-                    <span className="px-2 py-0.5 rounded-md bg-white/5 text-[10px] text-slate-400 font-bold flex-shrink-0 group-hover:opacity-0 transition-opacity">
-                      {c.pointsWeight} б.
+                    <span className="px-2 py-0.5 rounded-md bg-white/5 text-[10px] text-slate-400 font-bold flex-shrink-0 group-hover:opacity-0 transition-opacity flex items-center gap-1">
+                      {c.pointsWeight} б.{c.timeLimitSeconds ? ` (${c.timeLimitSeconds}с)` : ''}
                     </span>
                   </button>
                   <button
@@ -374,7 +380,6 @@ export default function QuestionsPage() {
                       <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Питання</th>
                       <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Тип</th>
                       <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Категорія</th>
-                      <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Вага</th>
                       <th className="px-5 py-4 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">Дії</th>
                     </tr>
                   </thead>
@@ -406,9 +411,6 @@ export default function QuestionsPage() {
                         </td>
                         <td className="px-5 py-4 text-slate-400 text-sm">
                           {q.category?.name || '—'}
-                        </td>
-                        <td className="px-5 py-4 text-slate-400 text-sm">
-                          {q.category?.pointsWeight ?? '—'} б.
                         </td>
                         <td className="px-5 py-4">
                           <div className="flex items-center justify-end gap-2">
@@ -519,6 +521,17 @@ export default function QuestionsPage() {
                   value={newCatWeight}
                   onChange={(e) => setNewCatWeight(parseInt(e.target.value))}
                   placeholder="Наприклад: 5"
+                  className="glass-input text-sm py-2.5"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Таймер на одне питання (сек, необов'язково)</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={newCatTimeLimit}
+                  onChange={(e) => setNewCatTimeLimit(e.target.value ? parseInt(e.target.value) : '')}
+                  placeholder="Наприклад: 60"
                   className="glass-input text-sm py-2.5"
                 />
               </div>

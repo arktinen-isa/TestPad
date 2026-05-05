@@ -47,6 +47,11 @@ enum MultiScoringMode {
   PARTIAL
 }
 
+enum TimerMode {
+  GLOBAL
+  PER_QUESTION
+}
+
 enum FinishReason {
   NORMAL
   TIMEOUT
@@ -113,6 +118,7 @@ model QuestionCategory {
   id           String  @id @default(uuid())
   name         String
   pointsWeight Float   @default(1.0)
+  timeLimitSeconds Int?
   createdById  String?
 
   createdBy          User?             @relation("CreatedCategories", fields: [createdById], references: [id])
@@ -165,6 +171,7 @@ model Test {
   title            String
   subject          String?
   createdById      String
+  timerMode        TimerMode        @default(GLOBAL)
   timeLimitMin     Int              @default(0)
   maxAttempts      Int              @default(1)
   openFrom         DateTime?

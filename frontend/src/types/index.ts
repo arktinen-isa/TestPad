@@ -39,6 +39,7 @@ export interface Category {
   id: string
   name: string
   pointsWeight: number
+  timeLimitSeconds?: number | null
   questionCount?: number
 }
 
@@ -59,6 +60,7 @@ export interface Test {
   id: string
   title: string
   subject?: string
+  timerMode: 'GLOBAL' | 'PER_QUESTION'
   timeLimitMin: number
   maxAttempts: number
   openFrom?: string
