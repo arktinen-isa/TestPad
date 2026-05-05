@@ -45,16 +45,6 @@ const navLinks = [
     ),
   },
   {
-    to: '/admin/categories',
-    label: 'Категорії',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M7 7h.01M7 12h.01M7 17h.01M10 7h10M10 12h10M10 17h10" />
-      </svg>
-    ),
-  },
-  {
     to: '/admin/tests',
     label: 'Тести',
     icon: (
@@ -99,13 +89,12 @@ export default function AdminLayout() {
       <aside className={`fixed left-0 top-0 bottom-0 ${collapsed ? 'w-20' : 'w-64'} z-40 border-r border-white/10 backdrop-blur-md bg-dark-bg/90 flex flex-col transition-width duration-300 ease-in-out`}>
         {/* Sidebar header */}
         <div className="p-6 border-b border-white/10 flex items-center justify-between">
-          <Logo size={36} />
-          {!collapsed && <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-2 font-bold px-1">Адмін панель</p>}
-          <button onClick={toggleSidebar} className="p-2 rounded-md hover:bg-white/10 transition-colors duration-200">
+          <Logo size={36} hideText={collapsed} />
+          <button onClick={toggleSidebar} className="p-2 rounded-md hover:bg-white/10 transition-colors duration-200 flex-shrink-0">
             {collapsed ? (
-              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>
             ) : (
-              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7M19 19l-7-7 7-7" /></svg>
             )}
           </button>
         </div>
@@ -117,7 +106,7 @@ export default function AdminLayout() {
               key={link.to}
               to={link.to}
               className={({ isActive }) =>
-                `flex items-center gap-2 p-2 rounded-md transition-colors duration-200 ${isActive ? 'bg-white/10' : 'hover:bg-white/5'} ${collapsed ? 'justify-center' : ''}`
+                `flex items-center gap-2 p-2 rounded-md transition-colors duration-200 ${isActive ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-slate-400 hover:text-white'} ${collapsed ? 'justify-center' : ''}`
               }
             >
               {link.icon}
@@ -125,48 +114,6 @@ export default function AdminLayout() {
             </NavLink>
           ))}
         </nav>
-
-        {/* User section */}
-        <div className="p-4 border-t border-white/10">
-          <div className="glass-card p-3 rounded-2xl">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-8 h-8 rounded-full bg-purple-accent/30 border border-purple-accent/40 flex items-center justify-center flex-shrink-0">
-                <span className="text-xs font-bold text-purple-300">
-                  {user?.name?.charAt(0).toUpperCase() || 'A'}
-                </span>
-              </div>
-              {!collapsed && (
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-white truncate leading-none">{user?.name}</p>
-                  <p className="text-xs text-slate-400 mt-0.5 truncate">{user?.email}</p>
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => navigate('/admin/profile')}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-white/5 text-xs text-slate-300 hover:text-white hover:bg-white/10 transition-all duration-200 border border-white/5"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  {collapsed ? '' : 'Профіль'}
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-red-500/10 text-xs text-red-400 hover:bg-red-500/20 transition-all duration-200 border border-red-500/20"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                  {collapsed ? '' : 'Вийти'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
       </aside>
 
       {/* Main area */}
@@ -174,11 +121,43 @@ export default function AdminLayout() {
         {/* Top bar */}
         <header className="sticky top-0 z-30 border-b border-white/10 backdrop-blur-md bg-dark-bg/80 h-16 flex items-center justify-between px-6">
           <div />
-          <div className="flex items-center gap-3">
-            <span className={`status-badge border ${roleColor}`}>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-purple-accent/30 border border-purple-accent/40 flex items-center justify-center">
+                <span className="text-xs font-bold text-purple-300">
+                  {user?.name?.charAt(0).toUpperCase() || 'A'}
+                </span>
+              </div>
+              <div className="text-left hidden sm:block">
+                <p className="text-sm font-semibold text-white leading-none">{user?.name}</p>
+                <p className="text-[10px] text-slate-400 mt-1">{user?.email}</p>
+              </div>
+            </div>
+            <span className={`status-badge border text-xs py-1 px-2 ${roleColor}`}>
               {roleLabel}
             </span>
-            <span className="text-sm text-slate-300 font-medium">{user?.name}</span>
+
+            <div className="h-5 w-px bg-white/10 mx-1" />
+
+            <button
+              onClick={() => navigate('/admin/profile')}
+              title="Профіль"
+              className="p-2 rounded-xl bg-white/5 text-slate-300 hover:text-white hover:bg-white/10 transition-all duration-200 border border-white/5 flex items-center justify-center"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </button>
+            <button
+              onClick={handleLogout}
+              title="Вийти"
+              className="p-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all duration-200 border border-red-500/20 flex items-center justify-center"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
           </div>
         </header>
 

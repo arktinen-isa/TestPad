@@ -10,7 +10,7 @@ export default function FormResultsPage() {
   const { data: form } = useQuery<Form>({
     queryKey: ['form', id],
     queryFn: async () => {
-      const res = await apiClient.get(`/api/forms/${id}`)
+      const res = await apiClient.get(`/forms/${id}`)
       return res.data
     }
   })
@@ -18,7 +18,7 @@ export default function FormResultsPage() {
   const { data: submissions, isLoading } = useQuery<FormSubmission[]>({
     queryKey: ['form-results', id],
     queryFn: async () => {
-      const res = await apiClient.get(`/api/forms/${id}/results`)
+      const res = await apiClient.get(`/forms/${id}/results`)
       return res.data
     }
   })

@@ -9,7 +9,7 @@ export default function StudentFormsPage() {
   const { data: forms, isLoading } = useQuery<Form[]>({
     queryKey: ['student-forms'],
     queryFn: async () => {
-      const res = await apiClient.get('/api/forms')
+      const res = await apiClient.get('/forms')
       return res.data
     }
   })

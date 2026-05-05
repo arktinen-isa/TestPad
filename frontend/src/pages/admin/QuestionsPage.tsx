@@ -44,6 +44,7 @@ export default function QuestionsPage() {
   // Unified Category Management States
   const [newCatName, setNewCatName] = useState('')
   const [newCatWeight, setNewCatWeight] = useState(1)
+  const [showCategoryModal, setShowCategoryModal] = useState(false)
 
   const createCategoryMutation = useMutation({
     mutationFn: async (data: { name: string, pointsWeight: number }) => {
@@ -259,35 +260,16 @@ export default function QuestionsPage() {
           <div className="glass-card p-5 space-y-5">
             <h2 className="font-unbounded text-sm font-bold text-white uppercase tracking-wider">Категорії</h2>
             
-            {/* Create Category form */}
-            <form onSubmit={handleCreateCategory} className="space-y-3">
-              <input
-                type="text"
-                required
-                value={newCatName}
-                onChange={(e) => setNewCatName(e.target.value)}
-                placeholder="Назва категорії..."
-                className="glass-input text-xs py-2.5"
-              />
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  required
-                  min={1}
-                  value={newCatWeight}
-                  onChange={(e) => setNewCatWeight(parseInt(e.target.value))}
-                  placeholder="Вага..."
-                  className="glass-input text-xs py-2.5 w-20"
-                />
-                <button
-                  type="submit"
-                  disabled={createCategoryMutation.isPending}
-                  className="btn-secondary flex-1 text-xs py-2.5"
-                >
-                  {createCategoryMutation.isPending ? '...' : 'Додати'}
-                </button>
-              </div>
-            </form>
+            {/* Create Category button */}
+            <button
+              onClick={() => setShowCategoryModal(true)}
+              className="w-full btn-secondary text-xs py-2.5 flex items-center justify-center gap-1.5 font-bold"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Створити категорію
+            </button>
 
             <div className="h-px bg-white/5" />
 
@@ -496,6 +478,69 @@ export default function QuestionsPage() {
           onClose={() => { setShowModal(false); setEditQuestion(null) }}
           onSave={handleSave}
         />
+      )}
+
+      {showCategoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="glass-card max-w-sm w-full p-6 space-y-6 relative animate-zoom-in">
+            <button
+              onClick={() => setShowCategoryModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <div>
+              <h3 className="font-unbounded text-base font-bold text-white mb-1">Створити категорію</h3>
+              <p className="text-slate-400 text-xs">Додайте нову категорію питань для тестів</p>
+            </div>
+            <form onSubmit={(e) => {
+              handleCreateCategory(e);
+              setShowCategoryModal(false);
+            }} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Назва категорії</label>
+                <input
+                  type="text"
+                  required
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  placeholder="Наприклад: Основи React..."
+                  className="glass-input text-sm py-2.5"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Вага категорії (бали за питання)</label>
+                <input
+                  type="number"
+                  required
+                  min={1}
+                  value={newCatWeight}
+                  onChange={(e) => setNewCatWeight(parseInt(e.target.value))}
+                  placeholder="Наприклад: 5"
+                  className="glass-input text-sm py-2.5"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCategoryModal(false)}
+                  className="flex-1 btn-ghost text-xs py-2.5"
+                >
+                  Скасувати
+                </button>
+                <button
+                  type="submit"
+                  disabled={createCategoryMutation.isPending}
+                  className="flex-1 btn-secondary text-xs py-2.5 disabled:opacity-50"
+                >
+                  {createCategoryMutation.isPending ? 'Створення...' : 'Створити'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {showImportModal && (

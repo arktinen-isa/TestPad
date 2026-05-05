@@ -25,7 +25,7 @@ export default function FormEditor() {
   const { isLoading } = useQuery<Form>({
     queryKey: ['form', id],
     queryFn: async () => {
-      const res = await apiClient.get(`/api/forms/${id}`)
+      const res = await apiClient.get(`/forms/${id}`)
       const form = res.data
       setTitle(form.title)
       setDescription(form.description || '')
@@ -40,9 +40,9 @@ export default function FormEditor() {
     mutationFn: async () => {
       const data = { title, description, status, fields }
       if (isEdit) {
-        await apiClient.patch(`/api/forms/${id}`, data)
+        await apiClient.patch(`/forms/${id}`, data)
       } else {
-        await apiClient.post('/api/forms', data)
+        await apiClient.post('/forms', data)
       }
     },
     onSuccess: () => navigate('/admin/forms')

@@ -13,14 +13,14 @@ export default function FormFillPage() {
   const { data: form, isLoading } = useQuery<Form>({
     queryKey: ['form', id],
     queryFn: async () => {
-      const res = await apiClient.get(`/api/forms/${id}`)
+      const res = await apiClient.get(`/forms/${id}`)
       return res.data
     }
   })
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      await apiClient.post(`/api/forms/${id}/submit`, { values })
+      await apiClient.post(`/forms/${id}/submit`, { values })
     },
     onSuccess: () => navigate('/student/forms'),
     onError: (err: any) => setError(err.response?.data?.error || 'Помилка надсилання')

@@ -11,13 +11,13 @@ export default function FormsPage() {
   const { data: forms, isLoading } = useQuery<Form[]>({
     queryKey: ['forms'],
     queryFn: async () => {
-      const res = await apiClient.get('/api/forms')
+      const res = await apiClient.get('/forms')
       return res.data
     }
   })
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => apiClient.delete(`/api/forms/${id}`),
+    mutationFn: async (id: string) => apiClient.delete(`/forms/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['forms'] })
   })
 
