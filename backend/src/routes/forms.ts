@@ -116,7 +116,7 @@ router.post(
             label: f.label,
             type: f.type,
             required: f.required,
-            correctAnswer: f.correctAnswer ?? null,
+            correctAnswer: f.correctAnswer && f.correctAnswer.trim() !== '' ? f.correctAnswer.trim() : null,
             order: i,
           })),
         },
@@ -193,6 +193,10 @@ router.patch(
       await prisma.formGroup.deleteMany({ where: { formId: id } });
     }
 
+    if (fields !== undefined) {
+      await prisma.formField.deleteMany({ where: { formId: id } });
+    }
+
     const form = await prisma.form.update({
       where: { id },
       data: {
@@ -205,12 +209,11 @@ router.patch(
           create: groupIds.map((groupId) => ({ groupId })),
         } : undefined,
         fields: fields ? {
-          deleteMany: {},
           create: fields.map((f, i) => ({
             label: f.label,
             type: f.type,
             required: f.required,
-            correctAnswer: f.correctAnswer ?? null,
+            correctAnswer: f.correctAnswer && f.correctAnswer.trim() !== '' ? f.correctAnswer.trim() : null,
             order: i,
           })),
         } : undefined,

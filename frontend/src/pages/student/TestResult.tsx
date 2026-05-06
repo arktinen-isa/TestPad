@@ -5,7 +5,6 @@ import apiClient from '../../api/client'
 import { useTestStore } from '../../store/testStore'
 import { AttemptResult } from '../../types'
 import { PASS_MESSAGES, FAIL_MESSAGES } from '../../constants/messages'
-import { getAnonymousAlias } from '../../utils/aliasGenerator'
 
 function getPlural(n: number, one: string, few: string, many: string) {
   const lastDigit = Math.floor(n) % 10;
@@ -42,17 +41,6 @@ export default function TestResult() {
       return res.data
     },
     enabled: !!attemptId,
-  })
-
-  const testId = result?.testId
-  const { data: leaderboard } = useQuery<any[]>({
-    queryKey: ['leaderboard', testId],
-    queryFn: async () => {
-      if (!testId) return []
-      const res = await apiClient.get(`/tests/${testId}/leaderboard`)
-      return res.data
-    },
-    enabled: !!testId,
   })
 
   useEffect(() => {
@@ -195,63 +183,6 @@ export default function TestResult() {
           )}
         </div>
       </div>
-
-      {/* Anonymous Leaderboard */}
-      {testId && leaderboard && leaderboard.length > 0 && (
-        <div className="glass-card p-6 md:p-8 mb-8 relative overflow-hidden shadow-xl border-purple-accent/10">
-          <div className="absolute inset-0 bg-gradient-to-b from-purple-accent/5 to-transparent pointer-events-none" />
-          <div className="flex items-center gap-3 mb-6">
-            <span className="text-2xl">🏆</span>
-            <div>
-              <h2 className="font-unbounded text-lg font-bold text-white">Дошка лідерів (Анонімно)</h2>
-              <p className="text-slate-400 text-xs mt-0.5">Найкращі результати проходження цього тесту</p>
-            </div>
-          </div>
-
-          <div className="space-y-2.5">
-            {leaderboard.map((item: any, index: number) => {
-              const isTop3 = index < 3
-              const medalColors = ['text-yellow-400 bg-yellow-400/10 border-yellow-400/20', 'text-slate-300 bg-slate-300/10 border-slate-300/20', 'text-amber-600 bg-amber-600/10 border-amber-600/20']
-              const alias = getAnonymousAlias(item.studentId)
-              
-              const durationMin = item.startedAt && item.finishedAt 
-                ? Math.round((new Date(item.finishedAt).getTime() - new Date(item.startedAt).getTime()) / 1000 / 60)
-                : null
-
-              return (
-                <div 
-                  key={item.id} 
-                  className={`flex items-center justify-between p-3 rounded-xl border transition-all hover:scale-[1.01] duration-200 ${
-                    isTop3 
-                      ? 'bg-purple-accent/5 border-purple-accent/20' 
-                      : 'bg-white/[0.02] border-white/5'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs border ${
-                      isTop3 ? medalColors[index] : 'text-slate-400 bg-white/5 border-white/10'
-                    }`}>
-                      {index + 1}
-                    </span>
-                    <span className="text-sm font-semibold text-white">{alias}</span>
-                  </div>
-
-                  <div className="flex items-center gap-4 text-right">
-                    {durationMin !== null && (
-                      <span className="text-xs text-slate-500 hidden sm:inline">
-                        ⏱️ {durationMin} хв
-                      </span>
-                    )}
-                    <span className="font-unbounded text-sm font-black text-purple-accent">
-                      {item.percentage}%
-                    </span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
 
 
 
