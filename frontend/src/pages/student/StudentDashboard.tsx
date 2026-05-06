@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import apiClient from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
-import { StudentTest } from '../../types'
+import { StudentTest, Form } from '../../types'
 import { useTestStore } from '../../store/testStore'
 import { useState } from 'react'
 import { generateCertificate } from '../../utils/certificateGenerator'
@@ -233,6 +233,8 @@ function TestCard({ test }: { test: StudentTest }) {
 
 export default function StudentDashboard() {
   const { user } = useAuthStore()
+  const navigate = useNavigate()
+  const [activeTab, setActiveTab] = useState<'tests' | 'forms'>('tests')
 
   const { data: tests, isLoading, error } = useQuery<StudentTest[]>({
     queryKey: ['student-tests'],
@@ -244,22 +246,13 @@ export default function StudentDashboard() {
     gcTime: 1000 * 60 * 5,
   })
 
-  const { data: gamificationStatus } = useQuery({
-    queryKey: ['gamification-status'],
+  const { data: forms, isLoading: isFormsLoading } = useQuery<Form[]>({
+    queryKey: ['student-forms'],
     queryFn: async () => {
-      const res = await apiClient.get('/gamification/status')
+      const res = await apiClient.get('/forms')
       return res.data
     },
-    staleTime: 1000 * 30,
-  })
-
-  const { data: leaderboard } = useQuery({
-    queryKey: ['gamification-leaderboard'],
-    queryFn: async () => {
-      const res = await apiClient.get('/gamification/leaderboard')
-      return res.data
-    },
-    staleTime: 1000 * 30,
+    staleTime: 1000 * 60,
   })
 
   return (
@@ -269,7 +262,7 @@ export default function StudentDashboard() {
           Вітаємо, {user?.name ? (user.name.split(' ').length > 1 ? user.name.split(' ')[1] : user.name) : 'Студент'} 👋
         </h1>
         <p className="text-slate-400">
-          Ваші досягнення та навчальний прогрес
+          Ваш персональний кабінет для проходження тестів та опитувань
         </p>
       </div>
 
@@ -279,73 +272,32 @@ export default function StudentDashboard() {
         </div>
       )}
 
-      {/* Gamification Header Panel */}
-      {gamificationStatus && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-          {/* Streak Card */}
-          <div className="glass-card p-5 bg-gradient-to-br from-amber-500/10 to-orange-500/5 border-amber-500/20 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-2xl select-none">
-              🔥
-            </div>
-            <div>
-              <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Ударний темп</p>
-              <h3 className="font-unbounded text-lg font-bold text-white mt-0.5">
-                {gamificationStatus.streakCount} {getPlural(gamificationStatus.streakCount, 'день', 'дні', 'днів')} поспіль
-              </h3>
-              <p className="text-amber-400/80 text-xs mt-0.5">
-                {gamificationStatus.streakCount > 0 ? 'Продовжуйте серію завтра!' : 'Складіть тест сьогодні для серії!'}
-              </p>
-            </div>
-          </div>
-
-          {/* XP Card */}
-          <div className="glass-card p-5 bg-gradient-to-br from-purple-500/10 to-indigo-500/5 border-purple-500/20 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-2xl select-none">
-              ✨
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Досвід (XP)</p>
-              <h3 className="font-unbounded text-lg font-bold text-white mt-0.5">
-                {gamificationStatus.xp} XP
-              </h3>
-              <div className="w-full h-2 bg-white/5 border border-white/10 rounded-full mt-2 overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 transition-all duration-500" 
-                  style={{ width: `${Math.min(100, (gamificationStatus.xp % 100))}%` }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Badges Card */}
-          <div className="glass-card p-5 bg-gradient-to-br from-pink-500/10 to-rose-500/5 border-pink-500/20 flex flex-col justify-center">
-            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Нагороди та медалі</p>
-            <div className="flex items-center gap-2 overflow-x-auto py-1 scrollbar-none">
-              {gamificationStatus.badges && gamificationStatus.badges.length > 0 ? (
-                gamificationStatus.badges.map((b: any, i: number) => (
-                  <div 
-                    key={i} 
-                    className="w-10 h-10 rounded-xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-lg flex-shrink-0 cursor-help group/badge relative"
-                  >
-                    {b.imageUrl || '🏅'}
-                    <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-2.5 py-1.5 rounded-xl bg-gray-950/95 border border-white/10 text-[10px] text-white opacity-0 group-hover/badge:opacity-100 pointer-events-none whitespace-nowrap transition-all z-20 shadow-xl">
-                      {b.title}: {b.description} (+{b.xpBonus} XP)
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-slate-500 text-xs py-1">Складіть тест, щоб отримати нагороди!</p>
-              )}
-            </div>
-          </div>
+      <div className="w-full space-y-6">
+        <div className="flex gap-2 p-1 rounded-2xl bg-white/[0.02] border border-white/5 w-fit">
+          <button
+            onClick={() => setActiveTab('tests')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
+              activeTab === 'tests'
+                ? 'bg-purple-accent text-white shadow-[0_0_20px_rgba(147,51,234,0.3)]'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            📝 Тести ({tests?.length || 0})
+          </button>
+          <button
+            onClick={() => setActiveTab('forms')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
+              activeTab === 'forms'
+                ? 'bg-purple-accent text-white shadow-[0_0_20px_rgba(147,51,234,0.3)]'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            📋 Опитування ({forms?.length || 0})
+          </button>
         </div>
-      )}
 
-      {/* Main Dual Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-        {/* Left: Tests list */}
-        <div className="lg:col-span-3">
-          {isLoading ? (
+        {activeTab === 'tests' && (
+          isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
             </div>
@@ -370,47 +322,66 @@ export default function StudentDashboard() {
                 На даний момент для вашої групи немає доступних тестів.
               </p>
             </div>
-          )}
-        </div>
+          )
+        )}
 
-        {/* Right: Sleek Leaderboard */}
-        {leaderboard && leaderboard.length > 0 && (
-          <div className="lg:col-span-1 glass-card p-5 space-y-4 animate-fade-in">
-            <h2 className="font-unbounded text-xs font-bold text-white uppercase tracking-wider pb-2 border-b border-white/5">Таблиця лідерів</h2>
-            <div className="space-y-2">
-              {leaderboard.map((l: any, i: number) => (
-                <div 
-                  key={l.id} 
-                  className={`flex items-center gap-3 p-2 rounded-xl border ${
-                    l.id === user?.id 
-                      ? 'bg-purple-accent/10 border-purple-accent/30' 
-                      : 'border-transparent hover:bg-white/5'
-                  }`}
-                >
-                  <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black ${
-                    i === 0 ? 'bg-amber-500/20 text-amber-400' :
-                    i === 1 ? 'bg-slate-300/20 text-slate-300' :
-                    i === 2 ? 'bg-amber-700/20 text-amber-600' :
-                    'text-slate-500'
-                  }`}>
-                    {i + 1}
-                  </span>
-                  <div className="flex-1 min-w-0 text-left">
-                    <p className="text-white text-xs font-semibold truncate">{l.name}</p>
-                    <p className="text-slate-500 text-[9px] truncate">
-                      {l.groups?.[0]?.group?.name || 'Клас'}
-                    </p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-purple-400 text-xs font-bold">{l.xp} XP</p>
-                    {l.streakCount > 0 && (
-                      <p className="text-amber-500 text-[9px] font-bold">🔥 {l.streakCount}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
+        {activeTab === 'forms' && (
+          isFormsLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {Array.from({ length: 2 }).map((_, i) => <SkeletonCard key={i} />)}
             </div>
-          </div>
+          ) : forms && forms.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {forms.map((form) => {
+                const isSubmitted = form.submissions && form.submissions.length > 0;
+                return (
+                  <div key={form.id} className="glass-card p-6 flex flex-col justify-between hover:border-purple-accent/30 transition-all duration-300 group">
+                    <div>
+                      <div className="flex items-start justify-between gap-3 mb-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded-md bg-purple-accent/15 text-purple-300 text-[10px] font-black uppercase tracking-wider">
+                            {form._count?.fields || 0} питань
+                          </span>
+                          {form.openUntil && (
+                            <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-400 text-[10px] font-bold">
+                              🕒 До: {new Date(form.openUntil).toLocaleDateString('uk-UA')}
+                            </span>
+                          )}
+                        </div>
+                        <span className={`status-badge ${isSubmitted ? 'status-open' : 'status-draft'}`}>
+                          {isSubmitted ? 'Заповнено ✓' : 'Не заповнено'}
+                        </span>
+                      </div>
+                      <h3 className="font-unbounded text-base font-bold text-white group-hover:text-purple-300 transition-colors duration-200 mb-2 leading-snug">
+                        {form.title}
+                      </h3>
+                      <p className="text-slate-400 text-sm mb-6 line-clamp-2">{form.description || 'Опис відсутній'}</p>
+                    </div>
+                    <button 
+                      onClick={() => navigate(`/student/forms/${form.id}`)}
+                      className={`w-full py-3 px-6 rounded-xl font-semibold text-sm transition-all duration-200 text-center ${
+                        isSubmitted 
+                          ? 'bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300' 
+                          : 'btn-primary'
+                      }`}
+                    >
+                      {isSubmitted ? 'Редагувати відповідь' : 'Пройти опитування'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="glass-card p-12 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-purple-accent/10 border border-purple-accent/20 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <h3 className="font-unbounded text-lg font-semibold text-white mb-2">Опитування відсутні</h3>
+              <p className="text-slate-400 text-sm">На даний момент для вас немає активних опитувань.</p>
+            </div>
+          )
         )}
       </div>
     </div>

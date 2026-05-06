@@ -187,6 +187,7 @@ export interface Form {
   openUntil?: string | null
   groups?: { groupId: string; group: Group }[]
   fields?: FormField[]
+  submissions?: FormSubmission[]
   _count?: { submissions: number; fields: number }
 }
 

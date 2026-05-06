@@ -74,13 +74,18 @@ router.get(
       };
     }
 
+    const include: any = {
+      groups: { include: { group: { select: { id: true, name: true } } } },
+      _count: { select: { submissions: true, fields: true } }
+    };
+    if (user.role === 'STUDENT') {
+      include.submissions = { where: { userId: user.userId }, select: { id: true, submittedAt: true } };
+    }
+
     const forms = await prisma.form.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      include: {
-        groups: { include: { group: { select: { id: true, name: true } } } },
-        _count: { select: { submissions: true, fields: true } }
-      }
+      include
     });
 
     res.json(forms);
