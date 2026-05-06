@@ -221,7 +221,7 @@ export default function FormEditor() {
               </div>
             </div>
 
-            <div className="border-t border-white/5 pt-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="border-t border-white/5 pt-6 grid grid-cols-1 sm:grid-cols-3 gap-6 items-end">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Статус</label>
                 <select 
