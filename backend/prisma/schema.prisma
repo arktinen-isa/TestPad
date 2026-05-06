@@ -89,6 +89,10 @@ model User {
   attempts      Attempt[]
   formSubmissions FormSubmission[]
   refreshTokens RefreshToken[]
+  xp             Int      @default(0)
+  streakCount    Int      @default(0)
+  lastActiveDate DateTime?
+  badges         UserBadge[]
 
   @@index([role])
 }
@@ -99,7 +103,7 @@ model Group {
 
   users      UserGroup[]
   testGroups TestGroup[]
-  forms      Form[]
+  formGroups FormGroup[]
 
   @@index([name])
 }
@@ -148,6 +152,10 @@ model Question {
   answers          Answer[]
   testQuestions    TestQuestion[]
   attemptQuestions AttemptQuestion[]
+
+  difficultyIndex     Float?
+  discriminationIndex Float?
+  totalResponsesCount Int          @default(0)
 
   @@index([categoryId])
   @@index([createdById])
@@ -314,17 +322,26 @@ model Form {
   createdById  String
   createdAt    DateTime @default(now())
   status       TestStatus @default(DRAFT)
-  groupId      String?
   openFrom     DateTime?
   openUntil    DateTime?
 
-  createdBy    User          @relation("CreatedForms", fields: [createdById], references: [id])
-  group        Group?        @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  createdBy    User             @relation("CreatedForms", fields: [createdById], references: [id])
+  groups       FormGroup[]
   fields       FormField[]
   submissions  FormSubmission[]
 
   @@index([createdById])
   @@index([status])
+}
+
+model FormGroup {
+  formId  String
+  groupId String
+
+  form  Form  @relation(fields: [formId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([formId, groupId])
   @@index([groupId])
 }
 
@@ -364,9 +381,30 @@ model FormFieldValue {
   value          String?        @db.Text
 
   submission     FormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-  field          FormField      @relation(fields: [fieldId], references: [id])
+  field          FormField      @relation(fields: [fieldId], references: [id], onDelete: Cascade)
 
   @@index([submissionId])
   @@index([fieldId])
+}
+
+model Badge {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  imageUrl    String
+  xpBonus     Int      @default(100)
+
+  users       UserBadge[]
+}
+
+model UserBadge {
+  userId    String
+  badgeId   String
+  awardedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@id([userId, badgeId])
 }
 

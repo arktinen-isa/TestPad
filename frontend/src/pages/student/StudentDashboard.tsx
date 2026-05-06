@@ -234,28 +234,42 @@ function TestCard({ test }: { test: StudentTest }) {
 export default function StudentDashboard() {
   const { user } = useAuthStore()
 
-  // REMOVED: queryClient.invalidateQueries on every mount for performance
-  // We rely on staleTime and manual invalidation when starting/finishing tests
-
-
   const { data: tests, isLoading, error } = useQuery<StudentTest[]>({
     queryKey: ['student-tests'],
     queryFn: async () => {
       const res = await apiClient.get('/tests')
       return res.data.data
     },
-    staleTime: 1000 * 60, // 1 minute of stale time to reduce server load
-    gcTime: 1000 * 60 * 5, // Keep in cache for 5 minutes
+    staleTime: 1000 * 60,
+    gcTime: 1000 * 60 * 5,
+  })
+
+  const { data: gamificationStatus } = useQuery({
+    queryKey: ['gamification-status'],
+    queryFn: async () => {
+      const res = await apiClient.get('/gamification/status')
+      return res.data
+    },
+    staleTime: 1000 * 30,
+  })
+
+  const { data: leaderboard } = useQuery({
+    queryKey: ['gamification-leaderboard'],
+    queryFn: async () => {
+      const res = await apiClient.get('/gamification/leaderboard')
+      return res.data
+    },
+    staleTime: 1000 * 30,
   })
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in text-left">
       <div className="mb-8">
         <h1 className="font-unbounded text-2xl sm:text-3xl font-bold text-white mb-2">
           Вітаємо, {user?.name ? (user.name.split(' ').length > 1 ? user.name.split(' ')[1] : user.name) : 'Студент'} 👋
         </h1>
         <p className="text-slate-400">
-          Ваші доступні тести та результати
+          Ваші досягнення та навчальний прогрес
         </p>
       </div>
 
@@ -265,32 +279,140 @@ export default function StudentDashboard() {
         </div>
       )}
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
-        </div>
-      ) : tests && tests.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {tests.map((test) => (
-            <TestCard key={test.id} test={test} />
-          ))}
-        </div>
-      ) : (
-        <div className="glass-card p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-purple-accent/10 border border-purple-accent/20 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
+      {/* Gamification Header Panel */}
+      {gamificationStatus && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+          {/* Streak Card */}
+          <div className="glass-card p-5 bg-gradient-to-br from-amber-500/10 to-orange-500/5 border-amber-500/20 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-2xl select-none">
+              🔥
+            </div>
+            <div>
+              <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Ударний темп</p>
+              <h3 className="font-unbounded text-lg font-bold text-white mt-0.5">
+                {gamificationStatus.streakCount} {getPlural(gamificationStatus.streakCount, 'день', 'дні', 'днів')} поспіль
+              </h3>
+              <p className="text-amber-400/80 text-xs mt-0.5">
+                {gamificationStatus.streakCount > 0 ? 'Продовжуйте серію завтра!' : 'Складіть тест сьогодні для серії!'}
+              </p>
+            </div>
           </div>
-          <h3 className="font-unbounded text-lg font-semibold text-white mb-2">
-            Тести відсутні
-          </h3>
-          <p className="text-slate-400 text-sm">
-            На даний момент для вашої групи немає доступних тестів.
-          </p>
+
+          {/* XP Card */}
+          <div className="glass-card p-5 bg-gradient-to-br from-purple-500/10 to-indigo-500/5 border-purple-500/20 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-2xl select-none">
+              ✨
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Досвід (XP)</p>
+              <h3 className="font-unbounded text-lg font-bold text-white mt-0.5">
+                {gamificationStatus.xp} XP
+              </h3>
+              <div className="w-full h-2 bg-white/5 border border-white/10 rounded-full mt-2 overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 transition-all duration-500" 
+                  style={{ width: `${Math.min(100, (gamificationStatus.xp % 100))}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Badges Card */}
+          <div className="glass-card p-5 bg-gradient-to-br from-pink-500/10 to-rose-500/5 border-pink-500/20 flex flex-col justify-center">
+            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Нагороди та медалі</p>
+            <div className="flex items-center gap-2 overflow-x-auto py-1 scrollbar-none">
+              {gamificationStatus.badges && gamificationStatus.badges.length > 0 ? (
+                gamificationStatus.badges.map((b: any, i: number) => (
+                  <div 
+                    key={i} 
+                    className="w-10 h-10 rounded-xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-lg flex-shrink-0 cursor-help group/badge relative"
+                  >
+                    {b.imageUrl || '🏅'}
+                    <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-2.5 py-1.5 rounded-xl bg-gray-950/95 border border-white/10 text-[10px] text-white opacity-0 group-hover/badge:opacity-100 pointer-events-none whitespace-nowrap transition-all z-20 shadow-xl">
+                      {b.title}: {b.description} (+{b.xpBonus} XP)
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-slate-500 text-xs py-1">Складіть тест, щоб отримати нагороди!</p>
+              )}
+            </div>
+          </div>
         </div>
       )}
+
+      {/* Main Dual Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+        {/* Left: Tests list */}
+        <div className="lg:col-span-3">
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
+            </div>
+          ) : tests && tests.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {tests.map((test) => (
+                <TestCard key={test.id} test={test} />
+              ))}
+            </div>
+          ) : (
+            <div className="glass-card p-12 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-purple-accent/10 border border-purple-accent/20 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </div>
+              <h3 className="font-unbounded text-lg font-semibold text-white mb-2">
+                Тести відсутні
+              </h3>
+              <p className="text-slate-400 text-sm">
+                На даний момент для вашої групи немає доступних тестів.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Right: Sleek Leaderboard */}
+        {leaderboard && leaderboard.length > 0 && (
+          <div className="lg:col-span-1 glass-card p-5 space-y-4 animate-fade-in">
+            <h2 className="font-unbounded text-xs font-bold text-white uppercase tracking-wider pb-2 border-b border-white/5">Таблиця лідерів</h2>
+            <div className="space-y-2">
+              {leaderboard.map((l: any, i: number) => (
+                <div 
+                  key={l.id} 
+                  className={`flex items-center gap-3 p-2 rounded-xl border ${
+                    l.id === user?.id 
+                      ? 'bg-purple-accent/10 border-purple-accent/30' 
+                      : 'border-transparent hover:bg-white/5'
+                  }`}
+                >
+                  <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black ${
+                    i === 0 ? 'bg-amber-500/20 text-amber-400' :
+                    i === 1 ? 'bg-slate-300/20 text-slate-300' :
+                    i === 2 ? 'bg-amber-700/20 text-amber-600' :
+                    'text-slate-500'
+                  }`}>
+                    {i + 1}
+                  </span>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-white text-xs font-semibold truncate">{l.name}</p>
+                    <p className="text-slate-500 text-[9px] truncate">
+                      {l.groups?.[0]?.group?.name || 'Клас'}
+                    </p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-purple-400 text-xs font-bold">{l.xp} XP</p>
+                    {l.streakCount > 0 && (
+                      <p className="text-amber-500 text-[9px] font-bold">🔥 {l.streakCount}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

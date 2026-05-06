@@ -8,6 +8,29 @@ const router = Router();
 
 router.use(authenticate);
 
+// TZI Security Audit Logger
+function logSecurityEvent(userId: string, role: string, action: string, details: any, ip?: string) {
+  console.log(JSON.stringify({
+    timestamp: new Date().toISOString(),
+    level: 'SECURITY_AUDIT',
+    userId,
+    role,
+    action,
+    details,
+    ip: ip || 'unknown'
+  }));
+}
+
+// TZI Input Sanitization against Stored XSS
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
 const formFieldSchema = z.object({
   label: z.string().min(1).max(500),
   type: z.enum(['TEXT', 'BOOLEAN', 'INTEGER', 'FLOAT']),
@@ -19,7 +42,7 @@ const createFormSchema = z.object({
   title: z.string().min(1).max(255),
   description: z.string().optional(),
   status: z.enum(['DRAFT', 'OPEN', 'CLOSED']).default('DRAFT'),
-  groupId: z.string().nullable().optional(),
+  groupIds: z.array(z.string().uuid()).optional(),
   openFrom: z.string().nullable().optional(),
   openUntil: z.string().nullable().optional(),
   fields: z.array(formFieldSchema),
@@ -41,12 +64,12 @@ router.get(
         where: { userId: user.userId },
         select: { groupId: true }
       });
-      const groupIds = userGroups.map(ug => ug.groupId);
+      const studentGroupIds = userGroups.map(ug => ug.groupId);
       where = {
         status: 'OPEN',
         OR: [
-          { groupId: null },
-          { groupId: { in: groupIds } }
+          { groups: { none: {} } },
+          { groups: { some: { groupId: { in: studentGroupIds } } } }
         ]
       };
     }
@@ -55,7 +78,7 @@ router.get(
       where,
       orderBy: { createdAt: 'desc' },
       include: {
-        group: { select: { id: true, name: true } },
+        groups: { include: { group: { select: { id: true, name: true } } } },
         _count: { select: { submissions: true, fields: true } }
       }
     });
@@ -69,7 +92,7 @@ router.post(
   '/',
   authorize('ADMIN', 'TEACHER'),
   asyncHandler(async (req, res) => {
-    const { title, description, status, groupId, openFrom, openUntil, fields } = createFormSchema.parse(req.body);
+    const { title, description, status, groupIds, openFrom, openUntil, fields } = createFormSchema.parse(req.body);
     const user = req.user!;
 
     const form = await prisma.form.create({
@@ -77,10 +100,12 @@ router.post(
         title,
         description,
         status,
-        groupId: groupId ?? null,
         openFrom: openFrom ? new Date(openFrom) : null,
         openUntil: openUntil ? new Date(openUntil) : null,
         createdById: user.userId,
+        groups: groupIds
+          ? { create: groupIds.map((groupId) => ({ groupId })) }
+          : undefined,
         fields: {
           create: fields.map((f, i) => ({
             label: f.label,
@@ -91,8 +116,10 @@ router.post(
           })),
         },
       },
-      include: { fields: true },
+      include: { fields: true, groups: { include: { group: { select: { id: true, name: true } } } } },
     });
+
+    logSecurityEvent(user.userId, user.role, 'FORM_CREATE', { formId: form.id, title: form.title }, req.ip);
 
     res.status(201).json(form);
   })
@@ -109,6 +136,7 @@ router.get(
       where: { id },
       include: { 
         fields: { orderBy: { order: 'asc' } },
+        groups: { include: { group: { select: { id: true, name: true } } } },
         _count: { select: { submissions: true } }
       },
     });
@@ -117,9 +145,23 @@ router.get(
       return res.status(404).json({ error: 'Form not found' });
     }
 
-    // RBAC check
+    // TZI Access Control & IDOR Protection:
     if (user.role === 'TEACHER' && form.createdById !== user.userId) {
+      logSecurityEvent(user.userId, user.role, 'UNAUTHORIZED_ACCESS_ATTEMPT', { formId: id }, req.ip);
       return res.status(403).json({ error: 'Access denied' });
+    }
+
+    if (user.role === 'STUDENT' && form.groups && form.groups.length > 0) {
+      const userGroups = await prisma.userGroup.findMany({
+        where: { userId: user.userId },
+        select: { groupId: true }
+      });
+      const studentGroupIds = userGroups.map(ug => ug.groupId);
+      const hasAccess = form.groups.some(g => studentGroupIds.includes(g.groupId));
+      if (!hasAccess) {
+        logSecurityEvent(user.userId, user.role, 'UNAUTHORIZED_ACCESS_ATTEMPT', { formId: id }, req.ip);
+        return res.status(403).json({ error: 'Ви не належите до групи, якій призначена ця форма' });
+      }
     }
 
     res.json(form);
@@ -133,12 +175,17 @@ router.patch(
   asyncHandler(async (req, res) => {
     const { id } = req.params;
     const user = req.user!;
-    const { title, description, status, groupId, openFrom, openUntil, fields } = updateFormSchema.parse(req.body);
+    const { title, description, status, groupIds, openFrom, openUntil, fields } = updateFormSchema.parse(req.body);
 
     const existing = await prisma.form.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ error: 'Form not found' });
     if (user.role === 'TEACHER' && existing.createdById !== user.userId) {
+      logSecurityEvent(user.userId, user.role, 'UNAUTHORIZED_FORM_EDIT_ATTEMPT', { formId: id }, req.ip);
       return res.status(403).json({ error: 'Access denied' });
+    }
+
+    if (groupIds !== undefined) {
+      await prisma.formGroup.deleteMany({ where: { formId: id } });
     }
 
     const form = await prisma.form.update({
@@ -147,9 +194,11 @@ router.patch(
         title,
         description,
         status,
-        groupId: groupId !== undefined ? groupId : undefined,
         openFrom: openFrom !== undefined ? (openFrom ? new Date(openFrom) : null) : undefined,
         openUntil: openUntil !== undefined ? (openUntil ? new Date(openUntil) : null) : undefined,
+        groups: groupIds !== undefined ? {
+          create: groupIds.map((groupId) => ({ groupId })),
+        } : undefined,
         fields: fields ? {
           deleteMany: {},
           create: fields.map((f, i) => ({
@@ -161,8 +210,10 @@ router.patch(
           })),
         } : undefined,
       },
-      include: { fields: true },
+      include: { fields: true, groups: { include: { group: { select: { id: true, name: true } } } } },
     });
+
+    logSecurityEvent(user.userId, user.role, 'FORM_UPDATE', { formId: form.id }, req.ip);
 
     res.json(form);
   })
@@ -178,7 +229,7 @@ router.post(
 
     const form = await prisma.form.findUnique({
       where: { id },
-      include: { fields: true },
+      include: { fields: true, groups: true },
     });
 
     if (!form || form.status !== 'OPEN') {
@@ -190,6 +241,7 @@ router.post(
       where: { formId: id, userId: user.userId }
     });
     if (existingSubmission) {
+      logSecurityEvent(user.userId, user.role, 'FORM_DUPLICATE_SUBMIT_ATTEMPT', { formId: id }, req.ip);
       return res.status(400).json({ error: 'Ви вже заповнили цю форму (дозволено лише 1 спробу)' });
     }
 
@@ -203,11 +255,13 @@ router.post(
     }
 
     // 3. Enforce group targeting
-    if (form.groupId) {
+    if (form.groups && form.groups.length > 0) {
+      const targetedGroupIds = form.groups.map(g => g.groupId);
       const userGroup = await prisma.userGroup.findFirst({
-        where: { userId: user.userId, groupId: form.groupId }
+        where: { userId: user.userId, groupId: { in: targetedGroupIds } }
       });
       if (!userGroup) {
+        logSecurityEvent(user.userId, user.role, 'UNAUTHORIZED_SUBMIT_ATTEMPT', { formId: id }, req.ip);
         return res.status(403).json({ error: 'Ви не належите до групи, якій призначена ця форма' });
       }
     }
@@ -241,11 +295,13 @@ router.post(
         values: {
           create: Object.entries(values).map(([fieldId, value]) => ({
             fieldId,
-            value: String(value),
+            value: escapeHtml(String(value)), // TZI Sanitization
           })),
         },
       },
     });
+
+    logSecurityEvent(user.userId, user.role, 'FORM_SUBMIT', { formId: id, submissionId: submission.id }, req.ip);
 
     res.status(201).json(submission);
   })
@@ -258,6 +314,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const { id } = req.params;
     const user = req.user!;
+    const groupId = req.query['groupId'] as string | undefined;
 
     const form = await prisma.form.findUnique({
       where: { id },
@@ -265,17 +322,32 @@ router.get(
 
     if (!form) return res.status(404).json({ error: 'Form not found' });
     if (user.role === 'TEACHER' && form.createdById !== user.userId) {
+      logSecurityEvent(user.userId, user.role, 'UNAUTHORIZED_RESULTS_ACCESS_ATTEMPT', { formId: id }, req.ip);
       return res.status(403).json({ error: 'Access denied' });
     }
 
+    const where: any = { formId: id };
+    if (groupId) {
+      where.user = { groups: { some: { groupId } } };
+    }
+
     const submissions = await prisma.formSubmission.findMany({
-      where: { formId: id },
+      where,
       include: {
-        user: { select: { id: true, name: true, email: true } },
+        user: { 
+          select: { 
+            id: true, 
+            name: true, 
+            email: true,
+            groups: { select: { group: { select: { name: true } } } }
+          } 
+        },
         values: true,
       },
       orderBy: { submittedAt: 'desc' },
     });
+
+    logSecurityEvent(user.userId, user.role, 'FORM_RESULTS_ACCESS', { formId: id }, req.ip);
 
     res.json(submissions);
   })
@@ -292,10 +364,14 @@ router.delete(
     const form = await prisma.form.findUnique({ where: { id } });
     if (!form) return res.status(404).json({ error: 'Form not found' });
     if (user.role === 'TEACHER' && form.createdById !== user.userId) {
+      logSecurityEvent(user.userId, user.role, 'UNAUTHORIZED_DELETE_ATTEMPT', { formId: id }, req.ip);
       return res.status(403).json({ error: 'Access denied' });
     }
 
     await prisma.form.delete({ where: { id } });
+    
+    logSecurityEvent(user.userId, user.role, 'FORM_DELETE', { formId: id }, req.ip);
+    
     res.status(204).send();
   })
 );

@@ -5,6 +5,7 @@ import { asyncHandler } from '../middleware/errorHandler';
 import { authenticate, authorize } from '../middleware/auth';
 import { sampleFromBank, sampleByCategory } from '../services/samplingService';
 import { scoreAttempt } from '../services/scoringService';
+import { calculatePsychometrics, updateDailyStreak } from '../services/analyticsService';
 
 const router = Router();
 router.use(authenticate);
@@ -56,6 +57,8 @@ async function finishAttempt(
     select: {
       id: true,
       startedAt: true,
+      studentId: true,
+      testId: true,
       test: {
         select: {
           multiScoringMode: true,
@@ -105,6 +108,14 @@ async function finishAttempt(
     where: { id: attemptId },
     data: { finishedAt: new Date(), finishReason: reason, score, maxScore },
   }));
+
+  // Trigger post-attempt services
+  try {
+    await updateDailyStreak(attempt.studentId);
+    await calculatePsychometrics(attempt.testId);
+  } catch (err) {
+    console.error('Error in post-attempt services:', err);
+  }
 
   const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100 * 100) / 100 : 0;
   const passed =

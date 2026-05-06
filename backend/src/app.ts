@@ -19,6 +19,7 @@ import dashboardRouter from './routes/dashboard';
 import uploadRouter from './routes/upload';
 import suspiciousRouter from './routes/suspicious';
 import formsRouter from './routes/forms';
+import gamificationRouter from './routes/gamification';
 
 const app = express();
 
@@ -75,6 +76,7 @@ app.use('/api/dashboard', dashboardRouter);
 app.use('/api/upload', uploadRouter);
 app.use('/api/suspicious', suspiciousRouter);
 app.use('/api/forms', formsRouter);
+app.use('/api/gamification', gamificationRouter);
 
 // Serve React SPA — must be after all API routes
 const frontendDist = path.join(__dirname, '..', 'public');

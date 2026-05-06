@@ -405,6 +405,19 @@ export default function QuestionsPage() {
                               ? `${(q.orderingItems as any)?.length || 0} кроків` 
                               : `${q.answers?.length || 0} відповідей`}
                           </p>
+                          {q.totalResponsesCount && q.totalResponsesCount > 0 ? (
+                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">
+                                Складність (P): {q.difficultyIndex !== undefined && q.difficultyIndex !== null ? `${Math.round(q.difficultyIndex * 100)}%` : '—'}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-pink-500/10 text-pink-400 border border-pink-500/20 font-medium">
+                                Розрізнення (D): {q.discriminationIndex !== undefined && q.discriminationIndex !== null ? q.discriminationIndex.toFixed(2) : '—'}
+                              </span>
+                              <span className="text-[10px] text-slate-500">
+                                ({q.totalResponsesCount} відп.)
+                              </span>
+                            </div>
+                          ) : null}
                         </td>
                         <td className="px-5 py-4">
                           <span className={`status-badge border ${TYPE_COLORS[q.type]}`}>

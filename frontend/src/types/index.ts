@@ -14,6 +14,9 @@ export interface Question {
   orderingItems?: string[]
   // Optional per‑question time limit in seconds
   timeLimitSeconds?: number
+  difficultyIndex?: number | null
+  discriminationIndex?: number | null
+  totalResponsesCount?: number
 }
 
 export type TestStatus = 'DRAFT' | 'OPEN' | 'CLOSED'
@@ -26,6 +29,10 @@ export interface User {
   role: Role
   createdAt: string
   groups?: { group: { id: string, name: string } }[]
+  xp?: number
+  streakCount?: number
+  lastActiveDate?: string
+  badges?: any[]
 }
 
 export interface Group {
@@ -176,10 +183,9 @@ export interface Form {
   createdById: string
   createdAt: string
   status: TestStatus
-  groupId?: string | null
   openFrom?: string | null
   openUntil?: string | null
-  group?: { id: string; name: string } | null
+  groups?: { groupId: string; group: Group }[]
   fields?: FormField[]
   _count?: { submissions: number; fields: number }
 }

@@ -87,8 +87,10 @@ export default function FormsPage() {
             <h3 className="font-unbounded text-base font-bold text-white mb-2 line-clamp-1">{form.title}</h3>
             
             <div className="flex flex-col gap-1 mb-3">
-              {form.group ? (
-                <span className="text-[10px] text-purple-300 font-extrabold uppercase">👥 Група: {form.group.name}</span>
+              {form.groups && form.groups.length > 0 ? (
+                <span className="text-[10px] text-purple-300 font-extrabold uppercase line-clamp-1">
+                  👥 Групи: {form.groups.map(g => g.group.name).join(', ')}
+                </span>
               ) : (
                 <span className="text-[10px] text-slate-500 font-extrabold uppercase">🌐 Спільна форма</span>
               )}

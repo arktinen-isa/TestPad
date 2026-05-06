@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../../api/client'
 import { Form, FormFieldType, TestStatus, Group } from '../../types'
 import * as XLSX from 'xlsx'
@@ -16,13 +16,15 @@ export default function FormEditor() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const isEdit = !!id
+  const queryClient = useQueryClient()
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [status, setStatus] = useState<TestStatus>('DRAFT')
-  const [groupId, setGroupId] = useState('')
+  const [groupIds, setGroupIds] = useState<string[]>([])
   const [openFrom, setOpenFrom] = useState('')
   const [openUntil, setOpenUntil] = useState('')
+  const [error, setError] = useState<string | null>(null)
   const [fields, setFields] = useState<FieldInput[]>([
     { label: '', type: 'TEXT', required: true, correctAnswer: '' }
   ])
@@ -35,33 +37,49 @@ export default function FormEditor() {
     },
   })
 
-  const { isLoading } = useQuery<Form>({
+  const { data: form, isLoading } = useQuery<Form>({
     queryKey: ['form', id],
     queryFn: async () => {
       const res = await apiClient.get(`/forms/${id}`)
-      const form = res.data
-      setTitle(form.title)
-      setDescription(form.description || '')
-      setStatus(form.status)
-      setGroupId(form.groupId || '')
-      setOpenFrom(form.openFrom ? form.openFrom.substring(0, 16) : '')
-      setOpenUntil(form.openUntil ? form.openUntil.substring(0, 16) : '')
-      setFields(form.fields || [])
-      return form
+      return res.data
     },
     enabled: isEdit
   })
 
+  useEffect(() => {
+    if (form) {
+      setTitle(form.title)
+      setDescription(form.description || '')
+      setStatus(form.status)
+      setGroupIds(form.groups?.map((g: any) => g.groupId) || [])
+      setOpenFrom(form.openFrom ? form.openFrom.substring(0, 16) : '')
+      setOpenUntil(form.openUntil ? form.openUntil.substring(0, 16) : '')
+      setFields(form.fields?.map(f => ({
+        label: f.label,
+        type: f.type,
+        required: f.required,
+        correctAnswer: f.correctAnswer || ''
+      })) || [])
+    }
+  }, [form])
+
   const saveMutation = useMutation({
     mutationFn: async () => {
+      setError(null)
+      // Automatically filter out empty/blank fields before sending to the backend
+      const cleanedFields = fields.filter(f => f.label.trim() !== '')
+      if (cleanedFields.length === 0) {
+        throw new Error('Будь ласка, додайте хоча б одне поле з назвою.')
+      }
+
       const data = { 
         title, 
         description, 
         status, 
-        groupId: groupId || null, 
+        groupIds, 
         openFrom: openFrom || null, 
         openUntil: openUntil || null, 
-        fields 
+        fields: cleanedFields 
       }
       if (isEdit) {
         await apiClient.patch(`/forms/${id}`, data)
@@ -69,15 +87,25 @@ export default function FormEditor() {
         await apiClient.post('/forms', data)
       }
     },
-    onSuccess: () => navigate('/admin/forms')
+    onError: (err: any) => {
+      const msg = err.response?.data?.error || err.message || 'Помилка збереження форми'
+      setError(msg)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['forms'] })
+      navigate('/admin/forms')
+    }
   })
+
+  const toggleGroup = (id: string) => {
+    setGroupIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
 
   const addField = () => {
     setFields([...fields, { label: '', type: 'TEXT', required: true, correctAnswer: '' }])
   }
 
   const removeField = (idx: number) => {
-    if (fields.length <= 1) return
     setFields(fields.filter((_, i) => i !== idx))
   }
 
@@ -144,6 +172,7 @@ export default function FormEditor() {
     <div className="animate-fade-in max-w-3xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
         <button 
+          type="button"
           onClick={() => navigate('/admin/forms')}
           className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-all"
         >
@@ -159,37 +188,46 @@ export default function FormEditor() {
         </div>
       </div>
 
+      {error && (
+        <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm animate-fade-in text-left">
+          {error}
+        </div>
+      )}
+
       {isLoading ? (
         <div className="py-20 text-center">
           <div className="w-10 h-10 border-2 border-purple-accent border-t-transparent rounded-full animate-spin mx-auto" />
         </div>
       ) : (
         <form onSubmit={(e) => { e.preventDefault(); saveMutation.mutate() }} className="space-y-6">
-          <div className="glass-card p-6 space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Назва форми</label>
-              <input 
-                type="text" required value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="glass-input" placeholder="Анкета задоволеності навчанням..."
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Опис форми</label>
-              <textarea 
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="glass-input resize-none" rows={3}
-                placeholder="Будь ласка, заповніть цю анкету для покращення якості дисципліни..."
-              />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="glass-card p-6 space-y-6">
+            <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Статус</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">Назва форми</label>
+                <input 
+                  type="text" required value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="glass-input" placeholder="Анкета задоволеності навчанням..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">Опис форми</label>
+                <textarea 
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="glass-input resize-none" rows={3}
+                  placeholder="Будь ласка, заповніть цю анкету для покращення якості дисципліни..."
+                />
+              </div>
+            </div>
+
+            <div className="border-t border-white/5 pt-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Статус</label>
                 <select 
                   value={status}
                   onChange={(e) => setStatus(e.target.value as TestStatus)}
-                  className="glass-input"
+                  className="glass-input py-2.5"
                 >
                   <option value="DRAFT" className="bg-slate-900">Чернетка</option>
                   <option value="OPEN" className="bg-slate-900">Відкрито</option>
@@ -197,35 +235,59 @@ export default function FormEditor() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">👥 Призначити для групи</label>
-                <select 
-                  value={groupId}
-                  onChange={(e) => setGroupId(e.target.value)}
-                  className="glass-input"
-                >
-                  <option value="" className="bg-slate-900">Всі групи (Спільна)</option>
-                  {groups?.map((g) => (
-                    <option key={g.id} value={g.id} className="bg-slate-900">{g.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">📅 Доступно з (необов'язково)</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center justify-between">
+                  <span>📅 Доступно з (необов'язково)</span>
+                  <button type="button" onClick={() => setOpenFrom('')} className="text-[10px] text-purple-400 hover:text-purple-300 transition-colors uppercase font-bold">Очистити</button>
+                </label>
                 <input 
                   type="datetime-local"
                   value={openFrom}
                   onChange={(e) => setOpenFrom(e.target.value)}
-                  className="glass-input"
+                  className="glass-input py-2"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">📅 Доступно по (необов'язково)</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center justify-between">
+                  <span>📅 Доступно по (необов'язково)</span>
+                  <button type="button" onClick={() => setOpenUntil('')} className="text-[10px] text-purple-400 hover:text-purple-300 transition-colors uppercase font-bold">Очистити</button>
+                </label>
                 <input 
                   type="datetime-local"
                   value={openUntil}
                   onChange={(e) => setOpenUntil(e.target.value)}
-                  className="glass-input"
+                  className="glass-input py-2"
                 />
+              </div>
+            </div>
+
+            <div className="border-t border-white/5 pt-6">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">👥 Призначити для груп (необов'язково)</label>
+              <div className="flex flex-wrap gap-2">
+                {groups?.map((g) => {
+                  const isSelected = groupIds.includes(g.id)
+                  return (
+                    <button
+                      key={g.id}
+                      type="button"
+                      onClick={() => toggleGroup(g.id)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all border ${
+                        isSelected
+                          ? 'bg-purple-accent text-white border-purple-accent shadow-[0_0_15px_rgba(168,85,247,0.4)]'
+                          : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10 hover:text-slate-300'
+                      }`}
+                    >
+                      {isSelected && (
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                      {g.name}
+                    </button>
+                  )
+                })}
+                {(!groups || groups.length === 0) && (
+                  <p className="text-slate-500 text-xs">Груп не знайдено</p>
+                )}
               </div>
             </div>
           </div>
@@ -275,8 +337,7 @@ export default function FormEditor() {
                   <span className="text-slate-500 font-mono text-xs font-bold">Поле #{idx + 1}</span>
                   <button 
                     type="button" onClick={() => removeField(idx)}
-                    disabled={fields.length <= 1}
-                    className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -339,8 +400,14 @@ export default function FormEditor() {
             </button>
             <button 
               type="submit" disabled={saveMutation.isPending}
-              className="flex-1 btn-secondary disabled:opacity-50"
+              className="flex-1 btn-secondary disabled:opacity-50 flex items-center justify-center gap-2"
             >
+              {saveMutation.isPending && (
+                <svg className="animate-spin h-4 w-4 text-current" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+              )}
               {saveMutation.isPending ? 'Збереження...' : 'Зберегти форму'}
             </button>
           </div>
