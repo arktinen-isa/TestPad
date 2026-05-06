@@ -262,7 +262,6 @@ router.get(
     const rawAttempts = await prisma.attempt.findMany({
       where: { testId: id, finishedAt: { not: null } },
       orderBy: [
-        { percentage: 'desc' },
         { score: 'desc' },
         { finishedAt: 'asc' },
       ],
@@ -271,28 +270,55 @@ router.get(
         studentId: true,
         score: true,
         maxScore: true,
-        percentage: true,
         finishedAt: true,
         startedAt: true,
         student: { select: { id: true, name: true } },
       },
     });
 
+    const attemptsMapped = rawAttempts.map((att) => {
+      const s = att.score ?? 0;
+      const ms = att.maxScore ?? 0;
+      const percentage = ms > 0 ? Math.round((s / ms) * 100) : 0;
+      return {
+        ...att,
+        percentage,
+      };
+    });
+
     // Group by student to keep only the best attempt per student
-    const bestAttemptsMap = new Map<string, typeof rawAttempts[0]>();
-    for (const att of rawAttempts) {
+    const bestAttemptsMap = new Map<string, typeof attemptsMapped[0]>();
+    for (const att of attemptsMapped) {
       if (!bestAttemptsMap.has(att.studentId)) {
         bestAttemptsMap.set(att.studentId, att);
       } else {
         const existing = bestAttemptsMap.get(att.studentId)!;
-        if ((att.percentage ?? 0) > (existing.percentage ?? 0)) {
+        if (att.percentage > existing.percentage) {
           bestAttemptsMap.set(att.studentId, att);
+        } else if (att.percentage === existing.percentage) {
+          const scoreA = att.score ?? 0;
+          const scoreB = existing.score ?? 0;
+          if (scoreA > scoreB) {
+            bestAttemptsMap.set(att.studentId, att);
+          }
         }
       }
     }
 
     const leaderboard = Array.from(bestAttemptsMap.values())
-      .sort((a, b) => (b.percentage ?? 0) - (a.percentage ?? 0))
+      .sort((a, b) => {
+        if (b.percentage !== a.percentage) {
+          return b.percentage - a.percentage;
+        }
+        const scoreA = a.score ?? 0;
+        const scoreB = b.score ?? 0;
+        if (scoreB !== scoreA) {
+          return scoreB - scoreA;
+        }
+        const timeA = a.finishedAt ? a.finishedAt.getTime() : 0;
+        const timeB = b.finishedAt ? b.finishedAt.getTime() : 0;
+        return timeA - timeB;
+      })
       .slice(0, 10);
 
     res.json(leaderboard);
