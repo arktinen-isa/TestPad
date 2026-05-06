@@ -348,11 +348,11 @@ model FormGroup {
 model FormField {
   id        String        @id @default(uuid())
   formId    String
-  label     String
+  label     String        @db.Text
   type      FormFieldType
   order         Int
   required      Boolean       @default(true)
-  correctAnswer String?
+  correctAnswer String?       @db.Text
 
   form      Form          @relation(fields: [formId], references: [id], onDelete: Cascade)
   values    FormFieldValue[]
