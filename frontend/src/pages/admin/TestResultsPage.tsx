@@ -197,6 +197,8 @@ export default function TestResultsPage() {
     },
   })
 
+  const selectedGroupName = groups?.find((g) => g.id === groupFilter)?.name || 'Всі групи'
+
   return (
     <div className="animate-fade-in space-y-6">
       {/* Back + Header */}
@@ -472,24 +474,54 @@ export default function TestResultsPage() {
       <div className="print-only p-12 bg-white text-black">
         <style>{`
           @media print {
-            @page { size: auto; margin: 0; }
-            body { background: white !important; color: black !important; padding: 0 !important; margin: 0 !important; overflow: visible !important; }
-            .no-print, aside, nav, button, .admin-sidebar, #admin-sidebar, .sidebar, .glass-card, .btn-ghost, .btn-secondary, .btn-danger, header, .pagination { 
+            @page { size: auto; margin: 15mm; }
+            body { 
+              background: white !important; 
+              color: black !important; 
+              padding: 0 !important; 
+              margin: 0 !important; 
+              overflow: visible !important; 
+            }
+            
+            /* Completely hide all UI layout wrappers */
+            .no-print, aside, nav, button, .admin-sidebar, #admin-sidebar, .sidebar, 
+            .glass-card, .btn-ghost, .btn-secondary, .btn-danger, header, .pagination, select { 
               display: none !important; 
             }
+            
+            /* Remove margins, padding, borders, shadows and backgrounds on all wrapping container divs */
+            div, main, section {
+              margin-left: 0 !important;
+              margin-right: 0 !important;
+              padding: 0 !important;
+              background: none !important;
+              background-color: transparent !important;
+              border: none !important;
+              box-shadow: none !important;
+            }
+
+            /* Configure print-only layout to span full width */
             .print-only { 
               display: flex !important; 
               flex-direction: column !important;
               width: 100% !important; 
-              padding: 20mm !important; 
+              padding: 0 !important; 
               margin: 0 !important;
               position: static !important;
-              min-height: 275mm !important;
-              height: auto !important;
               background: white !important;
+              color: black !important;
             }
-            main { padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; display: block !important; }
-            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            main { 
+              padding: 0 !important; 
+              margin: 0 !important; 
+              width: 100% !important; 
+              max-width: 100% !important; 
+              display: block !important; 
+            }
+            * { 
+              -webkit-print-color-adjust: exact !important; 
+              print-color-adjust: exact !important; 
+            }
           }
         `}</style>
         
@@ -506,21 +538,25 @@ export default function TestResultsPage() {
 
         <div className="mb-12">
           <h2 className="text-2xl font-black mb-6 border-l-4 border-black pl-4">{data?.test.title}</h2>
-          <div className="grid grid-cols-2 gap-10 text-sm">
-            <div className="p-5 border-2 border-black rounded-none">
+          <div className="grid grid-cols-3 gap-6 text-sm">
+            <div className="p-4 border-2 border-black rounded-none">
               <p className="text-gray-500 uppercase text-[9px] font-black mb-1">Дисципліна</p>
-              <p className="font-bold text-base">{data?.test.subject || '—'}</p>
+              <p className="font-bold text-sm truncate">{data?.test.subject || '—'}</p>
             </div>
-            <div className="p-5 border-2 border-black rounded-none">
-              <p className="text-gray-500 uppercase text-[9px] font-black mb-1">Підсумок групи</p>
-              <div className="flex justify-between">
+            <div className="p-4 border-2 border-black rounded-none">
+              <p className="text-gray-500 uppercase text-[9px] font-black mb-1">Група</p>
+              <p className="font-bold text-sm truncate">{selectedGroupName}</p>
+            </div>
+            <div className="p-4 border-2 border-black rounded-none">
+              <p className="text-gray-500 uppercase text-[9px] font-black mb-1">Підсумок</p>
+              <div className="flex justify-between text-xs leading-tight">
                 <div>
-                  <p className="text-[10px]">Середній бал</p>
-                  <p className="font-bold text-lg">{data?.stats.avgPct.toFixed(1)}%</p>
+                  <p className="text-[9px] text-gray-500">Середній бал</p>
+                  <p className="font-bold">{data?.stats.avgPct.toFixed(1)}%</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px]">Склали</p>
-                  <p className="font-bold text-lg text-green-600">{data?.stats.passCount} / {data?.total}</p>
+                  <p className="text-[9px] text-gray-500">Склали</p>
+                  <p className="font-bold text-green-700">{data?.stats.passCount} / {data?.total}</p>
                 </div>
               </div>
             </div>

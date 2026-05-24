@@ -27,11 +27,191 @@ function checkAnswer(userVal?: string, correctVal?: string): boolean {
   return false
 }
 
+interface FormStatsPanelProps {
+  form?: Form
+  submissions: FormSubmission[]
+}
+
+function FormStatsPanel({ form, submissions }: FormStatsPanelProps) {
+  if (!form || !submissions || submissions.length === 0) {
+    return (
+      <div className="glass-card p-6 text-center text-slate-400 text-sm">
+        Немає даних для розрахунку статистики
+      </div>
+    )
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {form.fields?.map((field) => {
+        const values = submissions
+          .map((s) => s.values?.find((v) => v.fieldId === field.id)?.value)
+          .filter((v): v is string => v !== undefined && v !== null && v.trim() !== '')
+
+        const totalAnswers = values.length
+        const hasCorrectAnswer = field.correctAnswer && field.correctAnswer.trim() !== ''
+        let correctCount = 0
+        if (hasCorrectAnswer && totalAnswers > 0) {
+          values.forEach((v) => {
+            if (checkAnswer(v, field.correctAnswer || undefined)) {
+              correctCount++
+            }
+          })
+        }
+        const successRate = totalAnswers > 0 ? (correctCount / totalAnswers) * 100 : 0
+
+        let statsContent = null
+
+        if (field.type === 'BOOLEAN') {
+          let yesCount = 0
+          let noCount = 0
+          values.forEach((v) => {
+            const normalized = v.trim().toLowerCase()
+            if (normalized === 'true' || normalized === 'так' || normalized === 'yes' || normalized === '1') {
+              yesCount++
+            } else {
+              noCount++
+            }
+          })
+
+          const yesPct = totalAnswers > 0 ? (yesCount / totalAnswers) * 100 : 0
+          const noPct = totalAnswers > 0 ? (noCount / totalAnswers) * 100 : 0
+
+          statsContent = (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
+                <span>Так: <strong className="text-emerald-400">{yesCount}</strong> ({yesPct.toFixed(1)}%)</span>
+                <span>Ні: <strong className="text-red-400">{noCount}</strong> ({noPct.toFixed(1)}%)</span>
+              </div>
+              <div className="h-2.5 bg-white/10 rounded-full overflow-hidden flex">
+                <div
+                  className="bg-emerald-400 h-full transition-all duration-500"
+                  style={{ width: `${yesPct}%` }}
+                  title={`Так: ${yesPct.toFixed(1)}%`}
+                />
+                <div
+                  className="bg-red-400 h-full transition-all duration-500"
+                  style={{ width: `${noPct}%` }}
+                  title={`Ні: ${noPct.toFixed(1)}%`}
+                />
+              </div>
+            </div>
+          )
+        } else if (field.type === 'INTEGER' || field.type === 'FLOAT') {
+          const numbers = values
+            .map((v) => parseFloat(v))
+            .filter((n) => !isNaN(n))
+
+          if (numbers.length === 0) {
+            statsContent = (
+              <p className="text-slate-500 text-xs py-2 italic text-center">
+                Немає числових відповідей
+              </p>
+            )
+          } else {
+            const min = Math.min(...numbers)
+            const max = Math.max(...numbers)
+            const avg = numbers.reduce((sum, n) => sum + n, 0) / numbers.length
+            const isFloat = field.type === 'FLOAT'
+            const formatNum = (n: number) => isFloat ? n.toFixed(2) : Math.round(n).toString()
+
+            const range = max - min
+            const avgPctFromMin = range > 0 ? ((avg - min) / range) * 100 : 50
+
+            statsContent = (
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="px-2 py-1.5 rounded-lg bg-white/5 border border-white/5">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">Мін</p>
+                    <p className="text-sm font-bold text-slate-300 font-mono">{formatNum(min)}</p>
+                  </div>
+                  <div className="px-2 py-1.5 rounded-lg bg-purple-accent/10 border border-purple-accent/20">
+                    <p className="text-[10px] text-purple-300 uppercase tracking-wider mb-0.5">Сер</p>
+                    <p className="text-sm font-black text-purple-200 font-mono">{formatNum(avg)}</p>
+                  </div>
+                  <div className="px-2 py-1.5 rounded-lg bg-white/5 border border-white/5">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">Макс</p>
+                    <p className="text-sm font-bold text-slate-300 font-mono">{formatNum(max)}</p>
+                  </div>
+                </div>
+
+                {range > 0 && (
+                  <div className="relative pt-2 pb-1">
+                    <div className="h-1 bg-white/10 rounded-full" />
+                    <div 
+                      className="absolute top-1.5 w-2 h-2 -ml-1 rounded-full bg-purple-accent shadow-[0_0_8px_#7c3aed]"
+                      style={{ left: `${avgPctFromMin}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            )
+          }
+        } else {
+          const uniqueTexts = Array.from(new Set(values)).slice(-4).reverse()
+
+          statsContent = (
+            <div className="space-y-2">
+              <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Останні унікальні відповіді:</p>
+              {uniqueTexts.length === 0 ? (
+                <p className="text-slate-500 text-xs py-2 italic text-center">Відповіді відсутні</p>
+              ) : (
+                <div className="space-y-1.5 max-h-[140px] overflow-y-auto pr-1">
+                  {uniqueTexts.map((text, i) => (
+                    <div key={i} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 text-xs text-slate-300 truncate font-medium hover:bg-white/10 transition-colors" title={text}>
+                      {text}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        }
+
+        return (
+          <div key={field.id} className="glass-card flex flex-col justify-between overflow-hidden relative group">
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-purple-accent/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            
+            <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+              <div>
+                <div className="flex items-start justify-between gap-2 mb-1.5">
+                  <h4 className="font-unbounded text-xs font-bold text-white leading-relaxed line-clamp-2">
+                    {field.label}
+                  </h4>
+                  <span className="flex-shrink-0 px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[9px] text-slate-400 font-mono tracking-wider">
+                    {field.type === 'BOOLEAN' ? 'ТАК/НІ' : field.type === 'INTEGER' ? 'ЦІЛЕ' : field.type === 'FLOAT' ? 'ДІЙСНЕ' : 'ТЕКСТ'}
+                  </span>
+                </div>
+                <p className="text-slate-500 text-[10px] font-medium">{totalAnswers} відповідей</p>
+              </div>
+
+              <div className="pt-2">{statsContent}</div>
+
+              {hasCorrectAnswer && totalAnswers > 0 && (
+                <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    <span>Правильних: <strong>{correctCount}</strong></span>
+                  </div>
+                  <span className="font-unbounded text-xs font-black text-emerald-400">
+                    {successRate.toFixed(1)}%
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function FormResultsPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [groupFilter, setGroupFilter] = useState('')
+  const [showStats, setShowStats] = useState(false)
 
   const { data: groups } = useQuery<Group[]>({
     queryKey: ['groups'],
@@ -58,6 +238,8 @@ export default function FormResultsPage() {
       return res.data
     }
   })
+
+  const selectedGroupName = groups?.find((g) => g.id === groupFilter)?.name || 'Всі групи'
 
   // Calculate evaluation info with useMemo
   const fieldsWithCorrect = useMemo(() => {
@@ -170,6 +352,21 @@ export default function FormResultsPage() {
         </button>
 
         <button
+          onClick={() => setShowStats((s) => !s)}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all border ${
+            showStats
+              ? 'bg-purple-accent/30 text-white border-purple-accent/50'
+              : 'text-slate-300 bg-white/5 border-white/10 hover:bg-white/10 hover:text-white'
+          }`}
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          Зведена аналітика
+        </button>
+
+        <button
           onClick={() => window.print()}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-purple-accent hover:bg-purple-600 transition-all shadow-[0_0_15px_rgba(124,58,237,0.3)]"
         >
@@ -179,6 +376,12 @@ export default function FormResultsPage() {
           Друкувати звіт
         </button>
       </div>
+
+      {showStats && (
+        <div className="no-print animate-fade-in">
+          <FormStatsPanel form={form} submissions={filteredSubmissions} />
+        </div>
+      )}
 
       {/* Main Table */}
       <div className="glass-card overflow-hidden no-print">
@@ -281,24 +484,54 @@ export default function FormResultsPage() {
       <div className="print-only p-12 bg-white text-black">
         <style>{`
           @media print {
-            @page { size: auto; margin: 0; }
-            body { background: white !important; color: black !important; padding: 0 !important; margin: 0 !important; overflow: visible !important; }
-            .no-print, aside, nav, button, .admin-sidebar, #admin-sidebar, .sidebar, .glass-card, .btn-ghost, .btn-secondary, .btn-danger, header, .pagination { 
+            @page { size: auto; margin: 15mm; }
+            body { 
+              background: white !important; 
+              color: black !important; 
+              padding: 0 !important; 
+              margin: 0 !important; 
+              overflow: visible !important; 
+            }
+            
+            /* Completely hide all UI layout wrappers */
+            .no-print, aside, nav, button, .admin-sidebar, #admin-sidebar, .sidebar, 
+            .glass-card, .btn-ghost, .btn-secondary, .btn-danger, header, .pagination, select { 
               display: none !important; 
             }
+            
+            /* Remove margins, padding, borders, shadows and backgrounds on all wrapping container divs */
+            div, main, section {
+              margin-left: 0 !important;
+              margin-right: 0 !important;
+              padding: 0 !important;
+              background: none !important;
+              background-color: transparent !important;
+              border: none !important;
+              box-shadow: none !important;
+            }
+
+            /* Configure print-only layout to span full width */
             .print-only { 
               display: flex !important; 
               flex-direction: column !important;
               width: 100% !important; 
-              padding: 20mm !important; 
+              padding: 0 !important; 
               margin: 0 !important;
               position: static !important;
-              min-height: 275mm !important;
-              height: auto !important;
               background: white !important;
+              color: black !important;
             }
-            main { padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; display: block !important; }
-            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            main { 
+              padding: 0 !important; 
+              margin: 0 !important; 
+              width: 100% !important; 
+              max-width: 100% !important; 
+              display: block !important; 
+            }
+            * { 
+              -webkit-print-color-adjust: exact !important; 
+              print-color-adjust: exact !important; 
+            }
           }
         `}</style>
         
@@ -315,22 +548,26 @@ export default function FormResultsPage() {
 
         <div className="mb-12">
           <h2 className="text-2xl font-black mb-6 border-l-4 border-black pl-4">{form?.title}</h2>
-          <div className="grid grid-cols-2 gap-10 text-sm">
-            <div className="p-5 border-2 border-black rounded-none">
+          <div className="grid grid-cols-3 gap-6 text-sm">
+            <div className="p-4 border-2 border-black rounded-none">
               <p className="text-gray-500 uppercase text-[9px] font-black mb-1">Опис опитування</p>
-              <p className="font-bold text-base">{form?.description || '—'}</p>
+              <p className="font-bold text-sm truncate">{form?.description || '—'}</p>
             </div>
-            <div className="p-5 border-2 border-black rounded-none">
-              <p className="text-gray-500 uppercase text-[9px] font-black mb-1">Підсумок відповідей</p>
-              <div className="flex justify-between">
+            <div className="p-4 border-2 border-black rounded-none">
+              <p className="text-gray-500 uppercase text-[9px] font-black mb-1">Група</p>
+              <p className="font-bold text-sm truncate">{selectedGroupName}</p>
+            </div>
+            <div className="p-4 border-2 border-black rounded-none">
+              <p className="text-gray-500 uppercase text-[9px] font-black mb-1">Підсумок</p>
+              <div className="flex justify-between text-xs leading-tight">
                 <div>
-                  <p className="text-[10px]">Всього відповідей</p>
-                  <p className="font-bold text-lg">{submissions?.length || 0}</p>
+                  <p className="text-[9px] text-gray-500">Всього відповідей</p>
+                  <p className="font-bold">{submissions?.length || 0}</p>
                 </div>
                 {hasEvaluation && (
                   <div className="text-right">
-                    <p className="text-[10px]">Середня успішність</p>
-                    <p className="font-bold text-lg text-purple-accent">{avgPct.toFixed(1)}%</p>
+                    <p className="text-[9px] text-gray-500">Середня успішність</p>
+                    <p className="font-bold text-purple-700">{avgPct.toFixed(1)}%</p>
                   </div>
                 )}
               </div>
