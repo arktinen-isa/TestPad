@@ -60,7 +60,8 @@ export default function TestResult() {
 
   const motivationalMessage = useMemo(() => {
     const list = passed ? PASS_MESSAGES : FAIL_MESSAGES
-    return list[Math.floor(Math.random() * list.length)]
+    const safeIndex = Math.floor(Math.random() * list.length) % list.length
+    return list[safeIndex] ?? ''
   }, [passed])
 
   const displayScore = useMemo(() => {

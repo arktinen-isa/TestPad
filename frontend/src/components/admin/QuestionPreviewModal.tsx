@@ -21,10 +21,26 @@ const TYPE_COLORS: Record<string, string> = {
   ORDERING: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
 }
 
+function getPreviewTypeColor(type: string): string {
+  if (type === 'SINGLE') return TYPE_COLORS.SINGLE
+  if (type === 'MULTI') return TYPE_COLORS.MULTI
+  if (type === 'MATCHING') return TYPE_COLORS.MATCHING
+  if (type === 'ORDERING') return TYPE_COLORS.ORDERING
+  return 'bg-white/5 text-slate-400 border-white/10'
+}
+
+function getPreviewTypeLabel(type: string): string {
+  if (type === 'SINGLE') return TYPE_LABELS.SINGLE
+  if (type === 'MULTI') return TYPE_LABELS.MULTI
+  if (type === 'MATCHING') return TYPE_LABELS.MATCHING
+  if (type === 'ORDERING') return TYPE_LABELS.ORDERING
+  return type
+}
+
 export default function QuestionPreviewModal({ question, onClose }: QuestionPreviewModalProps) {
   const [showCorrect, setShowCorrect] = useState(true)
   const [selectedAnswers, setSelectedAnswers] = useState<string[]>([])
-  const [matchingSelections, setMatchingSelections] = useState<Record<string, string>>({})
+  const [matchingSelections, setMatchingSelections] = useState<Map<string, string>>(new Map())
   const [selectedLeft, setSelectedLeft] = useState<string | null>(null)
   
   // For interactive ordering
@@ -48,34 +64,33 @@ export default function QuestionPreviewModal({ question, onClose }: QuestionPrev
 
   const handleRightClick = (item: string) => {
     if (!selectedLeft) return
-    setMatchingSelections((prev) => ({
-      ...prev,
-      [selectedLeft]: item,
-    }))
+    setMatchingSelections((prev) => {
+      const next = new Map(prev)
+      next.set(selectedLeft, item)
+      return next
+    })
     setSelectedLeft(null)
   }
 
   const handleMoveUp = (index: number) => {
     if (index === 0) return
     const updated = [...orderingState]
-    const temp = updated[index]
-    updated[index] = updated[index - 1]!
-    updated[index - 1] = temp!
+    const [removed] = updated.splice(index - 1, 1)
+    updated.splice(index, 0, removed!)
     setOrderingState(updated)
   }
 
   const handleMoveDown = (index: number) => {
     if (index === orderingState.length - 1) return
     const updated = [...orderingState]
-    const temp = updated[index]
-    updated[index] = updated[index + 1]!
-    updated[index + 1] = temp!
+    const [removed] = updated.splice(index, 1)
+    updated.splice(index + 1, 0, removed!)
     setOrderingState(updated)
   }
 
   const resetInteractive = () => {
     setSelectedAnswers([])
-    setMatchingSelections({})
+    setMatchingSelections(new Map())
     setSelectedLeft(null)
     if (question.type === 'ORDERING') {
       setOrderingState([...(question.orderingItems || [])].sort(() => Math.random() - 0.5))
@@ -89,8 +104,8 @@ export default function QuestionPreviewModal({ question, onClose }: QuestionPrev
         <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
           <div className="flex items-center gap-3">
             <h2 className="font-unbounded text-lg font-bold text-white">Попередній перегляд</h2>
-            <span className={`status-badge border text-xs ${TYPE_COLORS[question.type]}`}>
-              {TYPE_LABELS[question.type]}
+            <span className={`status-badge border text-xs ${getPreviewTypeColor(question.type)}`}>
+              {getPreviewTypeLabel(question.type)}
             </span>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
@@ -268,7 +283,7 @@ export default function QuestionPreviewModal({ question, onClose }: QuestionPrev
                         <h4 className="text-xs font-bold uppercase tracking-wider text-purple-400 mb-1">Колонка А</h4>
                         {question.matchingPairs?.map((pair, idx) => {
                           const item = pair.left
-                          const pairedWith = matchingSelections[item]
+                          const pairedWith = matchingSelections.get(item)
                           const isSelected = selectedLeft === item
                           return (
                             <button
@@ -300,7 +315,7 @@ export default function QuestionPreviewModal({ question, onClose }: QuestionPrev
                         {/* Shuffle right column slightly or just list them */}
                         {question.matchingPairs?.map((pair, idx) => {
                           const item = pair.right
-                          const isPaired = Object.values(matchingSelections).includes(item)
+                          const isPaired = Array.from(matchingSelections.values()).includes(item)
                           return (
                             <button
                               key={idx}
@@ -323,11 +338,11 @@ export default function QuestionPreviewModal({ question, onClose }: QuestionPrev
                     </div>
 
                     {/* Established pairings */}
-                    {Object.keys(matchingSelections).length > 0 && (
+                    {matchingSelections.size > 0 && (
                       <div className="space-y-2 pt-4 border-t border-white/5">
                         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">З'єднані вами пари:</span>
                         <div className="grid grid-cols-1 gap-2">
-                          {Object.entries(matchingSelections).map(([left, right], idx) => (
+                          {Array.from(matchingSelections.entries()).map(([left, right], idx) => (
                             <div key={idx} className="flex items-center justify-between p-3 rounded-2xl bg-[#160D33]/30 border border-purple-500/10 text-xs">
                               <div className="flex items-center gap-3 truncate">
                                 <span className="font-bold text-purple-300 truncate">{left}</span>
@@ -338,9 +353,9 @@ export default function QuestionPreviewModal({ question, onClose }: QuestionPrev
                                 type="button"
                                 onClick={() => {
                                   setMatchingSelections(prev => {
-                                    const updated = { ...prev }
-                                    delete updated[left]
-                                    return updated
+                                    const next = new Map(prev)
+                                    next.delete(left)
+                                    return next
                                   })
                                 }}
                                 className="p-1 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400"

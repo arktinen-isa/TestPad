@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/atom-one-dark.css'
 import { renderLatex } from '../utils/latexRenderer'
+import SafeHtml from './SafeHtml'
 
 interface Part {
   type: 'text' | 'code'
@@ -74,10 +75,10 @@ export default function QuestionText({ text, className = '' }: QuestionTextProps
         part.type === 'code' ? (
           <CodeBlock key={i} code={part.content} lang={part.lang || 'plaintext'} />
         ) : (
-          <span 
-            key={i} 
+          <SafeHtml
+            key={i}
+            html={renderLatex(part.content)}
             className="whitespace-pre-wrap"
-            dangerouslySetInnerHTML={{ __html: renderLatex(part.content) }}
           />
         )
       )}

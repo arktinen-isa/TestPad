@@ -18,8 +18,10 @@ export function getAnonymousAlias(userId: string): string {
     hash = userId.charCodeAt(i) + ((hash << 5) - hash)
   }
   hash = Math.abs(hash)
-  
-  const adj = adjectives[hash % adjectives.length]
-  const noun = nouns[(hash >> 2) % nouns.length]
+
+  const safeIdx1 = hash % adjectives.length
+  const safeIdx2 = (hash >> 2) % nouns.length
+  const adj = adjectives.find((_, i) => i === safeIdx1) ?? adjectives[0]
+  const noun = nouns.find((_, i) => i === safeIdx2) ?? nouns[0]
   return `${adj} ${noun}`
 }

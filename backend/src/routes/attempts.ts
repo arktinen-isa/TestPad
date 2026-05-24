@@ -27,12 +27,15 @@ const answerSchema = z.object({
 });
 
 function shuffleArray<T>(arr: T[]): T[] {
-  const result = [...arr];
-  for (let i = result.length - 1; i > 0; i--) {
+  const map = new Map<number, T>(arr.map((v, i) => [i, v]));
+  for (let i = map.size - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j]!, result[i]!];
+    const vi = map.get(i) as T;
+    const vj = map.get(j) as T;
+    map.set(i, vj);
+    map.set(j, vi);
   }
-  return result;
+  return Array.from(map.values());
 }
 
 function isTimedOut(startedAt: Date, timeLimitMin: number): boolean {

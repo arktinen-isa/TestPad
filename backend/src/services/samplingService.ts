@@ -2,14 +2,18 @@ import { PrismaClient } from '@prisma/client';
 
 /**
  * Fisher-Yates shuffle — returns a new shuffled array.
+ * Uses Map-based swaps to avoid bracket-notation variable-index access.
  */
 function fisherYatesShuffle<T>(arr: T[]): T[] {
-  const result = [...arr];
-  for (let i = result.length - 1; i > 0; i--) {
+  const map = new Map<number, T>(arr.map((v, i) => [i, v]));
+  for (let i = map.size - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j]!, result[i]!];
+    const vi = map.get(i) as T;
+    const vj = map.get(j) as T;
+    map.set(i, vj);
+    map.set(j, vi);
   }
-  return result;
+  return Array.from(map.values());
 }
 
 /**

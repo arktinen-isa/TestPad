@@ -35,6 +35,20 @@ const STATUS_COLORS: Record<TestStatus, string> = {
   CLOSED: 'bg-red-500/20 text-red-400 border-red-500/30',
 }
 
+function getTestStatusLabel(status: string): string {
+  if (status === 'DRAFT') return STATUS_LABELS.DRAFT
+  if (status === 'OPEN') return STATUS_LABELS.OPEN
+  if (status === 'CLOSED') return STATUS_LABELS.CLOSED
+  return status
+}
+
+function getTestStatusColor(status: string): string {
+  if (status === 'DRAFT') return STATUS_COLORS.DRAFT
+  if (status === 'OPEN') return STATUS_COLORS.OPEN
+  if (status === 'CLOSED') return STATUS_COLORS.CLOSED
+  return 'bg-white/5 text-slate-400 border-white/10'
+}
+
 function formatDateTime(dateStr?: string): string {
   if (!dateStr) return '—'
   return new Date(dateStr).toLocaleString('uk-UA', {
@@ -61,15 +75,18 @@ export default function TestsPage() {
     },
   })
 
-  // Group tests by subject
-  const testsBySubject = tests ? tests.reduce<Record<string, Test[]>>((acc, t) => {
-    const subject = (t.subject || 'Без дисципліни').trim()
-    if (!acc[subject]) acc[subject] = []
-    acc[subject].push(t)
-    return acc
-  }, {}) : {}
+  // Group tests by subject using a Map to avoid prototype pollution
+  const testsBySubjectMap = tests
+    ? tests.reduce<Map<string, Test[]>>((acc, t) => {
+        const subject = (t.subject || 'Без дисципліни').trim()
+        const existing = acc.get(subject)
+        if (existing) existing.push(t)
+        else acc.set(subject, [t])
+        return acc
+      }, new Map())
+    : new Map<string, Test[]>()
 
-  const sortedSubjects = Object.keys(testsBySubject).sort((a, b) => {
+  const sortedSubjects = Array.from(testsBySubjectMap.keys()).sort((a, b) => {
     if (a === 'Без дисципліни') return 1
     if (b === 'Без дисципліни') return -1
     return a.localeCompare(b)
@@ -139,7 +156,7 @@ export default function TestsPage() {
                 : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10 hover:text-white'
             }`}
           >
-            {s === 'ALL' ? 'Всі' : STATUS_LABELS[s]}
+            {s === 'ALL' ? 'Всі' : getTestStatusLabel(s)}
           </button>
         ))}
       </div>
@@ -152,7 +169,7 @@ export default function TestsPage() {
           </div>
         ) : sortedSubjects.length > 0 ? (
           sortedSubjects.map((subject) => {
-            const groupTests = testsBySubject[subject]
+            const groupTests = testsBySubjectMap.get(subject) ?? []
             return (
               <div key={subject} className="space-y-4">
                 {/* Subject Header */}
@@ -170,8 +187,8 @@ export default function TestsPage() {
                     <div key={t.id} className="glass-card p-5 group hover:border-purple-accent/30 transition-all flex flex-col justify-between">
                       <div>
                         <div className="flex items-start justify-between mb-4">
-                          <span className={`status-badge border ${STATUS_COLORS[t.status]}`}>
-                            {STATUS_LABELS[t.status]}
+                          <span className={`status-badge border ${getTestStatusColor(t.status)}`}>
+                            {getTestStatusLabel(t.status)}
                           </span>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button 

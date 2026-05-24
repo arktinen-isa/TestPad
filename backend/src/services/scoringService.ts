@@ -87,12 +87,15 @@ export function scoreQuestion(
       }
     }
 
+    // Convert to Map so position lookups don't use bracket notation with variable index
+    const submittedMap = new Map<number, string>(submittedOrder.map((id, i) => [i, id]));
+
     let correctPositions = 0;
-    for (let i = 0; i < correctOrder.length; i++) {
-      if (submittedOrder[i] === correctOrder[i]) {
+    correctOrder.forEach((expectedId, i) => {
+      if (submittedMap.get(i) === expectedId) {
         correctPositions++;
       }
-    }
+    });
 
     if (multiMode === MultiScoringMode.ALL_OR_NOTHING) {
       return correctPositions === correctOrder.length ? weight : 0;

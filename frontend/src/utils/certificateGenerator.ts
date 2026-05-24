@@ -169,10 +169,10 @@ export const generateCertificate = (
 
   const pos = new Map<ElemKey, number>()
   let curY = MARGIN_TOP
-  for (let i = 0; i < ELEMS.length; i++) {
-    curY += ELEMS[i].h / 2
-    pos.set(ELEMS[i].key, curY)
-    curY += ELEMS[i].h / 2
+  for (const [i, elem] of ELEMS.entries()) {
+    curY += elem.h / 2
+    pos.set(elem.key, curY)
+    curY += elem.h / 2
     if (i < ELEMS.length - 1) curY += gap
   }
 

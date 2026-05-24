@@ -44,17 +44,17 @@ function StatCard({
 }
 
 // ─── Status helpers ───────────────────────────────────────────
-function getStatusLabel(status: Test['status']) {
-  const map: Record<Test['status'], string> = { DRAFT: 'Чернетка', OPEN: 'Відкрито', CLOSED: 'Закрито' }
-  return map[status]
+function getStatusLabel(status: Test['status']): string {
+  if (status === 'DRAFT') return 'Чернетка'
+  if (status === 'OPEN') return 'Відкрито'
+  if (status === 'CLOSED') return 'Закрито'
+  return status
 }
-function getStatusClass(status: Test['status']) {
-  const map: Record<Test['status'], string> = {
-    DRAFT:  'status-badge status-draft',
-    OPEN:   'status-badge status-open',
-    CLOSED: 'status-badge status-closed',
-  }
-  return map[status]
+function getStatusClass(status: Test['status']): string {
+  if (status === 'DRAFT') return 'status-badge status-draft'
+  if (status === 'OPEN') return 'status-badge status-open'
+  if (status === 'CLOSED') return 'status-badge status-closed'
+  return 'status-badge'
 }
 
 // ─── Skeleton row ─────────────────────────────────────────────
@@ -87,6 +87,13 @@ const PIE_COLORS = {
   DRAFT:  '#64748b',
 }
 
+function getPieColor(status: string): string {
+  if (status === 'OPEN') return PIE_COLORS.OPEN
+  if (status === 'CLOSED') return PIE_COLORS.CLOSED
+  if (status === 'DRAFT') return PIE_COLORS.DRAFT
+  return '#8b5cf6'
+}
+
 export default function AdminDashboard() {
   const navigate = useNavigate()
 
@@ -105,7 +112,7 @@ export default function AdminDashboard() {
     .map(([status, value]) => ({
       name: getStatusLabel(status as Test['status']),
       value,
-      color: PIE_COLORS[status as keyof typeof PIE_COLORS] ?? '#8b5cf6',
+      color: getPieColor(status),
     }))
 
   // Activity history (attempts over the last 7 days)

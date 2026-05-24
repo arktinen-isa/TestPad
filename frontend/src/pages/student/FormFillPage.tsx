@@ -7,7 +7,7 @@ import { Form } from '../../types'
 export default function FormFillPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [values, setValues] = useState<Record<string, any>>({})
+  const [values, setValues] = useState<Map<string, unknown>>(new Map())
   const [error, setError] = useState<string | null>(null)
   const [isSubmitted, setIsSubmitted] = useState(false)
 
@@ -21,14 +21,18 @@ export default function FormFillPage() {
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      await apiClient.post(`/forms/${id}/submit`, { values })
+      await apiClient.post(`/forms/${id}/submit`, { values: Object.fromEntries(values) })
     },
     onSuccess: () => setIsSubmitted(true),
     onError: (err: any) => setError(err.response?.data?.error || 'Помилка надсилання')
   })
 
-  const handleValueChange = (fieldId: string, val: any) => {
-    setValues({ ...values, [fieldId]: val })
+  const handleValueChange = (fieldId: string, val: unknown) => {
+    setValues(prev => {
+      const next = new Map(prev)
+      next.set(fieldId, val)
+      return next
+    })
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -104,7 +108,7 @@ export default function FormFillPage() {
                 {field.type === 'TEXT' && (
                   <input 
                     type="text" required={field.required}
-                    value={values[field.id] || ''}
+                    value={String(values.get(field.id) ?? '')}
                     onChange={(e) => handleValueChange(field.id, e.target.value)}
                     className="glass-input" placeholder="Ваша відповідь..."
                   />
@@ -113,7 +117,7 @@ export default function FormFillPage() {
                 {field.type === 'INTEGER' && (
                   <input 
                     type="number" step="1" required={field.required}
-                    value={values[field.id] || ''}
+                    value={String(values.get(field.id) ?? '')}
                     onChange={(e) => handleValueChange(field.id, e.target.value)}
                     className="glass-input" placeholder="Ціле число..."
                   />
@@ -122,7 +126,7 @@ export default function FormFillPage() {
                 {field.type === 'FLOAT' && (
                   <input 
                     type="number" step="any" required={field.required}
-                    value={values[field.id] || ''}
+                    value={String(values.get(field.id) ?? '')}
                     onChange={(e) => handleValueChange(field.id, e.target.value)}
                     className="glass-input" placeholder="Дійсне число..."
                   />
@@ -133,7 +137,7 @@ export default function FormFillPage() {
                     <label className="flex items-center gap-2 cursor-pointer select-none px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 transition-all border border-white/5">
                       <input 
                         type="radio" name={field.id} required={field.required}
-                        checked={values[field.id] === true}
+                        checked={values.get(field.id) === true}
                         onChange={() => handleValueChange(field.id, true)}
                         className="text-purple-accent focus:ring-0"
                       />
@@ -142,7 +146,7 @@ export default function FormFillPage() {
                     <label className="flex items-center gap-2 cursor-pointer select-none px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 transition-all border border-white/5">
                       <input 
                         type="radio" name={field.id} required={field.required}
-                        checked={values[field.id] === false}
+                        checked={values.get(field.id) === false}
                         onChange={() => handleValueChange(field.id, false)}
                         className="text-purple-accent focus:ring-0"
                       />

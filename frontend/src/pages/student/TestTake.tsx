@@ -6,6 +6,7 @@ import QuestionText from '../../components/QuestionText'
 import MatchingQuestion from '../../components/MatchingQuestion'
 import OrderingQuestion from '../../components/OrderingQuestion'
 import { renderLatex } from '../../utils/latexRenderer'
+import SafeHtml from '../../components/SafeHtml'
 import { t } from '../../utils/i18n'
 
 function formatTime(seconds: number): string {
@@ -484,11 +485,11 @@ export default function TestTake() {
                             </svg>
                           )}
                         </div>
-                        <span 
+                        <SafeHtml
+                          html={renderLatex(answer.text)}
                           className={`text-base font-medium transition-colors duration-200 ${
                             isSelected ? 'text-white' : 'text-slate-300 group-hover:text-white'
                           }`}
-                          dangerouslySetInnerHTML={{ __html: renderLatex(answer.text) }}
                         />
                       </button>
                     )

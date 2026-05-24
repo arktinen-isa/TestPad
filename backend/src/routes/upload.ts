@@ -2,30 +2,40 @@ import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { authenticate, authorize } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
 
 const router = Router();
 
-// Ensure upload directory exists
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads');
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
+// Ensure upload directory exists (mkdirSync with recursive:true is a no-op if already exists)
+const UPLOAD_DIR = path.resolve(process.cwd(), 'uploads');
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
+const MIME_TO_EXT = new Map<string, string>([
+  ['image/jpeg', '.jpg'],
+  ['image/jpg', '.jpg'],
+  ['image/png', '.png'],
+  ['image/gif', '.gif'],
+  ['image/webp', '.webp'],
+  ['image/svg+xml', '.svg'],
+]);
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
   filename: (_req, file, cb) => {
-    const unique = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const ext = path.extname(file.originalname).toLowerCase();
-    const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
-    const safeExt = allowedExts.includes(ext) ? ext : '.bin';
-    const finalFilename = `${unique}${safeExt}`;
+    // Generate a completely safe, server-controlled unique name
+    const uniqueId = crypto.randomUUID();
+    const mime = file.mimetype.toLowerCase();
+    const ext = MIME_TO_EXT.has(mime) ? MIME_TO_EXT.get(mime) : '.bin';
+    const finalFilename = `${uniqueId}${ext}`;
 
-    // Prevent path traversal by joining, normalizing, and verifying it starts with UPLOAD_DIR
-    const joinedPath = path.join(UPLOAD_DIR, finalFilename);
+    // Prevent path traversal by resolving and normalizing both UPLOAD_DIR and the destination path
+    const resolvedUploadDir = path.resolve(UPLOAD_DIR);
+    const joinedPath = path.join(resolvedUploadDir, finalFilename);
     const normalizedPath = path.normalize(joinedPath);
-    if (!normalizedPath.startsWith(UPLOAD_DIR)) {
+
+    if (!normalizedPath.startsWith(resolvedUploadDir)) {
       return cb(new Error('Invalid path specified!'), '');
     }
 

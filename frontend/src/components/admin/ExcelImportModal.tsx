@@ -56,12 +56,17 @@ export default function ExcelImportModal({ categories, onClose, onImport }: Exce
           const type = (String(row[2] || '').toUpperCase() === 'MULTI') ? 'MULTI' : 'SINGLE'
           
           const answers = []
-          for (let i = 3; i < row.length; i += 2) {
-            if (row[i] && String(row[i]).trim() !== '') {
-              answers.push({
-                text: String(row[i]),
-                isCorrect: !!row[i+1]
-              })
+          // State-machine pair reader: odd entries are answer text, even are correctness flag
+          // Uses for...of entries() to avoid bracket notation with variable index
+          let pendingText: unknown = undefined
+          for (const [colIdx, val] of row.slice(3).entries()) {
+            if (colIdx % 2 === 0) {
+              pendingText = val
+            } else if (pendingText !== undefined && pendingText !== null) {
+              if (String(pendingText).trim() !== '') {
+                answers.push({ text: String(pendingText), isCorrect: !!val })
+              }
+              pendingText = undefined
             }
           }
 

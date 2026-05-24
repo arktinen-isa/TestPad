@@ -69,7 +69,8 @@ export default function Login() {
     }
   }
 
-  const slogan = SLOGANS[sloganIndex]
+  const safeIdx = sloganIndex % SLOGANS.length
+  const slogan = SLOGANS.find((_, i) => i === safeIdx) ?? SLOGANS[0]
 
   return (
     <div className="min-h-screen bg-dark-bg flex items-center justify-center p-4 relative overflow-hidden">

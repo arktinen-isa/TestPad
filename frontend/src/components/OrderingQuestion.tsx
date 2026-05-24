@@ -21,18 +21,18 @@ export default function OrderingQuestion({
   const handleMoveUp = (index: number) => {
     if (index === 0) return
     const updated = [...value]
-    const temp = updated[index]
-    updated[index] = updated[index - 1]!
-    updated[index - 1] = temp!
+    // Remove element above and re-insert below current position
+    const [removed] = updated.splice(index - 1, 1)
+    updated.splice(index, 0, removed!)
     onChange(updated)
   }
 
   const handleMoveDown = (index: number) => {
     if (index === value.length - 1) return
     const updated = [...value]
-    const temp = updated[index]
-    updated[index] = updated[index + 1]!
-    updated[index + 1] = temp!
+    // Remove current element and re-insert one position below
+    const [removed] = updated.splice(index, 1)
+    updated.splice(index + 1, 0, removed!)
     onChange(updated)
   }
 
