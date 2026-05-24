@@ -61,6 +61,20 @@ export default function TestsPage() {
     },
   })
 
+  // Group tests by subject
+  const testsBySubject = tests ? tests.reduce<Record<string, Test[]>>((acc, t) => {
+    const subject = (t.subject || 'Без дисципліни').trim()
+    if (!acc[subject]) acc[subject] = []
+    acc[subject].push(t)
+    return acc
+  }, {}) : {}
+
+  const sortedSubjects = Object.keys(testsBySubject).sort((a, b) => {
+    if (a === 'Без дисципліни') return 1
+    if (b === 'Без дисципліни') return -1
+    return a.localeCompare(b)
+  })
+
   const saveMutation = useMutation({
     mutationFn: async ({ data, id }: { data: TestFormData; id?: string }) => {
       const payload = {
@@ -130,80 +144,100 @@ export default function TestsPage() {
         ))}
       </div>
 
-      {/* Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Grouped lists */}
+      <div className="space-y-8">
         {isLoading ? (
-          <div className="col-span-full py-20 text-center">
+          <div className="py-20 text-center">
             <div className="w-10 h-10 border-2 border-purple-accent border-t-transparent rounded-full animate-spin mx-auto" />
           </div>
-        ) : tests?.map((t) => (
-          <div key={t.id} className="glass-card p-5 group hover:border-purple-accent/30 transition-all flex flex-col justify-between">
-            <div>
-              <div className="flex items-start justify-between mb-4">
-                <span className={`status-badge border ${STATUS_COLORS[t.status]}`}>
-                  {STATUS_LABELS[t.status]}
-                </span>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button 
-                    onClick={() => { setEditTest(t); setShowModal(true) }}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"
-                    title="Редагувати"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </button>
-                  <button 
-                    onClick={() => setDeleteConfirm(t)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                    title="Видалити"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
+        ) : sortedSubjects.length > 0 ? (
+          sortedSubjects.map((subject) => {
+            const groupTests = testsBySubject[subject]
+            return (
+              <div key={subject} className="space-y-4">
+                {/* Subject Header */}
+                <div className="flex items-center gap-3">
+                  <h2 className="font-unbounded text-xs font-bold text-purple-accent uppercase tracking-wider">{subject}</h2>
+                  <div className="h-px flex-1 bg-white/5" />
+                  <span className="px-2.5 py-0.5 rounded-lg bg-white/5 border border-white/10 text-[10px] text-slate-400 font-bold">
+                    Тестів: {groupTests.length}
+                  </span>
                 </div>
-              </div>
 
-              <div className="mb-3">
-                <span className="text-[9px] uppercase tracking-wider font-extrabold text-purple-accent/80 block mb-0.5">
-                  {t.subject || 'Дисципліна'}
-                </span>
-                <h3 className="font-unbounded text-base font-bold text-white mb-2 line-clamp-1">{t.title}</h3>
-              </div>
+                {/* Subject Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {groupTests.map((t) => (
+                    <div key={t.id} className="glass-card p-5 group hover:border-purple-accent/30 transition-all flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-start justify-between mb-4">
+                          <span className={`status-badge border ${STATUS_COLORS[t.status]}`}>
+                            {STATUS_LABELS[t.status]}
+                          </span>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                              onClick={() => { setEditTest(t); setShowModal(true) }}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                              title="Редагувати"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                            <button 
+                              onClick={() => setDeleteConfirm(t)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                              title="Видалити"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
 
-              <div className="space-y-1.5 text-xs text-slate-400 mb-5">
-                <div className="flex justify-between">
-                  <span>Кількість питань:</span>
-                  <span className="text-white font-medium">{t.questionsCount}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Режим вибірки:</span>
-                  <span className="text-white font-medium">{t.samplingMode === 'BY_CATEGORY' ? 'За категоріями' : 'З усього банку'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Дедлайн:</span>
-                  <span className="text-white font-medium">{formatDateTime(t.openUntil)}</span>
-                </div>
-              </div>
-            </div>
+                        <div className="mb-3">
+                          <span className="text-[9px] uppercase tracking-wider font-extrabold text-purple-accent/80 block mb-0.5">
+                            {t.subject || 'Дисципліна'}
+                          </span>
+                          <h3 className="font-unbounded text-base font-bold text-white mb-2 line-clamp-1">{t.title}</h3>
+                        </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-white/5">
-              <div className="flex flex-col">
-                <span className="text-[10px] text-slate-500 uppercase font-black">Режим таймера</span>
-                <span className="text-xs font-bold text-white uppercase">{t.timerMode === 'PER_QUESTION' ? 'По-питанням' : 'Глобальний'}</span>
+                        <div className="space-y-1.5 text-xs text-slate-400 mb-5">
+                          <div className="flex justify-between">
+                            <span>Кількість питань:</span>
+                            <span className="text-white font-medium">{t.questionsCount}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Режим вибірки:</span>
+                            <span className="text-white font-medium">{t.samplingMode === 'BY_CATEGORY' ? 'За категоріями' : 'З усього банку'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Дедлайн:</span>
+                            <span className="text-white font-medium">{formatDateTime(t.openUntil)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-slate-500 uppercase font-black">Режим таймера</span>
+                          <span className="text-xs font-bold text-white uppercase">{t.timerMode === 'PER_QUESTION' ? 'По-питанням' : 'Глобальний'}</span>
+                        </div>
+                        <button 
+                          onClick={() => navigate(`/admin/tests/${t.id}/results`)}
+                          className="px-4 py-2 rounded-xl bg-purple-accent/10 text-purple-400 text-xs font-bold hover:bg-purple-accent/20 transition-all"
+                        >
+                          РЕЗУЛЬТАТИ
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <button 
-                onClick={() => navigate(`/admin/tests/${t.id}/results`)}
-                className="px-4 py-2 rounded-xl bg-purple-accent/10 text-purple-400 text-xs font-bold hover:bg-purple-accent/20 transition-all"
-              >
-                РЕЗУЛЬТАТИ
-              </button>
-            </div>
-          </div>
-        ))}
-        {!isLoading && tests?.length === 0 && (
-          <div className="col-span-full py-20 text-center glass-card border-dashed">
+            )
+          })
+        ) : (
+          <div className="py-20 text-center glass-card border-dashed">
             <p className="text-slate-500">Тестів не знайдено</p>
           </div>
         )}
