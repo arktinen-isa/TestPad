@@ -3,7 +3,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 function requireEnv(name: string): string {
-  const value = process.env[name];
+  const envMap = new Map(Object.entries(process.env));
+  const value = envMap.get(name);
   if (!value) {
     throw new Error(`Missing required environment variable: ${name}`);
   }

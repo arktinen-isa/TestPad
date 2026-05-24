@@ -1,5 +1,7 @@
 import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { AnimatePresence, motion } from 'framer-motion'
+import { Toaster } from 'sonner'
 import { useAuthStore } from './store/authStore'
 import { Role } from './types'
 
@@ -63,6 +65,81 @@ function RootRedirect() {
   return <Navigate to="/admin/dashboard" replace />
 }
 
+const pageVariants = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  exit:    { opacity: 0, y: -8 },
+}
+
+function AnimatedRoutes() {
+  const location = useLocation()
+
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={location.pathname}
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={{ duration: 0.18, ease: 'easeOut' }}
+        style={{ minHeight: '100vh' }}
+      >
+        <Routes location={location}>
+          <Route path="/" element={<RootRedirect />} />
+          <Route path="/login" element={<Login />} />
+
+          {/* Student routes */}
+          <Route
+            path="/student"
+            element={
+              <ProtectedRoute allowedRoles={['STUDENT']}>
+                <StudentLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="/student/dashboard" replace />} />
+            <Route path="dashboard" element={<StudentDashboard />} />
+            <Route path="test/:testId/start" element={<TestStart />} />
+            <Route path="test/:testId/take" element={<TestTake />} />
+            <Route path="test/:testId/result" element={<TestResult />} />
+            <Route path="forms" element={<StudentFormsPage />} />
+            <Route path="forms/:id" element={<FormFillPage />} />
+            <Route path="profile" element={<ProfilePage />} />
+          </Route>
+
+          {/* Admin/Teacher routes */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN', 'TEACHER']}>
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="users" element={<UsersPage />} />
+            <Route path="groups" element={<GroupsPage />} />
+            <Route path="questions" element={<QuestionsPage />} />
+            <Route path="categories" element={<CategoriesPage />} />
+            <Route path="tests" element={<TestsPage />} />
+            <Route path="tests/:testId/results" element={<TestResultsPage />} />
+            <Route path="forms" element={<FormsPage />} />
+            <Route path="forms/new" element={<FormEditor />} />
+            <Route path="forms/:id/edit" element={<FormEditor />} />
+            <Route path="forms/:id/results" element={<FormResultsPage />} />
+            <Route path="profile" element={<ProfilePage />} />
+          </Route>
+
+          {/* Catch-all */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </motion.div>
+    </AnimatePresence>
+  )
+}
+
 export default function App() {
   const { init, isInitialized } = useAuthStore()
 
@@ -73,63 +150,30 @@ export default function App() {
   if (!isInitialized) {
     return (
       <div className="min-h-screen bg-dark-bg flex items-center justify-center">
-        <div className="w-10 h-10 border-2 border-purple-accent border-t-transparent rounded-full animate-spin" />
+        <div className="relative w-10 h-10">
+          <div className="absolute inset-0 rounded-full border-2 border-purple-accent/20" />
+          <div className="absolute inset-0 rounded-full border-2 border-purple-accent border-t-transparent animate-spin" />
+        </div>
       </div>
     )
   }
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<RootRedirect />} />
-        <Route path="/login" element={<Login />} />
-
-        {/* Student routes */}
-        <Route
-          path="/student"
-          element={
-            <ProtectedRoute allowedRoles={['STUDENT']}>
-              <StudentLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="/student/dashboard" replace />} />
-          <Route path="dashboard" element={<StudentDashboard />} />
-          <Route path="test/:testId/start" element={<TestStart />} />
-          <Route path="test/:testId/take" element={<TestTake />} />
-          <Route path="test/:testId/result" element={<TestResult />} />
-          <Route path="forms" element={<StudentFormsPage />} />
-          <Route path="forms/:id" element={<FormFillPage />} />
-          <Route path="profile" element={<ProfilePage />} />
-        </Route>
-
-        {/* Admin/Teacher routes */}
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute allowedRoles={['ADMIN', 'TEACHER']}>
-              <AdminLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="/admin/dashboard" replace />} />
-          <Route path="dashboard" element={<AdminDashboard />} />
-          <Route path="users" element={<UsersPage />} />
-          <Route path="groups" element={<GroupsPage />} />
-          <Route path="questions" element={<QuestionsPage />} />
-          <Route path="categories" element={<CategoriesPage />} />
-          <Route path="tests" element={<TestsPage />} />
-          <Route path="tests/:testId/results" element={<TestResultsPage />} />
-          <Route path="forms" element={<FormsPage />} />
-          <Route path="forms/new" element={<FormEditor />} />
-          <Route path="forms/:id/edit" element={<FormEditor />} />
-          <Route path="forms/:id/results" element={<FormResultsPage />} />
-          <Route path="profile" element={<ProfilePage />} />
-        </Route>
-
-        {/* Catch-all */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            background: '#1a1628',
+            border: '1px solid rgba(255,255,255,0.1)',
+            color: '#fff',
+            borderRadius: '12px',
+            fontSize: '14px',
+          },
+        }}
+        theme="dark"
+      />
+      <AnimatedRoutes />
     </BrowserRouter>
   )
 }

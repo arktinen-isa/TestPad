@@ -53,7 +53,7 @@ app.use(
 );
 
 // Body parsing
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // Static uploads
 app.use('/uploads', express.static('uploads'));

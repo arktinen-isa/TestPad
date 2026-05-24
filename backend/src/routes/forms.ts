@@ -275,12 +275,13 @@ router.post(
     }
 
     // Validation
+    const valuesMap = new Map(Object.entries(values || {}));
     for (const field of form.fields) {
-      if (field.required && (values[field.id] === undefined || values[field.id] === null || values[field.id] === '')) {
+      const val = valuesMap.get(field.id);
+      if (field.required && (val === undefined || val === null || val === '')) {
         return res.status(400).json({ error: `Field "${field.label}" is required` });
       }
       
-      const val = values[field.id];
       if (val !== undefined && val !== null && val !== '') {
         if (field.type === 'INTEGER') {
           if (!Number.isInteger(Number(val)) && isNaN(parseInt(String(val)))) {
