@@ -3,17 +3,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../../api/client'
 import { getApiError } from '../../api/errors'
 import { User, Role } from '../../types'
+import { t } from '../../utils/i18n'
 
-const ROLE_LABELS: Record<Role, string> = {
-  ADMIN: 'Адміністратор',
-  TEACHER: 'Викладач',
-  STUDENT: 'Студент',
+const getRoleLabel = (role: Role): string => {
+  if (role === 'ADMIN') return 'Адміністратор'
+  if (role === 'TEACHER') return 'Викладач'
+  return 'Студент'
 }
 
-const ROLE_COLORS: Record<Role, string> = {
-  ADMIN: 'bg-pink-500/20 text-pink-400 border border-pink-500/30',
-  TEACHER: 'bg-purple-500/20 text-purple-400 border border-purple-500/30',
-  STUDENT: 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
+const getRoleColor = (role: Role): string => {
+  if (role === 'ADMIN') return 'bg-pink-500/20 text-pink-400 border border-pink-500/30'
+  if (role === 'TEACHER') return 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+  return 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
 }
 
 interface UserFormData {
@@ -88,7 +89,7 @@ function UserModal({ initial, onClose, onSave }: UserModalProps) {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Email</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1.5">{t('Email')}</label>
             <input
               type="email"
               required
@@ -224,7 +225,7 @@ export default function UsersPage() {
                   : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10 hover:text-white'
               }`}
             >
-              {r === 'ALL' ? 'Всі' : ROLE_LABELS[r]}
+              {r === 'ALL' ? 'Всі' : getRoleLabel(r)}
             </button>
           ))}
         </div>
@@ -255,7 +256,7 @@ export default function UsersPage() {
               <thead>
                 <tr className="border-b border-white/10">
                   <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Ім'я</th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Email</th>
+                  <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('Email')}</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Роль</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Зареєстрований</th>
                   <th className="px-5 py-4 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">Дії</th>
@@ -285,8 +286,8 @@ export default function UsersPage() {
                     </td>
                     <td className="px-5 py-4 text-slate-400 text-sm">{u.email}</td>
                     <td className="px-5 py-4">
-                      <span className={`status-badge ${ROLE_COLORS[u.role]}`}>
-                        {ROLE_LABELS[u.role]}
+                      <span className={`status-badge ${getRoleColor(u.role)}`}>
+                        {getRoleLabel(u.role)}
                       </span>
                     </td>
                     <td className="px-5 py-4 text-slate-400 text-sm">{formatDate(u.createdAt)}</td>

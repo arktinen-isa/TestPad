@@ -69,8 +69,9 @@ router.get(
     };
 
     testStatusGroups.forEach((group) => {
-      if (group.status in testStatusCounts) {
-        testStatusCounts[group.status as keyof typeof testStatusCounts] = group._count._all;
+      const status = group.status;
+      if (status === 'OPEN' || status === 'CLOSED' || status === 'DRAFT') {
+        testStatusCounts[status] = group._count._all;
       }
     });
 

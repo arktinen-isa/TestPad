@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../../api/client'
 import { TestAttempt, Group, SuspiciousEvent } from '../../types'
+import { t } from '../../utils/i18n'
 
 interface ResultsResponse {
   test: { id: string; title: string; subject?: string; passThreshold?: number }
@@ -44,9 +45,10 @@ function SuspiciousModal({ attemptId, studentName, onClose }: { attemptId: strin
     },
   })
 
-  const EVENT_LABELS: Record<string, string> = {
-    FULLSCREEN_EXIT: '↙ Вихід з повного екрану',
-    TAB_SWITCH: '⇄ Перемикання вкладки',
+  const getEventLabel = (eventType: string): string => {
+    if (eventType === 'FULLSCREEN_EXIT') return '↙ Вихід з повного екрану'
+    if (eventType === 'TAB_SWITCH') return '⇄ Перемикання вкладки'
+    return eventType
   }
 
   return (
@@ -76,7 +78,7 @@ function SuspiciousModal({ attemptId, studentName, onClose }: { attemptId: strin
               <div key={ev.id} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-orange-500/5 border border-orange-500/15">
                 <span className="text-orange-400 font-mono text-xs w-5 text-center">{i + 1}</span>
                 <div className="flex-1">
-                  <p className="text-orange-300 text-sm font-medium">{EVENT_LABELS[ev.eventType] ?? ev.eventType}</p>
+                  <p className="text-orange-300 text-sm font-medium">{getEventLabel(ev.eventType)}</p>
                   <p className="text-slate-500 text-xs">
                     {new Date(ev.occurredAt).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                   </p>
@@ -527,7 +529,7 @@ export default function TestResultsPage() {
         
         <div className="flex justify-between items-start border-b-4 border-black pb-6 mb-8">
           <div>
-            <h1 className="text-4xl font-black uppercase mb-1 tracking-tighter">GradeX Report</h1>
+            <h1 className="text-4xl font-black uppercase mb-1 tracking-tighter">{t('GradeX Report')}</h1>
             <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#7c3aed]">Протокол тестування</p>
           </div>
           <div className="text-right text-[10px] font-mono">

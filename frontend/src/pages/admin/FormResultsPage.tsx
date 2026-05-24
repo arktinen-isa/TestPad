@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import apiClient from '../../api/client'
 import { Form, FormSubmission, Group } from '../../types'
+import { t } from '../../utils/i18n'
 
 function normalizeValue(val?: string): string {
   if (!val) return '—'
@@ -537,7 +538,7 @@ export default function FormResultsPage() {
         
         <div className="flex justify-between items-start border-b-4 border-black pb-6 mb-8">
           <div>
-            <h1 className="text-4xl font-black uppercase mb-1 tracking-tighter">GradeX Report</h1>
+            <h1 className="text-4xl font-black uppercase mb-1 tracking-tighter">{t('GradeX Report')}</h1>
             <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#7c3aed]">Протокол результатів опитування</p>
           </div>
           <div className="text-right text-[10px] font-mono">

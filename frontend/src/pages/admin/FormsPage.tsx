@@ -21,16 +21,18 @@ export default function FormsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['forms'] })
   })
 
-  const STATUS_LABELS: Record<string, string> = {
-    DRAFT: 'Чернетка',
-    OPEN: 'Відкрито',
-    CLOSED: 'Закрито'
+  function getFormStatusLabel(status: string): string {
+    if (status === 'DRAFT') return 'Чернетка'
+    if (status === 'OPEN') return 'Відкрито'
+    if (status === 'CLOSED') return 'Закрито'
+    return status
   }
 
-  const STATUS_COLORS: Record<string, string> = {
-    DRAFT: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
-    OPEN: 'bg-green-500/20 text-green-400 border-green-500/30',
-    CLOSED: 'bg-red-500/20 text-red-400 border-red-500/30'
+  function getFormStatusColor(status: string): string {
+    if (status === 'DRAFT') return 'bg-slate-500/20 text-slate-400 border-slate-500/30'
+    if (status === 'OPEN') return 'bg-green-500/20 text-green-400 border-green-500/30'
+    if (status === 'CLOSED') return 'bg-red-500/20 text-red-400 border-red-500/30'
+    return 'bg-white/5 text-slate-400 border-white/10'
   }
 
   return (
@@ -59,8 +61,8 @@ export default function FormsPage() {
         ) : forms?.map(form => (
           <div key={form.id} className="glass-card p-5 group hover:border-purple-accent/30 transition-all">
             <div className="flex items-start justify-between mb-4">
-              <span className={`status-badge border ${STATUS_COLORS[form.status]}`}>
-                {STATUS_LABELS[form.status]}
+              <span className={`status-badge border ${getFormStatusColor(form.status)}`}>
+                {getFormStatusLabel(form.status)}
               </span>
               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button 

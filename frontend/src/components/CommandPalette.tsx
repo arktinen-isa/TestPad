@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Command } from 'cmdk'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAuthStore } from '../store/authStore'
+import { t } from '../utils/i18n'
 
 interface CommandItem {
   id: string
@@ -193,7 +194,7 @@ export default function CommandPalette({ open, onClose }: Props) {
                     перейти
                   </span>
                   <span className="flex items-center gap-1">
-                    <kbd className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 font-mono text-[10px]">esc</kbd>
+                    <kbd className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 font-mono text-[10px]">{t('esc')}</kbd>
                     закрити
                   </span>
                 </div>

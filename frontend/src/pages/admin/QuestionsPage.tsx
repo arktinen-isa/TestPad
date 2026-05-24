@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../../api/client'
 import { Question, Category, QuestionType } from '../../types'
 import QuestionFormModal from '../../components/admin/QuestionFormModal'
+import QuestionPreviewModal from '../../components/admin/QuestionPreviewModal'
 import ExcelImportModal from '../../components/admin/ExcelImportModal'
 import * as XLSX from 'xlsx'
 
@@ -27,6 +28,22 @@ const TYPE_COLORS: Record<QuestionType, string> = {
   ORDERING: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
 }
 
+function getQuestionTypeColor(type: string): string {
+  if (type === 'SINGLE') return TYPE_COLORS.SINGLE
+  if (type === 'MULTI') return TYPE_COLORS.MULTI
+  if (type === 'MATCHING') return TYPE_COLORS.MATCHING
+  if (type === 'ORDERING') return TYPE_COLORS.ORDERING
+  return 'bg-white/5 text-slate-400 border-white/10'
+}
+
+function getQuestionTypeLabel(type: string): string {
+  if (type === 'SINGLE') return TYPE_LABELS.SINGLE
+  if (type === 'MULTI') return TYPE_LABELS.MULTI
+  if (type === 'MATCHING') return TYPE_LABELS.MATCHING
+  if (type === 'ORDERING') return TYPE_LABELS.ORDERING
+  return type
+}
+
 export default function QuestionsPage() {
   const qc = useQueryClient()
   const [page, setPage] = useState(1)
@@ -40,6 +57,7 @@ export default function QuestionsPage() {
   const [targetCategoryId, setTargetCategoryId] = useState('')
   const [editQuestion, setEditQuestion] = useState<Question | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<Question | null>(null)
+  const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null)
 
   // Unified Category Management States
   const [newCatName, setNewCatName] = useState('')
@@ -468,8 +486,8 @@ export default function QuestionsPage() {
                           ) : null}
                         </td>
                         <td className="px-5 py-4">
-                          <span className={`status-badge border ${TYPE_COLORS[q.type]}`}>
-                            {TYPE_LABELS[q.type]}
+                          <span className={`status-badge border ${getQuestionTypeColor(q.type)}`}>
+                            {getQuestionTypeLabel(q.type)}
                           </span>
                         </td>
                         <td className="px-5 py-4 text-slate-400 text-sm">
@@ -478,8 +496,19 @@ export default function QuestionsPage() {
                         <td className="px-5 py-4">
                           <div className="flex items-center justify-end gap-2">
                             <button
+                              onClick={() => setPreviewQuestion(q)}
+                              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                              title="Попередній перегляд"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </button>
+                            <button
                               onClick={() => { setEditQuestion(q); setShowModal(true) }}
                               className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                              title="Редагувати"
                             >
                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -489,6 +518,7 @@ export default function QuestionsPage() {
                             <button
                               onClick={() => setDeleteConfirm(q)}
                               className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                              title="Видалити"
                             >
                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -684,6 +714,13 @@ export default function QuestionsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {previewQuestion && (
+        <QuestionPreviewModal
+          question={previewQuestion}
+          onClose={() => setPreviewQuestion(null)}
+        />
       )}
     </div>
   )

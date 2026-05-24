@@ -32,6 +32,10 @@ export default function ExcelImportModal({ categories, onClose, onImport }: Exce
         const data = e.target?.result
         const workbook = XLSX.read(data, { type: 'binary' })
         const sheetName = workbook.SheetNames[0]
+        if (!sheetName || !Object.prototype.hasOwnProperty.call(workbook.Sheets, sheetName)) {
+          setError('Не вдалося знайти аркуш у файлі.')
+          return
+        }
         const sheet = workbook.Sheets[sheetName]
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][]
 

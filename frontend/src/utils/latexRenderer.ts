@@ -1,4 +1,5 @@
 import katex from 'katex'
+import DOMPurify from 'dompurify'
 
 function escapeHtml(str: string): string {
   return str
@@ -35,6 +36,9 @@ export function renderLatex(text?: string | null): string {
     }
   })
 
-  return rendered
+  // Sanitize the final HTML string using DOMPurify to eliminate all XSS risk
+  return DOMPurify.sanitize(rendered, {
+    USE_PROFILES: { html: true, mathMl: true, svg: true }
+  })
 }
 export default renderLatex

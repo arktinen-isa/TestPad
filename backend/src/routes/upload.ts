@@ -17,7 +17,19 @@ const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
   filename: (_req, file, cb) => {
     const unique = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    cb(null, unique + path.extname(file.originalname));
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+    const safeExt = allowedExts.includes(ext) ? ext : '.bin';
+    const finalFilename = `${unique}${safeExt}`;
+
+    // Prevent path traversal by joining, normalizing, and verifying it starts with UPLOAD_DIR
+    const joinedPath = path.join(UPLOAD_DIR, finalFilename);
+    const normalizedPath = path.normalize(joinedPath);
+    if (!normalizedPath.startsWith(UPLOAD_DIR)) {
+      return cb(new Error('Invalid path specified!'), '');
+    }
+
+    cb(null, finalFilename);
   },
 });
 

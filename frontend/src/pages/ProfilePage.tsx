@@ -2,16 +2,18 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import apiClient from '../api/client'
+import { t } from '../utils/i18n'
 
 export default function ProfilePage() {
   const { user } = useAuthStore()
   const navigate = useNavigate()
   const [password, setPassword] = useState('')
 
-  const ROLE_LABELS: Record<string, string> = {
-    ADMIN: 'Адміністратор',
-    TEACHER: 'Викладач',
-    STUDENT: 'Студент',
+  const getRoleLabel = (role?: string) => {
+    if (role === 'ADMIN') return 'Адміністратор'
+    if (role === 'TEACHER') return 'Викладач'
+    if (role === 'STUDENT') return 'Студент'
+    return role || ''
   }
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -69,13 +71,13 @@ export default function ProfilePage() {
             <p className="text-white font-medium">{user?.name}</p>
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Email</label>
+            <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">{t('Email')}</label>
             <p className="text-white font-medium">{user?.email}</p>
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Роль</label>
             <span className="status-badge bg-purple-500/20 text-purple-400 border border-purple-500/30">
-              {ROLE_LABELS[user?.role || ''] || user?.role}
+              {getRoleLabel(user?.role)}
             </span>
           </div>
         </div>

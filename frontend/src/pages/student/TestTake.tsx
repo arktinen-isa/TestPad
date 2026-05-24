@@ -6,6 +6,7 @@ import QuestionText from '../../components/QuestionText'
 import MatchingQuestion from '../../components/MatchingQuestion'
 import OrderingQuestion from '../../components/OrderingQuestion'
 import { renderLatex } from '../../utils/latexRenderer'
+import { t } from '../../utils/i18n'
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60)
@@ -311,7 +312,7 @@ export default function TestTake() {
           >
             Повернутись у тест
           </button>
-          <p className="text-white/20 text-[10px] mt-12 uppercase tracking-widest">GradeX Security Protocol v2.4</p>
+          <p className="text-white/20 text-[10px] mt-12 uppercase tracking-widest">{t('GradeX Security Protocol v2.4')}</p>
         </div>
       )}
       

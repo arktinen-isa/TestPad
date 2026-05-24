@@ -167,52 +167,53 @@ export const generateCertificate = (
   const totalElemH = ELEMS.reduce((s, e) => s + e.h, 0)
   const gap = (usableH - totalElemH) / (ELEMS.length - 1)
 
-  const pos: Partial<Record<ElemKey, number>> = {}
+  const pos = new Map<ElemKey, number>()
   let curY = MARGIN_TOP
   for (let i = 0; i < ELEMS.length; i++) {
     curY += ELEMS[i].h / 2
-    pos[ELEMS[i].key] = curY
+    pos.set(ELEMS[i].key, curY)
     curY += ELEMS[i].h / 2
     if (i < ELEMS.length - 1) curY += gap
   }
 
   // ── HEADER ─────────────────────────────────────────────────────────────
-  drawProjectLogo(W / 2, pos.logo!, 18)
-  drawText('GRADEX', W / 2, pos.gradex!, 7.5, 'bold', '#a78bfa', 'center', 'heading')
+  drawProjectLogo(W / 2, pos.get('logo')!, 18)
+  drawText('GRADEX', W / 2, pos.get('gradex')!, 7.5, 'bold', '#a78bfa', 'center', 'heading')
 
   draw(PURPLEL); doc.setLineWidth(0.2)
-  doc.line(W / 2 - 36, pos.rule!, W / 2 - 5, pos.rule!)
-  doc.line(W / 2 + 5, pos.rule!, W / 2 + 36, pos.rule!)
-  fill(GOLD); doc.circle(W / 2, pos.rule!, 1.0, 'F')
+  doc.line(W / 2 - 36, pos.get('rule')!, W / 2 - 5, pos.get('rule')!)
+  doc.line(W / 2 + 5, pos.get('rule')!, W / 2 + 36, pos.get('rule')!)
+  fill(GOLD); doc.circle(W / 2, pos.get('rule')!, 1.0, 'F')
 
-  drawText('СЕРТИФІКАТ', W / 2, pos.cert!, 19, '800', '#ffffff', 'center', 'heading')
-  drawText('ПРО УСПІШНЕ ПРОХОДЖЕННЯ ТЕСТУВАННЯ', W / 2, pos.subtitle!, 8, '600', '#a78bfa', 'center', 'body')
+  drawText('СЕРТИФІКАТ', W / 2, pos.get('cert')!, 19, '800', '#ffffff', 'center', 'heading')
+  drawText('ПРО УСПІШНЕ ПРОХОДЖЕННЯ ТЕСТУВАННЯ', W / 2, pos.get('subtitle')!, 8, '600', '#a78bfa', 'center', 'body')
 
   //sv(); gst(0.45); draw(DIM); doc.setLineWidth(0.3)
   //doc.line(20, pos.sep1!, W - 20, pos.sep1!); rs()
 
   // ── BODY ───────────────────────────────────────────────────────────────
-  drawText('цим підтверджується, що', W / 2, pos.cym!, 6, '300', '#94a3b8', 'center', 'body')
+  drawText('цим підтверджується, що', W / 2, pos.get('cym')!, 6, '300', '#94a3b8', 'center', 'body')
 
-  drawText(lastName, W / 2, pos.lastname!, 19, '800', '#fbbf24', 'center', 'heading')
-  if (firstName) drawText(firstName, W / 2, pos.firstname!, 12, '400', '#e2e8f0', 'center', 'heading')
+  drawText(lastName, W / 2, pos.get('lastname')!, 19, '800', '#fbbf24', 'center', 'heading')
+  if (firstName) drawText(firstName, W / 2, pos.get('firstname')!, 12, '400', '#e2e8f0', 'center', 'heading')
 
   sv(); gst(0.3); draw(GOLD); doc.setLineWidth(0.4)
-  doc.line(W / 2 - 52, pos.underline!, W / 2 + 52, pos.underline!); rs()
+  doc.line(W / 2 - 52, pos.get('underline')!, W / 2 + 52, pos.get('underline')!); rs()
 
-  drawText('успішно завершив(-ла) тестування з курсу', W / 2, pos.phrase!, 6, '400', '#94a3b8', 'center', 'body')
+  drawText('успішно завершив(-ла) тестування з курсу', W / 2, pos.get('phrase')!, 6, '400', '#94a3b8', 'center', 'body')
 
   titleLines.forEach((line, i) => {
-    drawText(line, W / 2, pos[`title${i}` as ElemKey]!, 10, '700', '#e2e8f0', 'center', 'heading')
+    const key: ElemKey = `title${i}` as ElemKey
+    drawText(line, W / 2, pos.get(key)!, 10, '700', '#e2e8f0', 'center', 'heading')
   })
 
   // Score badge
   const bh = 14
   sv(); gst(0.22); fill(PURPLE)
-  doc.roundedRect(W / 2 - 70, pos.badge! - bh / 2, 140, bh, 3, 3, 'F'); rs()
+  doc.roundedRect(W / 2 - 70, pos.get('badge')! - bh / 2, 140, bh, 3, 3, 'F'); rs()
   draw(PURPLEL); doc.setLineWidth(0.3)
-  doc.roundedRect(W / 2 - 70, pos.badge! - bh / 2, 140, bh, 3, 3, 'S')
-  drawText(`РЕЗУЛЬТАТ: ${score}`, W / 2, pos.badge! + 0.2, 5, '700', '#c4b5fd', 'center', 'body')
+  doc.roundedRect(W / 2 - 70, pos.get('badge')! - bh / 2, 140, bh, 3, 3, 'S')
+  drawText(`РЕЗУЛЬТАТ: ${score}`, W / 2, pos.get('badge')! + 0.2, 5, '700', '#c4b5fd', 'center', 'body')
 
   // ── FOOTER ─────────────────────────────────────────────────────────────
   //sv(); gst(0.45); draw(DIM); doc.setLineWidth(0.3)
@@ -220,7 +221,7 @@ export const generateCertificate = (
   //fill(GOLD); doc.circle(W / 2, pos.sep2!, 1.0, 'F')
 
   // Date label + value on one line, 8pt Inter
-  drawText(`дата завершення ${dateStr}`, W / 2, pos.date!, 3, '400', '#64748b', 'center', 'body')
+  drawText(`дата завершення ${dateStr}`, W / 2, pos.get('date')!, 3, '400', '#64748b', 'center', 'body')
 
   if (testLogoUrl) {
     try {

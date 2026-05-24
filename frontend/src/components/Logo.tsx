@@ -1,4 +1,5 @@
 import React from 'react';
+import { t } from '../utils/i18n';
 
 interface LogoProps {
   className?: string;
@@ -74,7 +75,7 @@ export const Logo: React.FC<LogoProps> = ({ className = "", size = 40, hideText 
       
       {!hideText && (
         <span className="font-unbounded font-black text-2xl tracking-tighter text-white inline-flex items-center select-none">
-          Grade<span className="text-[#8b5cf6]">X</span>
+          {t('Grade')}<span className="text-[#8b5cf6]">X</span>
         </span>
       )}
     </div>
