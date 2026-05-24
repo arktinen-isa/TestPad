@@ -75,7 +75,7 @@ router.get(
           category: { select: { id: true, name: true, pointsWeight: true } },
           answers: { select: { id: true, text: true, isCorrect: true } },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: category ? { text: 'asc' } : { createdAt: 'desc' },
       }),
       prisma.question.count({ where }),
     ]);

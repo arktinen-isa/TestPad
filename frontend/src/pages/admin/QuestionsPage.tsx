@@ -46,6 +46,7 @@ export default function QuestionsPage() {
   const [newCatWeight, setNewCatWeight] = useState(1)
   const [newCatTimeLimit, setNewCatTimeLimit] = useState<number | ''>('')
   const [showCategoryModal, setShowCategoryModal] = useState(false)
+  const [categorySearch, setCategorySearch] = useState('')
 
   const createCategoryMutation = useMutation({
     mutationFn: async (data: { name: string, pointsWeight: number, timeLimitSeconds: number | null }) => {
@@ -277,10 +278,24 @@ export default function QuestionsPage() {
               Створити категорію
             </button>
 
+            {/* Search Categories input */}
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                value={categorySearch}
+                onChange={(e) => setCategorySearch(e.target.value)}
+                placeholder="Пошук категорій..."
+                className="glass-input pl-8 py-2 text-xs"
+              />
+            </div>
+
             <div className="h-px bg-white/5" />
 
             {/* Category Listing / Quick Filters */}
-            <div className="space-y-1 max-h-96 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10">
+            <div className="space-y-1 max-h-[calc(100vh-320px)] min-h-[300px] lg:max-h-[580px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10">
               <button
                 onClick={() => setCategoryFilter('')}
                 className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium transition-all flex items-center justify-between border ${
@@ -292,38 +307,40 @@ export default function QuestionsPage() {
                 <span>Всі категорії</span>
               </button>
 
-              {categories?.map((c) => (
-                <div key={c.id} className="group relative flex items-center">
-                  <button
-                    onClick={() => setCategoryFilter(c.id)}
-                    className={`flex-1 text-left px-3 py-2 rounded-xl text-xs font-medium transition-all flex items-center justify-between border ${
-                      categoryFilter === c.id
-                        ? 'bg-purple-accent/20 border-purple-accent/30 text-white shadow-[0_0_15px_rgba(124,58,237,0.15)]'
-                        : 'text-slate-400 hover:bg-white/5 hover:text-white border-transparent'
-                    }`}
-                  >
-                    <span className="truncate pr-6">{c.name}</span>
-                    <span className="px-2 py-0.5 rounded-md bg-white/5 text-[10px] text-slate-400 font-bold flex-shrink-0 group-hover:opacity-0 transition-opacity flex items-center gap-1.5">
-                      <span>{c.pointsWeight} б.</span>
-                      {c.timeLimitSeconds ? <span>({c.timeLimitSeconds}с)</span> : null}
-                      <span className="bg-purple-accent/20 text-purple-300 px-1 py-0.5 rounded text-[9px] font-black">{c.questionCount ?? 0} ?</span>
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (confirm(`Ви впевнені, що хочете видалити категорію "${c.name}"?`)) {
-                        deleteCategoryMutation.mutate(c.id)
-                      }
-                    }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                    title="Видалити категорію"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </div>
-              ))}
+              {categories
+                ?.filter((c) => c.name.toLowerCase().includes(categorySearch.toLowerCase()))
+                ?.map((c) => (
+                  <div key={c.id} className="group relative flex items-center">
+                    <button
+                      onClick={() => setCategoryFilter(c.id)}
+                      className={`flex-1 text-left px-3 py-2 rounded-xl text-xs font-medium transition-all flex items-center justify-between border ${
+                        categoryFilter === c.id
+                          ? 'bg-purple-accent/20 border-purple-accent/30 text-white shadow-[0_0_15px_rgba(124,58,237,0.15)]'
+                          : 'text-slate-400 hover:bg-white/5 hover:text-white border-transparent'
+                      }`}
+                    >
+                      <span className="truncate pr-6">{c.name}</span>
+                      <span className="px-2 py-0.5 rounded-md bg-white/5 text-[10px] text-slate-400 font-bold flex-shrink-0 group-hover:opacity-0 transition-opacity flex items-center gap-1.5">
+                        <span>{c.pointsWeight} б.</span>
+                        {c.timeLimitSeconds ? <span>({c.timeLimitSeconds}с)</span> : null}
+                        <span className="bg-purple-accent/20 text-purple-300 px-1 py-0.5 rounded text-[9px] font-black">{c.questionCount ?? 0} ?</span>
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Ви впевнені, що хочете видалити категорію "${c.name}"?`)) {
+                          deleteCategoryMutation.mutate(c.id)
+                        }
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                      title="Видалити категорію"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
             </div>
           </div>
         </div>
