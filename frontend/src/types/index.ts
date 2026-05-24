@@ -161,6 +161,15 @@ export interface DashboardStats {
   totalStudents: number
   totalQuestions: number
   activeTests: Test[]
+  testStatusCounts: {
+    OPEN: number
+    CLOSED: number
+    DRAFT: number
+  }
+  dailyActivity: {
+    name: string
+    value: number
+  }[]
 }
 
 export interface LoginResponse {

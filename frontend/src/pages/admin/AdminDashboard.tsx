@@ -98,27 +98,18 @@ export default function AdminDashboard() {
     },
   })
 
-  // Build status distribution from activeTests
-  const allTests: Test[] = stats?.activeTests ?? []
-  const statusCounts = allTests.reduce<Record<string, number>>((acc, t) => {
-    acc[t.status] = (acc[t.status] ?? 0) + 1
-    return acc
-  }, {})
-  const pieData = Object.entries(statusCounts).map(([status, value]) => ({
-    name: getStatusLabel(status as Test['status']),
-    value,
-    color: PIE_COLORS[status as keyof typeof PIE_COLORS] ?? '#8b5cf6',
-  }))
+  // Build status distribution from all tests via testStatusCounts
+  const statusCounts = stats?.testStatusCounts ?? { OPEN: 0, CLOSED: 0, DRAFT: 0 }
+  const pieData = Object.entries(statusCounts)
+    .filter(([_, value]) => value > 0)
+    .map(([status, value]) => ({
+      name: getStatusLabel(status as Test['status']),
+      value,
+      color: PIE_COLORS[status as keyof typeof PIE_COLORS] ?? '#8b5cf6',
+    }))
 
-  // Synthetic sparkline from stats (3 reference points for visual interest)
-  const areaData = stats
-    ? [
-        { name: 'Питання', value: Math.round(stats.totalQuestions / 4) },
-        { name: 'Тести',   value: stats.totalTests },
-        { name: 'Студенти', value: stats.totalStudents },
-        { name: 'Актив.',  value: allTests.filter(t => t.status === 'OPEN').length },
-      ]
-    : []
+  // Activity history (attempts over the last 7 days)
+  const areaData = stats?.dailyActivity ?? []
 
   return (
     <motion.div
@@ -175,7 +166,7 @@ export default function AdminDashboard() {
         <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Area chart */}
           <div className="lg:col-span-2 glass-card p-5">
-            <p className="text-sm font-semibold text-white mb-4">Огляд системи</p>
+            <p className="text-sm font-semibold text-white mb-4">Активність тестування (спроби за останні 7 днів)</p>
             <ResponsiveContainer width="100%" height={160}>
               <AreaChart data={areaData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
                 <defs>
