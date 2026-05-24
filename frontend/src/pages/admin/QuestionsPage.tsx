@@ -94,6 +94,21 @@ export default function QuestionsPage() {
   const questions = queryData?.data
   const totalPages = queryData?.totalPages || 1
 
+  // Find duplicate texts in the loaded questions list
+  const duplicateTexts = new Set<string>()
+  if (questions) {
+    const textCounts: Record<string, number> = {}
+    questions.forEach(q => {
+      const normalized = q.text.trim().toLowerCase()
+      textCounts[normalized] = (textCounts[normalized] ?? 0) + 1
+    })
+    Object.entries(textCounts).forEach(([text, count]) => {
+      if (count > 1) {
+        duplicateTexts.add(text)
+      }
+    })
+  }
+
   const saveMutation = useMutation({
     mutationFn: async ({ data, id }: { data: QuestionFormData; id?: string }) => {
       if (id) {
@@ -403,25 +418,41 @@ export default function QuestionsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {questions?.map((q) => (
-                      <tr key={q.id} className={`table-row ${selectedIds.includes(q.id) ? 'bg-purple-accent/5' : ''}`}>
-                        <td className="px-5 py-4">
-                          <input
-                            type="checkbox"
-                            className="rounded border-white/20 bg-white/5 text-purple-accent"
-                            checked={selectedIds.includes(q.id)}
-                            onChange={() => toggleSelect(q.id)}
-                          />
-                        </td>
-                        <td className="px-5 py-4 max-w-xs">
-                          <p className="text-white text-sm">{truncateText(q.text)}</p>
-                          <p className="text-slate-500 text-xs mt-0.5">
-                            {q.type === 'MATCHING' 
-                              ? `${(q.matchingPairs as any)?.length || 0} пар` 
-                              : q.type === 'ORDERING' 
-                              ? `${(q.orderingItems as any)?.length || 0} кроків` 
-                              : `${q.answers?.length || 0} відповідей`}
-                          </p>
+                    {questions?.map((q) => {
+                      const isDuplicate = duplicateTexts.has(q.text.trim().toLowerCase())
+                      const rowClass = `table-row ${
+                        selectedIds.includes(q.id) 
+                          ? 'bg-purple-accent/15 border-purple-accent/30' 
+                          : isDuplicate 
+                          ? 'bg-red-500/10 border-red-500/20 hover:bg-red-500/15' 
+                          : ''
+                      }`
+                      return (
+                        <tr key={q.id} className={rowClass}>
+                          <td className="px-5 py-4">
+                            <input
+                              type="checkbox"
+                              className="rounded border-white/20 bg-white/5 text-purple-accent"
+                              checked={selectedIds.includes(q.id)}
+                              onChange={() => toggleSelect(q.id)}
+                            />
+                          </td>
+                          <td className="px-5 py-4 max-w-xs">
+                            <p className="text-white text-sm flex items-center gap-2 flex-wrap">
+                              {isDuplicate && (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] bg-red-500/25 text-red-400 border border-red-500/40 font-bold uppercase tracking-wider flex-shrink-0 animate-pulse">
+                                  Дублікат
+                                </span>
+                              )}
+                              <span className={isDuplicate ? 'text-red-200/90 font-medium' : ''}>{truncateText(q.text)}</span>
+                            </p>
+                            <p className="text-slate-500 text-xs mt-0.5">
+                              {q.type === 'MATCHING' 
+                                ? `${(q.matchingPairs as any)?.length || 0} пар` 
+                                : q.type === 'ORDERING' 
+                                ? `${(q.orderingItems as any)?.length || 0} кроків` 
+                                : `${q.answers?.length || 0} відповідей`}
+                            </p>
                           {q.totalResponsesCount && q.totalResponsesCount > 0 ? (
                             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                               <span className="px-1.5 py-0.5 rounded text-[10px] bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">
@@ -467,7 +498,8 @@ export default function QuestionsPage() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                      )
+                    })}
                     {questions?.length === 0 && (
                       <tr>
                         <td colSpan={6} className="text-center p-8 text-slate-500 text-sm">
