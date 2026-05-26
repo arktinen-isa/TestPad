@@ -385,4 +385,37 @@ router.delete(
   })
 );
 
+// DELETE /api/forms/submissions/:submissionId
+router.delete(
+  '/submissions/:submissionId',
+  authorize('ADMIN', 'TEACHER'),
+  asyncHandler(async (req, res) => {
+    const { submissionId } = req.params;
+    const user = req.user!;
+
+    const submission = await prisma.formSubmission.findUnique({
+      where: { id: submissionId },
+      include: { form: true },
+    });
+
+    if (!submission) {
+      return res.status(404).json({ error: 'Результат форми не знайдено' });
+    }
+
+    // TZI Access Control check for TEACHER role
+    if (user.role === 'TEACHER' && submission.form.createdById !== user.userId) {
+      logSecurityEvent(user.userId, user.role, 'UNAUTHORIZED_SUBMISSION_DELETE_ATTEMPT', { submissionId }, req.ip);
+      return res.status(403).json({ error: 'Доступ заборонено' });
+    }
+
+    await prisma.formSubmission.delete({
+      where: { id: submissionId },
+    });
+
+    logSecurityEvent(user.userId, user.role, 'FORM_SUBMISSION_DELETE', { submissionId, formId: submission.formId }, req.ip);
+
+    res.status(204).send();
+  })
+);
+
 export default router;

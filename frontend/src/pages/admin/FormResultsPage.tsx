@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import apiClient from '../../api/client'
 import { Form, FormSubmission, Group } from '../../types'
@@ -240,6 +240,19 @@ export default function FormResultsPage() {
     }
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: async (submissionId: string) => {
+      await apiClient.delete(`/forms/submissions/${submissionId}`)
+    },
+    onSuccess: () => {
+      refetch()
+    },
+    onError: (err: any) => {
+      const errMsg = err?.response?.data?.error || 'Помилка при видаленні результату'
+      alert(errMsg)
+    }
+  })
+
   const selectedGroupName = groups?.find((g) => g.id === groupFilter)?.name || 'Всі групи'
 
   // Calculate evaluation info with useMemo
@@ -418,6 +431,7 @@ export default function FormResultsPage() {
                       )}
                     </th>
                   ))}
+                  <th className="px-5 py-4 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider min-w-[100px] no-print">Дії</th>
                 </tr>
               </thead>
               <tbody>
@@ -472,6 +486,26 @@ export default function FormResultsPage() {
                           </td>
                         )
                       })}
+                      <td className="px-5 py-4 text-right no-print">
+                        <button
+                          onClick={() => {
+                            if (confirm('Ви дійсно хочете видалити цей результат?')) {
+                              deleteMutation.mutate(s.id)
+                            }
+                          }}
+                          disabled={deleteMutation.isPending}
+                          className="inline-flex items-center justify-center p-2 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 hover:bg-red-500 hover:text-white transition-all duration-300 hover:scale-105 active:scale-95 disabled:opacity-50"
+                          title="Видалити результат"
+                        >
+                          {deleteMutation.isPending ? (
+                            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          )}
+                        </button>
+                      </td>
                     </tr>
                   )
                 })}
