@@ -489,6 +489,7 @@ router.get(
             },
           },
           suspiciousEvents: { select: { id: true, eventType: true, occurredAt: true } },
+          webcamPhotos: { select: { photoType: true } },
         },
         orderBy: { startedAt: 'desc' },
       }),
@@ -513,6 +514,7 @@ router.get(
           ? Math.floor((a.finishedAt.getTime() - a.startedAt.getTime()) / 1000)
           : 0,
         suspiciousEvents: a.suspiciousEvents,
+        webcamPhotoTypes: a.webcamPhotos.map((p: { photoType: string }) => p.photoType),
       };
     });
 

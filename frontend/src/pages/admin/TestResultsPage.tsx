@@ -525,15 +525,45 @@ export default function TestResultsPage() {
                         )}
                       </td>
                       <td className="px-5 py-4">
-                        <button
-                          onClick={() => setWebcamModal({ attemptId: a.id, studentName: a.user?.name ?? '—' })}
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-cyan-400 hover:bg-cyan-500/10 transition-all"
-                          title="Переглянути фото вебкамери"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
-                        </button>
+                        {(() => {
+                          const types = a.webcamPhotoTypes ?? []
+                          const hasSuspicious = types.some(t => t === 'phone_detected' || t === 'camera_covered')
+                          const hasPhotos = types.length > 0
+                          return (
+                            <button
+                              onClick={() => setWebcamModal({ attemptId: a.id, studentName: a.user?.name ?? '—' })}
+                              className={`p-1.5 rounded-lg transition-all ${
+                                hasSuspicious
+                                  ? 'text-red-400 hover:text-red-300 hover:bg-red-500/10'
+                                  : hasPhotos
+                                  ? 'text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10'
+                                  : 'text-slate-600 hover:text-slate-400 hover:bg-white/5'
+                              }`}
+                              title={
+                                hasSuspicious
+                                  ? types.includes('phone_detected') && types.includes('camera_covered')
+                                    ? 'Виявлено телефон та закрита камера'
+                                    : types.includes('phone_detected')
+                                    ? 'Виявлено телефон'
+                                    : 'Камера була закрита'
+                                  : hasPhotos
+                                  ? 'Переглянути фото вебкамери'
+                                  : 'Фото вебкамери відсутні'
+                              }
+                            >
+                              {hasSuspicious ? (
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                              ) : (
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                              )}
+                            </button>
+                          )
+                        })()}
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex justify-end">

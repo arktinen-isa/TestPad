@@ -129,6 +129,7 @@ export interface TestAttempt {
   user?: User
   test?: Test
   suspiciousEvents?: SuspiciousEvent[]
+  webcamPhotoTypes?: string[]
 }
 
 export interface SuspiciousEvent {

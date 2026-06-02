@@ -6,6 +6,45 @@ import { getApiError } from '../../api/errors'
 import { useTestStore } from '../../store/testStore'
 import { StudentTest } from '../../types'
 
+function isMobileDevice(): boolean {
+  const ua = navigator.userAgent
+  const mobileRe = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i
+  if (mobileRe.test(ua)) return true
+  // iPadOS 13+ reports as desktop Safari but has touch
+  if (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua)) return true
+  return false
+}
+
+function MobileBlockScreen() {
+  return (
+    <div className="fixed inset-0 z-[9999] bg-[#0F0A1E] flex flex-col items-center justify-center p-6 text-center">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,#1a0a2e_0%,#0F0A1E_70%)] pointer-events-none" />
+      <div className="relative">
+        <div className="w-24 h-24 rounded-3xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mx-auto mb-8">
+          <svg className="w-12 h-12 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+              d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <h1 className="font-unbounded text-2xl font-black text-white mb-3 tracking-tighter">
+          МОБІЛЬНИЙ ПРИСТРІЙ
+        </h1>
+        <p className="text-slate-400 max-w-xs mx-auto text-base leading-relaxed mb-6">
+          Проходження тестування з телефону або планшета <span className="text-white font-semibold">недоступне</span>.
+        </p>
+        <p className="text-slate-500 text-sm max-w-xs mx-auto leading-relaxed">
+          Відкрийте тест на комп'ютері або ноутбуці з повноцінним браузером.
+        </p>
+        <div className="mt-10 flex items-center justify-center gap-2 text-white/15 text-[10px] uppercase tracking-[0.2em] font-bold">
+          <div className="w-1 h-1 rounded-full bg-white/20" />
+          GradeX Security Protocol
+          <div className="w-1 h-1 rounded-full bg-white/20" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function getPlural(n: number, one: string, few: string, many: string) {
   const lastDigit = n % 10;
   const lastTwoDigits = n % 100;
@@ -21,6 +60,8 @@ export default function TestStart() {
   const navigate = useNavigate()
   const { startAttempt, isLoading: isStarting } = useTestStore()
   const [startError, setStartError] = useState<string | null>(null)
+
+  if (isMobileDevice()) return <MobileBlockScreen />
 
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>('idle')
   const [cameraError, setCameraError] = useState<string | null>(null)

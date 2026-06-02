@@ -9,44 +9,65 @@ import { renderLatex } from '../../utils/latexRenderer'
 import SafeHtml from '../../components/SafeHtml'
 import { t } from '../../utils/i18n'
 
+function isMobileDevice(): boolean {
+  const ua = navigator.userAgent
+  if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i.test(ua)) return true
+  if (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua)) return true
+  return false
+}
+
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60)
   const s = seconds % 60
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-// Captures a JPEG frame from a video element as base64 string (~30-60KB)
-function captureFrame(video: HTMLVideoElement, quality = 0.6): string | null {
+const ANALYSIS_W = 80, ANALYSIS_H = 60
+
+// Draws a small canvas from the video and returns pixel data for analysis
+function getFramePixels(video: HTMLVideoElement): Uint8ClampedArray | null {
   if (video.readyState < 2) return null
+  const canvas = document.createElement('canvas')
+  canvas.width = ANALYSIS_W
+  canvas.height = ANALYSIS_H
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+  ctx.drawImage(video, 0, 0, ANALYSIS_W, ANALYSIS_H)
+  return ctx.getImageData(0, 0, ANALYSIS_W, ANALYSIS_H).data
+}
+
+// Captures a JPEG frame. Returns null if video not ready.
+// Returns { photoData, isCovered } — isCovered=true when avg brightness < 20 (lens blocked).
+function captureFrame(video: HTMLVideoElement, quality = 0.6): { photoData: string; isCovered: boolean } | null {
+  if (video.readyState < 2) return null
+  const pixels = getFramePixels(video)
+  let isCovered = false
+  if (pixels) {
+    let totalLum = 0
+    for (let i = 0; i < pixels.length; i += 4) {
+      totalLum += pixels[i] * 0.299 + pixels[i + 1] * 0.587 + pixels[i + 2] * 0.114
+    }
+    isCovered = (totalLum / (ANALYSIS_W * ANALYSIS_H)) < 20
+  }
   const canvas = document.createElement('canvas')
   canvas.width = 640
   canvas.height = 480
   const ctx = canvas.getContext('2d')
   if (!ctx) return null
   ctx.drawImage(video, 0, 0, 640, 480)
-  return canvas.toDataURL('image/jpeg', quality)
+  return { photoData: canvas.toDataURL('image/jpeg', quality), isCovered }
 }
 
 // Heuristic phone screen detection:
-// Scans the frame for a bright rectangular region (possible phone/tablet screen).
-// Returns true when 15-55% of pixels are very bright (>185 brightness),
-// suggesting an illuminated screen in the frame.
+// Returns true when 15-55% of pixels are very bright (>185 lum) — suggests phone screen.
 function detectBrightScreen(video: HTMLVideoElement): boolean {
-  if (video.readyState < 2) return false
-  const W = 80, H = 60
-  const canvas = document.createElement('canvas')
-  canvas.width = W
-  canvas.height = H
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return false
-  ctx.drawImage(video, 0, 0, W, H)
-  const data = ctx.getImageData(0, 0, W, H).data
+  const pixels = getFramePixels(video)
+  if (!pixels) return false
   let bright = 0
-  for (let i = 0; i < data.length; i += 4) {
-    const lum = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
-    if (lum > 185) bright++
+  for (let i = 0; i < pixels.length; i += 4) {
+    if (pixels[i] * 0.299 + pixels[i + 1] * 0.587 + pixels[i + 2] * 0.114 > 185) bright++
   }
-  const ratio = bright / (W * H)
+  const ratio = bright / (ANALYSIS_W * ANALYSIS_H)
   return ratio > 0.15 && ratio < 0.55
 }
 
@@ -55,6 +76,29 @@ export default function TestTake() {
   const navigate = useNavigate()
   const location = useLocation()
   const requireWebcam = (location.state?.requireWebcam ?? false) as boolean
+
+  if (isMobileDevice()) {
+    return (
+      <div className="fixed inset-0 bg-[#0F0A1E] flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 rounded-3xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mx-auto mb-6">
+          <svg className="w-10 h-10 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+              d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <h2 className="font-unbounded text-xl font-black text-white mb-3">МОБІЛЬНИЙ ПРИСТРІЙ</h2>
+        <p className="text-slate-400 max-w-xs text-sm leading-relaxed mb-6">
+          Проходження тестування з телефону або планшета недоступне. Відкрийте на комп'ютері.
+        </p>
+        <button
+          onClick={() => navigate('/student/dashboard')}
+          className="px-8 py-3 rounded-2xl bg-white/5 border border-white/10 text-white text-sm font-medium hover:bg-white/10 transition-all"
+        >
+          До кабінету
+        </button>
+      </div>
+    )
+  }
 
   const {
     attemptId,
@@ -122,12 +166,17 @@ export default function TestTake() {
     }
   }, [isFinished])
 
-  // Send a webcam photo to the backend
+  // Send a webcam photo to the backend.
+  // If the frame is nearly black (camera covered), overrides photoType to 'camera_covered'.
   const sendPhoto = useCallback(async (photoType: string) => {
     if (!videoRef.current || !attemptIdRef.current) return
-    const photoData = captureFrame(videoRef.current)
-    if (!photoData) return
-    apiClient.post(`/attempts/${attemptIdRef.current}/webcam-photo`, { photoData, photoType }).catch(() => {})
+    const result = captureFrame(videoRef.current)
+    if (!result) return
+    const effectiveType = result.isCovered ? 'camera_covered' : photoType
+    apiClient.post(`/attempts/${attemptIdRef.current}/webcam-photo`, {
+      photoData: result.photoData,
+      photoType: effectiveType,
+    }).catch(() => {})
   }, [])
 
   // Schedule 3 photos: start (~q1), middle (~50%), near-end (~85%)
@@ -642,21 +691,9 @@ export default function TestTake() {
       )}
     </div>
 
-      {/* Webcam PiP preview */}
-      {requireWebcam && !cameraError && (
-        <div className="fixed bottom-28 right-6 z-[1002] w-28 h-20 rounded-2xl overflow-hidden border border-cyan-500/30 bg-black shadow-[0_0_20px_rgba(6,182,212,0.15)] pointer-events-none">
-          <video
-            ref={videoRef}
-            autoPlay
-            muted
-            playsInline
-            className="w-full h-full object-cover scale-x-[-1]"
-          />
-          <div className="absolute top-1 left-1 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-black/60">
-            <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-            <span className="text-cyan-300 text-[8px] font-bold uppercase">Live</span>
-          </div>
-        </div>
+      {/* Hidden webcam stream (used only for frame capture, not shown to student) */}
+      {requireWebcam && (
+        <video ref={videoRef} autoPlay muted playsInline className="hidden" aria-hidden="true" />
       )}
 
       <div className="flex-shrink-0 border-t border-white/5 bg-[#0D071F]/90 backdrop-blur-2xl px-6 py-6 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
