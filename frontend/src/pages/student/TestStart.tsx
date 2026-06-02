@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import apiClient from '../../api/client'
 import { getApiError } from '../../api/errors'
 import { useTestStore } from '../../store/testStore'
 import { StudentTest } from '../../types'
- 
+
 function getPlural(n: number, one: string, few: string, many: string) {
   const lastDigit = n % 10;
   const lastTwoDigits = n % 100;
@@ -14,11 +14,18 @@ function getPlural(n: number, one: string, few: string, many: string) {
   return many;
 }
 
+type CameraStatus = 'idle' | 'requesting' | 'ready' | 'error' | 'blocked'
+
 export default function TestStart() {
   const { testId } = useParams<{ testId: string }>()
   const navigate = useNavigate()
   const { startAttempt, isLoading: isStarting } = useTestStore()
   const [startError, setStartError] = useState<string | null>(null)
+
+  const [cameraStatus, setCameraStatus] = useState<CameraStatus>('idle')
+  const [cameraError, setCameraError] = useState<string | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const streamRef = useRef<MediaStream | null>(null)
 
   const { data: test, isLoading } = useQuery<StudentTest>({
     queryKey: ['student-test', testId],
@@ -29,8 +36,83 @@ export default function TestStart() {
     enabled: !!testId,
   })
 
+  // Initialize camera if test requires webcam
+  useEffect(() => {
+    if (!test?.requireWebcam) return
+
+    setCameraStatus('requesting')
+    let cancelled = false
+
+    navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } })
+      .then(stream => {
+        if (cancelled) {
+          stream.getTracks().forEach(t => t.stop())
+          return
+        }
+        streamRef.current = stream
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+        }
+        setCameraStatus('ready')
+        setCameraError(null)
+      })
+      .catch(err => {
+        if (cancelled) return
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          setCameraStatus('blocked')
+          setCameraError('Доступ до камери заблоковано. Дозвольте доступ до камери в налаштуваннях браузера.')
+        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+          setCameraStatus('error')
+          setCameraError('Камера не знайдена. Підключіть веб-камеру та спробуйте ще раз.')
+        } else if (err.name === 'NotReadableError') {
+          setCameraStatus('error')
+          setCameraError('Камера зайнята іншою програмою. Закрийте інші вкладки або програми, що використовують камеру.')
+        } else {
+          setCameraStatus('error')
+          setCameraError('Не вдалося отримати доступ до камери. Перевірте підключення.')
+        }
+      })
+
+    return () => {
+      cancelled = true
+      streamRef.current?.getTracks().forEach(t => t.stop())
+      streamRef.current = null
+    }
+  }, [test?.requireWebcam])
+
+  const retryCamera = () => {
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    streamRef.current = null
+    setCameraStatus('requesting')
+    setCameraError(null)
+
+    navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } })
+      .then(stream => {
+        streamRef.current = stream
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+        }
+        setCameraStatus('ready')
+        setCameraError(null)
+      })
+      .catch(err => {
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          setCameraStatus('blocked')
+          setCameraError('Доступ до камери заблоковано. Дозвольте доступ до камери в налаштуваннях браузера.')
+        } else {
+          setCameraStatus('error')
+          setCameraError('Не вдалося отримати доступ до камери.')
+        }
+      })
+  }
+
   const handleStart = async () => {
     if (!testId) return
+    if (test?.requireWebcam && cameraStatus !== 'ready') return
+
+    // Stop camera stream - will be re-initialized in TestTake
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    streamRef.current = null
 
     // IMMEDIATE Fullscreen for Chrome/Mobile (must be absolute first to avoid losing user gesture)
     const el = document.documentElement as any;
@@ -42,7 +124,10 @@ export default function TestStart() {
     setStartError(null)
     try {
       await startAttempt(testId)
-      navigate(`/student/test/${testId}/take`, { replace: true })
+      navigate(`/student/test/${testId}/take`, {
+        replace: true,
+        state: { requireWebcam: test?.requireWebcam ?? false },
+      })
     } catch (err: unknown) {
       const msg = getApiError(err, 'Помилка при старті тесту')
       setStartError(msg)
@@ -72,6 +157,7 @@ export default function TestStart() {
   }
 
   const attemptsLeft = test.maxAttempts - test.attemptsUsed
+  const canStart = attemptsLeft > 0 && (!test.requireWebcam || cameraStatus === 'ready')
 
   return (
     <div className="max-w-2xl mx-auto animate-fade-in">
@@ -141,6 +227,88 @@ export default function TestStart() {
         )}
       </div>
 
+      {/* Webcam check block */}
+      {test.requireWebcam && (
+        <div className={`glass-card p-5 mb-5 border transition-colors ${
+          cameraStatus === 'ready'
+            ? 'border-cyan-500/30 bg-cyan-500/5'
+            : cameraStatus === 'error' || cameraStatus === 'blocked'
+            ? 'border-red-500/30 bg-red-500/5'
+            : 'border-white/10'
+        }`}>
+          <div className="flex items-start gap-3 mb-4">
+            <div className={`w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center ${
+              cameraStatus === 'ready' ? 'bg-cyan-500/20' : cameraStatus === 'error' || cameraStatus === 'blocked' ? 'bg-red-500/20' : 'bg-white/10'
+            }`}>
+              <svg className={`w-4 h-4 ${cameraStatus === 'ready' ? 'text-cyan-400' : cameraStatus === 'error' || cameraStatus === 'blocked' ? 'text-red-400' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <p className={`font-bold text-sm ${
+                cameraStatus === 'ready' ? 'text-cyan-300' : cameraStatus === 'error' || cameraStatus === 'blocked' ? 'text-red-400' : 'text-white'
+              }`}>
+                {cameraStatus === 'idle' && 'Перевірка вебкамери...'}
+                {cameraStatus === 'requesting' && 'Запит доступу до камери...'}
+                {cameraStatus === 'ready' && 'Камера підключена та готова'}
+                {cameraStatus === 'error' && 'Помилка доступу до камери'}
+                {cameraStatus === 'blocked' && 'Доступ до камери заблоковано'}
+              </p>
+              <p className="text-slate-400 text-xs mt-0.5">
+                {cameraStatus === 'ready'
+                  ? 'Система зафіксує 3 фото під час тесту для контролю академічної доброчесності'
+                  : cameraError || 'Цей тест вимагає активну вебкамеру для проходження'}
+              </p>
+            </div>
+          </div>
+
+          {/* Camera preview */}
+          <div className={`relative rounded-2xl overflow-hidden bg-black/50 border ${
+            cameraStatus === 'ready' ? 'border-cyan-500/30' : 'border-white/10'
+          }`} style={{ aspectRatio: '4/3', maxHeight: 240 }}>
+            <video
+              ref={videoRef}
+              autoPlay
+              muted
+              playsInline
+              className={`w-full h-full object-cover transition-opacity duration-500 ${cameraStatus === 'ready' ? 'opacity-100' : 'opacity-0'}`}
+            />
+            {cameraStatus !== 'ready' && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                {cameraStatus === 'requesting' || cameraStatus === 'idle' ? (
+                  <div className="w-8 h-8 border-2 border-cyan-500/50 border-t-cyan-400 rounded-full animate-spin" />
+                ) : (
+                  <svg className="w-10 h-10 text-red-400/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                  </svg>
+                )}
+                <p className="text-slate-500 text-xs">
+                  {cameraStatus === 'requesting' ? 'Очікування дозволу...' : 'Камера недоступна'}
+                </p>
+              </div>
+            )}
+            {cameraStatus === 'ready' && (
+              <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-black/60 backdrop-blur-sm">
+                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                <span className="text-green-300 text-[10px] font-bold uppercase tracking-widest">Live</span>
+              </div>
+            )}
+          </div>
+
+          {(cameraStatus === 'error' || cameraStatus === 'blocked') && (
+            <button
+              onClick={retryCamera}
+              className="mt-3 w-full py-2.5 rounded-xl border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 transition-all text-sm font-medium flex items-center justify-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Спробувати ще раз
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Fullscreen warning */}
       <div className="glass-card p-5 mb-5 border-yellow-500/20">
         <div className="flex items-start gap-3">
@@ -153,6 +321,9 @@ export default function TestStart() {
             <ul className="text-slate-300 text-xs space-y-2 list-disc pl-4">
               <li>Тест відкриється у <span className="text-white font-bold underline">повноекранному режимі</span>.</li>
               <li>Спроба виходу з повного екрану або перемикання вкладок буде <span className="text-red-400 font-semibold">зафіксована</span>.</li>
+              {test.requireWebcam && (
+                <li>Вебкамера буде <span className="text-cyan-400 font-bold">активна протягом всього тесту</span>. Система зробить 3 фото у випадкові моменти та виявлятиме використання телефону.</li>
+              )}
               <li>Використання <span className="text-white font-bold">ШІ (ChatGPT, Gemini тощо)</span> та сторонніх девайсів суворо заборонено.</li>
               <li>Будь-яка спроба порушення правил призведе до того, що тест буде вважатися <span className="text-red-400 font-bold uppercase underline">не складеним</span>.</li>
             </ul>
@@ -170,7 +341,7 @@ export default function TestStart() {
       {/* Start button */}
       <button
         onClick={handleStart}
-        disabled={isStarting || attemptsLeft <= 0}
+        disabled={isStarting || !canStart}
         className="w-full btn-primary py-5 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-3"
       >
         {isStarting ? (
@@ -183,6 +354,13 @@ export default function TestStart() {
           </>
         ) : attemptsLeft <= 0 ? (
           'Спроби вичерпано'
+        ) : test.requireWebcam && cameraStatus !== 'ready' ? (
+          <>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            Очікування камери...
+          </>
         ) : (
           <>
             Розпочати тест

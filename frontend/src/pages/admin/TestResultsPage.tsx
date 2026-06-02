@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../../api/client'
-import { TestAttempt, Group, SuspiciousEvent } from '../../types'
+import { TestAttempt, Group, SuspiciousEvent, WebcamPhoto } from '../../types'
 import { t } from '../../utils/i18n'
 
 interface ResultsResponse {
@@ -96,6 +96,137 @@ function SuspiciousModal({ attemptId, studentName, onClose }: { attemptId: strin
   )
 }
 
+function WebcamPhotosModal({ attemptId, studentName, onClose }: { attemptId: string; studentName: string; onClose: () => void }) {
+  const [activeIdx, setActiveIdx] = useState(0)
+
+  const { data: photos, isLoading } = useQuery<WebcamPhoto[]>({
+    queryKey: ['webcam-photos', attemptId],
+    queryFn: async () => {
+      const res = await apiClient.get(`/attempts/${attemptId}/webcam-photos`)
+      return res.data
+    },
+  })
+
+  const getPhotoLabel = (type: string) => {
+    if (type === 'start') return 'Початок тесту'
+    if (type === 'middle') return 'Середина тесту'
+    if (type === 'end') return 'Кінець тесту'
+    if (type === 'phone_detected') return 'Виявлено телефон'
+    return type
+  }
+
+  const getPhotoBadgeStyle = (type: string) => {
+    if (type === 'phone_detected') return 'bg-red-500/20 border border-red-500/30 text-red-300'
+    return 'bg-cyan-500/20 border border-cyan-500/30 text-cyan-300'
+  }
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-card max-w-2xl">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h3 className="font-unbounded text-base font-bold text-white">Фото вебкамери</h3>
+            <p className="text-slate-400 text-xs mt-0.5">{studentName}</p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {isLoading ? (
+          <div className="py-12 text-center">
+            <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto" />
+          </div>
+        ) : !photos?.length ? (
+          <div className="py-10 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <p className="text-slate-400 text-sm">Фото не збережені для цієї спроби</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Main photo viewer */}
+            <div className="relative rounded-2xl overflow-hidden bg-black border border-white/10" style={{ aspectRatio: '4/3' }}>
+              <img
+                src={photos[activeIdx]?.photoData}
+                alt={getPhotoLabel(photos[activeIdx]?.photoType)}
+                className="w-full h-full object-contain"
+              />
+              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${getPhotoBadgeStyle(photos[activeIdx]?.photoType)}`}>
+                  {getPhotoLabel(photos[activeIdx]?.photoType)}
+                </span>
+                <span className="px-2.5 py-1 rounded-lg bg-black/60 text-white/60 text-[10px] font-mono">
+                  {new Date(photos[activeIdx]?.takenAt).toLocaleString('uk-UA', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </span>
+              </div>
+              {photos.length > 1 && (
+                <>
+                  <button
+                    onClick={() => setActiveIdx(i => Math.max(0, i - 1))}
+                    disabled={activeIdx === 0}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center disabled:opacity-30 hover:bg-black/80 transition-all"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                  </button>
+                  <button
+                    onClick={() => setActiveIdx(i => Math.min(photos.length - 1, i + 1))}
+                    disabled={activeIdx === photos.length - 1}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center disabled:opacity-30 hover:bg-black/80 transition-all"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Thumbnails */}
+            {photos.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {photos.map((photo, i) => (
+                  <button
+                    key={photo.id}
+                    onClick={() => setActiveIdx(i)}
+                    className={`flex-shrink-0 relative rounded-xl overflow-hidden border-2 transition-all ${
+                      activeIdx === i ? 'border-cyan-400 opacity-100' : 'border-white/10 opacity-50 hover:opacity-80'
+                    }`}
+                    style={{ width: 80, height: 60 }}
+                  >
+                    <img src={photo.photoData} alt={getPhotoLabel(photo.photoType)} className="w-full h-full object-cover" />
+                    {photo.photoType === 'phone_detected' && (
+                      <div className="absolute inset-0 bg-red-500/30 flex items-center justify-center">
+                        <svg className="w-4 h-4 text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <p className="text-slate-500 text-xs text-center">
+              {activeIdx + 1} / {photos.length} фото
+              {photos.some(p => p.photoType === 'phone_detected') && (
+                <span className="ml-2 text-red-400">• Виявлено підозрілу активність</span>
+              )}
+            </p>
+          </div>
+        )}
+
+        <div className="mt-5">
+          <button onClick={onClose} className="w-full btn-ghost">Закрити</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function QuestionStatsPanel({ testId }: { testId: string }) {
   const { data: stats, isLoading } = useQuery<QuestionStat[]>({
     queryKey: ['question-stats', testId],
@@ -163,6 +294,7 @@ export default function TestResultsPage() {
   const [groupFilter, setGroupFilter] = useState('')
   const [page, setPage] = useState(1)
   const [suspiciousModal, setSuspiciousModal] = useState<{ attemptId: string; studentName: string } | null>(null)
+  const [webcamModal, setWebcamModal] = useState<{ attemptId: string; studentName: string } | null>(null)
   const [showStats, setShowStats] = useState(false)
   const qc = useQueryClient()
 
@@ -332,6 +464,7 @@ export default function TestResultsPage() {
                   <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Час</th>
                    <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Статус</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Підозр.</th>
+                  <th className="px-5 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">Камера</th>
                   <th className="px-5 py-4 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">Дії</th>
                 </tr>
               </thead>
@@ -392,6 +525,17 @@ export default function TestResultsPage() {
                         )}
                       </td>
                       <td className="px-5 py-4">
+                        <button
+                          onClick={() => setWebcamModal({ attemptId: a.id, studentName: a.user?.name ?? '—' })}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-cyan-400 hover:bg-cyan-500/10 transition-all"
+                          title="Переглянути фото вебкамери"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                      </td>
+                      <td className="px-5 py-4">
                         <div className="flex justify-end">
                           <button
                             onClick={() => setDeleteConfirmId(a.id)}
@@ -409,7 +553,7 @@ export default function TestResultsPage() {
                 })}
                 {(!data?.attempts || data.attempts.length === 0) && (
                   <tr>
-                    <td colSpan={10} className="px-5 py-10 text-center text-slate-400">
+                    <td colSpan={11} className="px-5 py-10 text-center text-slate-400">
                       Результатів не знайдено
                     </td>
                   </tr>
@@ -448,6 +592,14 @@ export default function TestResultsPage() {
           attemptId={suspiciousModal.attemptId}
           studentName={suspiciousModal.studentName}
           onClose={() => setSuspiciousModal(null)}
+        />
+      )}
+
+      {webcamModal && (
+        <WebcamPhotosModal
+          attemptId={webcamModal.attemptId}
+          studentName={webcamModal.studentName}
+          onClose={() => setWebcamModal(null)}
         />
       )}
 

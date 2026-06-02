@@ -82,6 +82,7 @@ export interface Test {
   createdAt: string
   allowCertificate: boolean
   logoUrl?: string
+  requireWebcam?: boolean
   groups?: { groupId: string; group: Group }[]
   categoryQuotas?: (CategoryQuota & { category?: Category })[]
 }
@@ -153,7 +154,16 @@ export interface StudentTest {
   showResultMode: string
   allowCertificate: boolean
   logoUrl?: string
+  requireWebcam?: boolean
   lastAttempt?: AttemptResult
+}
+
+export interface WebcamPhoto {
+  id: string
+  attemptId: string
+  photoData: string
+  takenAt: string
+  photoType: string
 }
 
 export interface DashboardStats {

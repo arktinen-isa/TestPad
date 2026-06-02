@@ -28,6 +28,7 @@ interface TestFormData {
   status: TestStatus
   allowCertificate: boolean
   logoUrl: string
+  requireWebcam: boolean
 }
 
 interface TestFormModalProps {
@@ -59,6 +60,7 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
     status: initial?.status || 'DRAFT',
     allowCertificate: initial?.allowCertificate ?? true,
     logoUrl: initial?.logoUrl || '',
+    requireWebcam: initial?.requireWebcam ?? false,
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -237,6 +239,23 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
               <label htmlFor="allowCertificate" className="flex-1 cursor-pointer">
                 <span className="block text-sm font-bold text-white">Дозволити видачу сертифікату</span>
                 <span className="block text-slate-400 text-[10px]">Стимулює студентів покращувати результати</span>
+              </label>
+            </div>
+
+            <div className="flex items-center gap-3 p-4 bg-cyan-500/5 border border-cyan-500/20 rounded-2xl">
+              <input
+                type="checkbox"
+                id="requireWebcam"
+                checked={form.requireWebcam}
+                onChange={(e) => setForm({ ...form, requireWebcam: e.target.checked })}
+                className="w-5 h-5 rounded border-white/20 bg-white/5 text-cyan-400 focus:ring-cyan-500/50"
+              />
+              <label htmlFor="requireWebcam" className="flex-1 cursor-pointer">
+                <div className="flex items-center gap-2">
+                  <span className="block text-sm font-bold text-white">Вимагати вебкамеру</span>
+                  <span className="px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-400 text-[9px] font-black uppercase tracking-wider">Анти-чит</span>
+                </div>
+                <span className="block text-slate-400 text-[10px] mt-0.5">Тест доступний лише якщо камера активна. Система робить 3 фото під час тесту та виявляє телефони на камері</span>
               </label>
             </div>
               <div>

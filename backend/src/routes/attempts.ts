@@ -624,6 +624,53 @@ router.get(
   })
 );
 
+router.post(
+  '/:id/webcam-photo',
+  authorize('STUDENT'),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const userId = req.user!.userId;
+    const { photoData, photoType = 'scheduled' } = req.body;
+
+    if (!photoData || typeof photoData !== 'string') {
+      res.status(400).json({ error: 'Invalid photo data' });
+      return;
+    }
+
+    const attempt = await prisma.attempt.findUnique({
+      where: { id },
+      select: { studentId: true },
+    });
+
+    if (!attempt || attempt.studentId !== userId) {
+      res.status(404).json({ error: 'Attempt not found' });
+      return;
+    }
+
+    await prisma.webcamPhoto.create({
+      data: { attemptId: id, photoData, photoType },
+    });
+
+    res.status(201).json({ ok: true });
+  })
+);
+
+router.get(
+  '/:id/webcam-photos',
+  authorize('ADMIN', 'TEACHER'),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const photos = await prisma.webcamPhoto.findMany({
+      where: { attemptId: id },
+      orderBy: { takenAt: 'asc' },
+      select: { id: true, photoData: true, takenAt: true, photoType: true },
+    });
+
+    res.json(photos);
+  })
+);
+
 router.delete(
   '/:id',
   authorize('ADMIN'),

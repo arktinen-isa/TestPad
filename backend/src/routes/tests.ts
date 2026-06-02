@@ -33,6 +33,7 @@ const createTestSchema = z.object({
   allowCertificate: z.boolean().optional().default(true),
   logoUrl: z.string().optional().nullable(),
   timerMode: z.enum(['GLOBAL', 'PER_QUESTION']).default('GLOBAL'),
+  requireWebcam: z.boolean().optional().default(false),
 });
 
 const updateTestSchema = createTestSchema.partial();
@@ -86,6 +87,7 @@ router.get(
           allowCertificate: true,
           passThreshold: true,
           logoUrl: true,
+          requireWebcam: true,
           groups: { select: { groupId: true } },
           samplingMode: true,
           categoryQuotas: { select: { categoryId: true, quota: true } },
@@ -176,6 +178,7 @@ router.post(
         multiScoringMode: data.multiScoringMode,
         allowCertificate: data.allowCertificate,
         logoUrl: data.logoUrl,
+        requireWebcam: data.requireWebcam,
         groups: data.groupIds
           ? { create: data.groupIds.map((groupId) => ({ groupId })) }
           : undefined,
@@ -360,6 +363,7 @@ router.patch(
     if (data.multiScoringMode !== undefined) updatePayload['multiScoringMode'] = data.multiScoringMode;
     if (data.allowCertificate !== undefined) updatePayload['allowCertificate'] = data.allowCertificate;
     if (data.logoUrl !== undefined) updatePayload['logoUrl'] = data.logoUrl;
+    if (data.requireWebcam !== undefined) updatePayload['requireWebcam'] = data.requireWebcam;
 
     if (data.groupIds !== undefined) {
       await prisma.testGroup.deleteMany({ where: { testId: id } });

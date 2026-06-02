@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useTestStore } from '../../store/testStore'
 import apiClient from '../../api/client'
 import QuestionText from '../../components/QuestionText'
@@ -15,9 +15,46 @@ function formatTime(seconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
+// Captures a JPEG frame from a video element as base64 string (~30-60KB)
+function captureFrame(video: HTMLVideoElement, quality = 0.6): string | null {
+  if (video.readyState < 2) return null
+  const canvas = document.createElement('canvas')
+  canvas.width = 640
+  canvas.height = 480
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+  ctx.drawImage(video, 0, 0, 640, 480)
+  return canvas.toDataURL('image/jpeg', quality)
+}
+
+// Heuristic phone screen detection:
+// Scans the frame for a bright rectangular region (possible phone/tablet screen).
+// Returns true when 15-55% of pixels are very bright (>185 brightness),
+// suggesting an illuminated screen in the frame.
+function detectBrightScreen(video: HTMLVideoElement): boolean {
+  if (video.readyState < 2) return false
+  const W = 80, H = 60
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return false
+  ctx.drawImage(video, 0, 0, W, H)
+  const data = ctx.getImageData(0, 0, W, H).data
+  let bright = 0
+  for (let i = 0; i < data.length; i += 4) {
+    const lum = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
+    if (lum > 185) bright++
+  }
+  const ratio = bright / (W * H)
+  return ratio > 0.15 && ratio < 0.55
+}
+
 export default function TestTake() {
   const { testId } = useParams<{ testId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const requireWebcam = (location.state?.requireWebcam ?? false) as boolean
 
   const {
     attemptId,
@@ -41,12 +78,89 @@ export default function TestTake() {
     return !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
   })
 
+  // Webcam state
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const [cameraError, setCameraError] = useState(false)
+  const photosTakenRef = useRef<Set<string>>(new Set())
+  const attemptIdRef = useRef(attemptId)
+  attemptIdRef.current = attemptId
+
   const isFullscreenSupported = !!(
     document.documentElement.requestFullscreen ||
     (document.documentElement as any).webkitRequestFullscreen ||
     (document.documentElement as any).mozRequestFullScreen ||
     (document.documentElement as any).msRequestFullscreen
   );
+
+  // Initialize webcam
+  useEffect(() => {
+    if (!requireWebcam) return
+
+    navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } })
+      .then(stream => {
+        streamRef.current = stream
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+        }
+      })
+      .catch(() => {
+        setCameraError(true)
+      })
+
+    return () => {
+      streamRef.current?.getTracks().forEach(t => t.stop())
+      streamRef.current = null
+    }
+  }, [requireWebcam])
+
+  // Stop camera when test finishes
+  useEffect(() => {
+    if (isFinished) {
+      streamRef.current?.getTracks().forEach(t => t.stop())
+      streamRef.current = null
+    }
+  }, [isFinished])
+
+  // Send a webcam photo to the backend
+  const sendPhoto = useCallback(async (photoType: string) => {
+    if (!videoRef.current || !attemptIdRef.current) return
+    const photoData = captureFrame(videoRef.current)
+    if (!photoData) return
+    apiClient.post(`/attempts/${attemptIdRef.current}/webcam-photo`, { photoData, photoType }).catch(() => {})
+  }, [])
+
+  // Schedule 3 photos: start (~q1), middle (~50%), near-end (~85%)
+  useEffect(() => {
+    if (!requireWebcam || !currentQuestion || !attemptIdRef.current) return
+    const { questionNumber, total } = currentQuestion
+    const midPoint = Math.max(2, Math.floor(total * 0.5))
+    const nearEnd = Math.max(3, Math.floor(total * 0.85))
+
+    if (questionNumber === 1 && !photosTakenRef.current.has('start')) {
+      photosTakenRef.current.add('start')
+      // Small delay so the video stream is settled
+      setTimeout(() => sendPhoto('start'), 1500)
+    } else if (questionNumber === midPoint && !photosTakenRef.current.has('middle')) {
+      photosTakenRef.current.add('middle')
+      setTimeout(() => sendPhoto('middle'), 500)
+    } else if (questionNumber === nearEnd && !photosTakenRef.current.has('end')) {
+      photosTakenRef.current.add('end')
+      setTimeout(() => sendPhoto('end'), 500)
+    }
+  }, [currentQuestion, requireWebcam, sendPhoto])
+
+  // Phone detection: every 20 seconds analyze frame for bright screen
+  useEffect(() => {
+    if (!requireWebcam) return
+    const interval = setInterval(() => {
+      if (!videoRef.current || !attemptIdRef.current || isFinished) return
+      if (detectBrightScreen(videoRef.current)) {
+        sendPhoto('phone_detected')
+      }
+    }, 20000)
+    return () => clearInterval(interval)
+  }, [requireWebcam, isFinished, sendPhoto])
 
   useEffect(() => {
     const handleFsChange = () => {
@@ -73,8 +187,6 @@ export default function TestTake() {
     }
   }
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const attemptIdRef = useRef(attemptId)
-  attemptIdRef.current = attemptId
   const isTimeLow = timeLeft !== null && timeLeft > 0 && timeLeft < 120
 
   const handleFinish = useCallback(async () => {
@@ -129,7 +241,6 @@ export default function TestTake() {
       }, 1000)
     }
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Block Ctrl+V (pasting), Ctrl+P, Ctrl+U, F12, PrintScreen etc.
       const isCtrlOrMeta = e.ctrlKey || e.metaKey
       if (isCtrlOrMeta && (e.key === 'v' || e.key === 'p' || e.key === 'u')) {
         e.preventDefault()
@@ -295,7 +406,28 @@ export default function TestTake() {
   return (
     <div className="fixed inset-0 bg-[#0F0A1E] text-white flex flex-col z-[1000] overflow-hidden select-none" onContextMenu={(e) => e.preventDefault()}>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,#3B2A6B_0%,#0F0A1E_80%)] opacity-60 pointer-events-none" />
-      
+
+      {/* Webcam camera-blocked overlay */}
+      {requireWebcam && cameraError && !isFinished && (
+        <div className="fixed inset-0 z-[9999] bg-[#0F0A1E]/95 backdrop-blur-2xl flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+          <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mb-8 ring-8 ring-red-500/20">
+            <svg className="w-12 h-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2zM9.75 9.75l4.5 4.5" />
+            </svg>
+          </div>
+          <h2 className="text-3xl font-black font-unbounded text-white mb-4 tracking-tighter">КАМЕРА НЕДОСТУПНА</h2>
+          <p className="text-slate-400 max-w-sm mb-4 text-lg leading-relaxed">
+            Цей тест вимагає активну вебкамеру. Надайте дозвіл на доступ до камери та перезавантажте сторінку.
+          </p>
+          <button
+            onClick={() => navigate(`/student/test/${testId}/start`, { replace: true })}
+            className="btn-secondary px-10 py-4 text-base"
+          >
+            Повернутись до старту
+          </button>
+        </div>
+      )}
+
       {!isFullScreen && !isFinished && isFullscreenSupported && (
         <div className="fixed inset-0 z-[9999] bg-[#0F0A1E]/95 backdrop-blur-2xl flex flex-col items-center justify-center p-6 text-center animate-fade-in">
           <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mb-8 ring-8 ring-red-500/20 animate-pulse">
@@ -307,8 +439,8 @@ export default function TestTake() {
           <p className="text-slate-400 max-w-sm mb-10 text-lg leading-relaxed">
             Для продовження тестування необхідно повернутися у повноекранний режим. Це правило безпеки було активоване автоматично.
           </p>
-          <button 
-            onClick={enterFullscreen} 
+          <button
+            onClick={enterFullscreen}
             className="btn-secondary px-12 py-5 text-xl shadow-[0_0_50px_rgba(124,58,237,0.4)] hover:shadow-[0_0_70px_rgba(124,58,237,0.6)] active:scale-95 transition-all"
           >
             Повернутись у тест
@@ -316,7 +448,7 @@ export default function TestTake() {
           <p className="text-white/20 text-[10px] mt-12 uppercase tracking-widest">{t('GradeX Security Protocol v2.4')}</p>
         </div>
       )}
-      
+
       {/* Header / Progress Bar */}
       <div className="flex-shrink-0 bg-[#160D33]/60 backdrop-blur-3xl border-b border-white/5 px-6 py-4 shadow-2xl relative z-[1001]">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-6">
@@ -328,6 +460,14 @@ export default function TestTake() {
           </div>
 
           <div className="flex-shrink-0 flex items-center gap-3">
+            {/* Webcam indicator */}
+            {requireWebcam && !cameraError && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
+                <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                <span className="text-cyan-400 text-[10px] font-bold uppercase tracking-widest">Cam</span>
+              </div>
+            )}
+
             {questionTimeLeft !== null && (
               <div className={`px-4 py-2 rounded-2xl border transition-all duration-500 flex items-center gap-3 ${
                 questionTimeLeft < 10
@@ -350,8 +490,8 @@ export default function TestTake() {
 
             {timeLeft !== null ? (
               <div className={`px-4 py-2 rounded-2xl border transition-all duration-500 flex items-center gap-3 ${
-                isTimeLow 
-                  ? 'bg-red-500/20 border-red-500/50 text-red-100 shadow-[0_0_20px_rgba(239,68,68,0.2)]' 
+                isTimeLow
+                  ? 'bg-red-500/20 border-red-500/50 text-red-100 shadow-[0_0_20px_rgba(239,68,68,0.2)]'
                   : 'bg-white/5 border-white/10 text-white shadow-xl'
               }`}>
                 <div className="flex flex-col items-end">
@@ -380,7 +520,7 @@ export default function TestTake() {
         {/* Global Progress Line */}
         {currentQuestion && (
           <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/5 overflow-hidden">
-            <div 
+            <div
               className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 transition-all duration-700 ease-out shadow-[0_0_15px_rgba(168,85,247,0.5)]"
               style={{ width: `${(currentQuestion.questionNumber / currentQuestion.total) * 100}%` }}
             />
@@ -502,6 +642,23 @@ export default function TestTake() {
       )}
     </div>
 
+      {/* Webcam PiP preview */}
+      {requireWebcam && !cameraError && (
+        <div className="fixed bottom-28 right-6 z-[1002] w-28 h-20 rounded-2xl overflow-hidden border border-cyan-500/30 bg-black shadow-[0_0_20px_rgba(6,182,212,0.15)] pointer-events-none">
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
+            className="w-full h-full object-cover scale-x-[-1]"
+          />
+          <div className="absolute top-1 left-1 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-black/60">
+            <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+            <span className="text-cyan-300 text-[8px] font-bold uppercase">Live</span>
+          </div>
+        </div>
+      )}
+
       <div className="flex-shrink-0 border-t border-white/5 bg-[#0D071F]/90 backdrop-blur-2xl px-6 py-6 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-6">
           <button
@@ -537,8 +694,8 @@ export default function TestTake() {
               ) : (
                 <>
                   <span>
-                    {currentQuestion && currentQuestion.questionNumber < currentQuestion.total 
-                      ? 'Наступне питання' 
+                    {currentQuestion && currentQuestion.questionNumber < currentQuestion.total
+                      ? 'Наступне питання'
                       : 'Фініш'}
                   </span>
                   <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>

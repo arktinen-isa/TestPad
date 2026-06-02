@@ -195,6 +195,7 @@ model Test {
   createdAt        DateTime         @default(now())
   allowCertificate Boolean          @default(true)
   logoUrl          String?
+  requireWebcam    Boolean          @default(false)
 
   createdBy      User                @relation(fields: [createdById], references: [id])
   groups         TestGroup[]
@@ -257,6 +258,7 @@ model Attempt {
   test             Test              @relation(fields: [testId], references: [id], onDelete: Cascade)
   attemptQuestions AttemptQuestion[]
   suspiciousEvents SuspiciousEvent[]
+  webcamPhotos     WebcamPhoto[]
 
   @@index([studentId, testId])
   @@index([testId])
@@ -406,5 +408,17 @@ model UserBadge {
   badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
 
   @@id([userId, badgeId])
+}
+
+model WebcamPhoto {
+  id          String   @id @default(uuid())
+  attemptId   String
+  photoData   String   @db.LongText
+  takenAt     DateTime @default(now())
+  photoType   String   @default("scheduled")
+
+  attempt     Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@index([attemptId])
 }
 
