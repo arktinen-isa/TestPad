@@ -8,9 +8,9 @@ import { scoreQuestion } from './scoringService';
 export async function calculatePsychometrics(testId: string) {
   const test = await prisma.test.findUnique({
     where: { id: testId },
-    select: { musicScoringMode: true } as any // Handle potential dynamic fields
+    select: { multiScoringMode: true }
   });
-  const scoringMode = (test as any)?.multiScoringMode || 'ALL_OR_NOTHING';
+  const scoringMode = test?.multiScoringMode || 'ALL_OR_NOTHING';
 
   const attempts = await prisma.attempt.findMany({
     where: { testId, finishedAt: { not: null } },
