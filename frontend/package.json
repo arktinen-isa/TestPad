@@ -9,6 +9,8 @@
   },
   "dependencies": {
     "@tanstack/react-query": "5.40.0",
+    "@tensorflow-models/coco-ssd": "^2.2.3",
+    "@tensorflow/tfjs": "^4.22.0",
     "@types/dompurify": "3.0.5",
     "axios": "1.7.2",
     "canvas-confetti": "1.9.4",

@@ -8,6 +8,7 @@ import OrderingQuestion from '../../components/OrderingQuestion'
 import { renderLatex } from '../../utils/latexRenderer'
 import SafeHtml from '../../components/SafeHtml'
 import { t } from '../../utils/i18n'
+import type { ObjectDetection } from '@tensorflow-models/coco-ssd'
 
 function isMobileDevice(): boolean {
   const ua = navigator.userAgent
@@ -22,53 +23,24 @@ function formatTime(seconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-const ANALYSIS_W = 80, ANALYSIS_H = 60
-
-// Draws a small canvas from the video and returns pixel data for analysis
-function getFramePixels(video: HTMLVideoElement): Uint8ClampedArray | null {
-  if (video.readyState < 2) return null
-  const canvas = document.createElement('canvas')
-  canvas.width = ANALYSIS_W
-  canvas.height = ANALYSIS_H
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return null
-  ctx.drawImage(video, 0, 0, ANALYSIS_W, ANALYSIS_H)
-  return ctx.getImageData(0, 0, ANALYSIS_W, ANALYSIS_H).data
-}
-
 // Captures a JPEG frame. Returns null if video not ready.
 // Returns { photoData, isCovered } — isCovered=true when avg brightness < 20 (lens blocked).
 function captureFrame(video: HTMLVideoElement, quality = 0.6): { photoData: string; isCovered: boolean } | null {
   if (video.readyState < 2) return null
-  const pixels = getFramePixels(video)
-  let isCovered = false
-  if (pixels) {
-    let totalLum = 0
-    for (let i = 0; i < pixels.length; i += 4) {
-      totalLum += pixels[i] * 0.299 + pixels[i + 1] * 0.587 + pixels[i + 2] * 0.114
-    }
-    isCovered = (totalLum / (ANALYSIS_W * ANALYSIS_H)) < 20
-  }
   const canvas = document.createElement('canvas')
   canvas.width = 640
   canvas.height = 480
   const ctx = canvas.getContext('2d')
   if (!ctx) return null
   ctx.drawImage(video, 0, 0, 640, 480)
-  return { photoData: canvas.toDataURL('image/jpeg', quality), isCovered }
-}
-
-// Heuristic phone screen detection:
-// Returns true when 15-55% of pixels are very bright (>185 lum) — suggests phone screen.
-function detectBrightScreen(video: HTMLVideoElement): boolean {
-  const pixels = getFramePixels(video)
-  if (!pixels) return false
-  let bright = 0
+  // Check average brightness to detect covered lens
+  const pixels = ctx.getImageData(0, 0, 640, 480).data
+  let totalLum = 0
   for (let i = 0; i < pixels.length; i += 4) {
-    if (pixels[i] * 0.299 + pixels[i + 1] * 0.587 + pixels[i + 2] * 0.114 > 185) bright++
+    totalLum += pixels[i] * 0.299 + pixels[i + 1] * 0.587 + pixels[i + 2] * 0.114
   }
-  const ratio = bright / (ANALYSIS_W * ANALYSIS_H)
-  return ratio > 0.15 && ratio < 0.55
+  const isCovered = (totalLum / (640 * 480)) < 20
+  return { photoData: canvas.toDataURL('image/jpeg', quality), isCovered }
 }
 
 export default function TestTake() {
@@ -129,6 +101,7 @@ export default function TestTake() {
   const photosTakenRef = useRef<Set<string>>(new Set())
   const attemptIdRef = useRef(attemptId)
   attemptIdRef.current = attemptId
+  const detectorRef = useRef<ObjectDetection | null>(null)
 
   const isFullscreenSupported = !!(
     document.documentElement.requestFullscreen ||
@@ -137,7 +110,7 @@ export default function TestTake() {
     (document.documentElement as any).msRequestFullscreen
   );
 
-  // Initialize webcam
+  // Initialize webcam and load COCO-SSD model for phone detection
   useEffect(() => {
     if (!requireWebcam) return
 
@@ -152,9 +125,19 @@ export default function TestTake() {
         setCameraError(true)
       })
 
+    // Load object detection model (lite variant — smallest, ~5 MB)
+    import('@tensorflow/tfjs').then(() =>
+      import('@tensorflow-models/coco-ssd').then(({ load }) =>
+        load({ base: 'lite_mobilenet_v2' }).then(model => {
+          detectorRef.current = model
+        })
+      )
+    ).catch(() => {})
+
     return () => {
       streamRef.current?.getTracks().forEach(t => t.stop())
       streamRef.current = null
+      detectorRef.current = null
     }
   }, [requireWebcam])
 
@@ -199,15 +182,21 @@ export default function TestTake() {
     }
   }, [currentQuestion, requireWebcam, sendPhoto])
 
-  // Phone detection: every 20 seconds analyze frame for bright screen
+  // Phone detection: every 15 seconds run COCO-SSD on the webcam frame.
+  // Flags 'phone_detected' when 'cell phone' class is found with confidence >= 0.5.
   useEffect(() => {
     if (!requireWebcam) return
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       if (!videoRef.current || !attemptIdRef.current || isFinished) return
-      if (detectBrightScreen(videoRef.current)) {
-        sendPhoto('phone_detected')
-      }
-    }, 20000)
+      if (!detectorRef.current || videoRef.current.readyState < 2) return
+      try {
+        const predictions = await detectorRef.current.detect(videoRef.current)
+        const phoneFound = predictions.some(p => p.class === 'cell phone' && p.score >= 0.5)
+        if (phoneFound) {
+          sendPhoto('phone_detected')
+        }
+      } catch {}
+    }, 15000)
     return () => clearInterval(interval)
   }, [requireWebcam, isFinished, sendPhoto])
 
