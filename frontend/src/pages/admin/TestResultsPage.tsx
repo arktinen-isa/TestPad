@@ -112,11 +112,16 @@ function WebcamPhotosModal({ attemptId, studentName, onClose }: { attemptId: str
     if (type === 'middle') return 'Середина тесту'
     if (type === 'end') return 'Кінець тесту'
     if (type === 'phone_detected') return 'Виявлено телефон'
+    if (type === 'camera_covered') return 'Камера закрита'
+    if (type === 'no_person') return 'Людини немає в кадрі'
     return type
   }
 
+  const isSuspiciousType = (type: string) =>
+    type === 'phone_detected' || type === 'camera_covered' || type === 'no_person'
+
   const getPhotoBadgeStyle = (type: string) => {
-    if (type === 'phone_detected') return 'bg-red-500/20 border border-red-500/30 text-red-300'
+    if (isSuspiciousType(type)) return 'bg-red-500/20 border border-red-500/30 text-red-300'
     return 'bg-cyan-500/20 border border-cyan-500/30 text-cyan-300'
   }
 
@@ -198,7 +203,7 @@ function WebcamPhotosModal({ attemptId, studentName, onClose }: { attemptId: str
                     style={{ width: 80, height: 60 }}
                   >
                     <img src={photo.photoData} alt={getPhotoLabel(photo.photoType)} className="w-full h-full object-cover" />
-                    {photo.photoType === 'phone_detected' && (
+                    {isSuspiciousType(photo.photoType) && (
                       <div className="absolute inset-0 bg-red-500/30 flex items-center justify-center">
                         <svg className="w-4 h-4 text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -212,7 +217,7 @@ function WebcamPhotosModal({ attemptId, studentName, onClose }: { attemptId: str
 
             <p className="text-slate-500 text-xs text-center">
               {activeIdx + 1} / {photos.length} фото
-              {photos.some(p => p.photoType === 'phone_detected') && (
+              {photos.some(p => isSuspiciousType(p.photoType)) && (
                 <span className="ml-2 text-red-400">• Виявлено підозрілу активність</span>
               )}
             </p>
@@ -527,7 +532,7 @@ export default function TestResultsPage() {
                       <td className="px-5 py-4">
                         {(() => {
                           const types = a.webcamPhotoTypes ?? []
-                          const hasSuspicious = types.some(t => t === 'phone_detected' || t === 'camera_covered')
+                          const hasSuspicious = types.some(t => t === 'phone_detected' || t === 'camera_covered' || t === 'no_person')
                           const hasPhotos = types.length > 0
                           return (
                             <button
@@ -541,11 +546,11 @@ export default function TestResultsPage() {
                               }`}
                               title={
                                 hasSuspicious
-                                  ? types.includes('phone_detected') && types.includes('camera_covered')
-                                    ? 'Виявлено телефон та закрита камера'
-                                    : types.includes('phone_detected')
-                                    ? 'Виявлено телефон'
-                                    : 'Камера була закрита'
+                                  ? [
+                                      types.includes('phone_detected') && 'Виявлено телефон',
+                                      types.includes('camera_covered') && 'Камера закрита',
+                                      types.includes('no_person') && 'Людини не було в кадрі',
+                                    ].filter(Boolean).join(' • ')
                                   : hasPhotos
                                   ? 'Переглянути фото вебкамери'
                                   : 'Фото вебкамери відсутні'

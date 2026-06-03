@@ -39,7 +39,7 @@ function captureFrame(video: HTMLVideoElement, quality = 0.6): { photoData: stri
   for (let i = 0; i < pixels.length; i += 4) {
     totalLum += pixels[i] * 0.299 + pixels[i + 1] * 0.587 + pixels[i + 2] * 0.114
   }
-  const isCovered = (totalLum / (640 * 480)) < 20
+  const isCovered = (totalLum / (640 * 480)) < 8
   return { photoData: canvas.toDataURL('image/jpeg', quality), isCovered }
 }
 
@@ -48,29 +48,7 @@ export default function TestTake() {
   const navigate = useNavigate()
   const location = useLocation()
   const requireWebcam = (location.state?.requireWebcam ?? false) as boolean
-
-  if (isMobileDevice()) {
-    return (
-      <div className="fixed inset-0 bg-[#0F0A1E] flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-20 h-20 rounded-3xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mx-auto mb-6">
-          <svg className="w-10 h-10 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-              d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-          </svg>
-        </div>
-        <h2 className="font-unbounded text-xl font-black text-white mb-3">МОБІЛЬНИЙ ПРИСТРІЙ</h2>
-        <p className="text-slate-400 max-w-xs text-sm leading-relaxed mb-6">
-          Проходження тестування з телефону або планшета недоступне. Відкрийте на комп'ютері.
-        </p>
-        <button
-          onClick={() => navigate('/student/dashboard')}
-          className="px-8 py-3 rounded-2xl bg-white/5 border border-white/10 text-white text-sm font-medium hover:bg-white/10 transition-all"
-        >
-          До кабінету
-        </button>
-      </div>
-    )
-  }
+  const isMobile = isMobileDevice()
 
   const {
     attemptId,
@@ -102,6 +80,7 @@ export default function TestTake() {
   const attemptIdRef = useRef(attemptId)
   attemptIdRef.current = attemptId
   const detectorRef = useRef<ObjectDetection | null>(null)
+  const consecutiveNoPersonRef = useRef(0)
 
   const isFullscreenSupported = !!(
     document.documentElement.requestFullscreen ||
@@ -125,14 +104,21 @@ export default function TestTake() {
         setCameraError(true)
       })
 
-    // Load object detection model (lite variant — smallest, ~5 MB)
-    import('@tensorflow/tfjs').then(() =>
-      import('@tensorflow-models/coco-ssd').then(({ load }) =>
-        load({ base: 'lite_mobilenet_v2' }).then(model => {
-          detectorRef.current = model
-        })
-      )
-    ).catch(() => {})
+    // Load object detection model (lite variant — ~5 MB).
+    // Explicit backend setup ensures Safari (WebGL) and Firefox (CPU fallback) both work.
+    import('@tensorflow/tfjs').then(async tf => {
+      try {
+        await tf.setBackend('webgl')
+        await tf.ready()
+      } catch {
+        // WebGL unavailable (e.g. some Linux configs) — fall back to CPU
+        await tf.setBackend('cpu')
+        await tf.ready()
+      }
+      const { load } = await import('@tensorflow-models/coco-ssd')
+      const model = await load({ base: 'lite_mobilenet_v2' })
+      detectorRef.current = model
+    }).catch(() => {})
 
     return () => {
       streamRef.current?.getTracks().forEach(t => t.stop())
@@ -171,8 +157,7 @@ export default function TestTake() {
 
     if (questionNumber === 1 && !photosTakenRef.current.has('start')) {
       photosTakenRef.current.add('start')
-      // Small delay so the video stream is settled
-      setTimeout(() => sendPhoto('start'), 1500)
+      setTimeout(() => sendPhoto('start'), 3000)
     } else if (questionNumber === midPoint && !photosTakenRef.current.has('middle')) {
       photosTakenRef.current.add('middle')
       setTimeout(() => sendPhoto('middle'), 500)
@@ -182,8 +167,8 @@ export default function TestTake() {
     }
   }, [currentQuestion, requireWebcam, sendPhoto])
 
-  // Phone detection: every 15 seconds run COCO-SSD on the webcam frame.
-  // Flags 'phone_detected' when 'cell phone' class is found with confidence >= 0.5.
+  // Object detection: every 15 seconds run COCO-SSD on the webcam frame.
+  // Checks for: phone in frame (phone_detected) and person absent (no_person after 2 consecutive misses).
   useEffect(() => {
     if (!requireWebcam) return
     const interval = setInterval(async () => {
@@ -191,9 +176,23 @@ export default function TestTake() {
       if (!detectorRef.current || videoRef.current.readyState < 2) return
       try {
         const predictions = await detectorRef.current.detect(videoRef.current)
+
+        // Phone check — single detection is enough
         const phoneFound = predictions.some(p => p.class === 'cell phone' && p.score >= 0.5)
         if (phoneFound) {
           sendPhoto('phone_detected')
+        }
+
+        // Person presence check — require 2 consecutive misses (~30s) before flagging
+        const personFound = predictions.some(p => p.class === 'person' && p.score >= 0.4)
+        if (!personFound) {
+          consecutiveNoPersonRef.current += 1
+          if (consecutiveNoPersonRef.current >= 2) {
+            consecutiveNoPersonRef.current = 0
+            sendPhoto('no_person')
+          }
+        } else {
+          consecutiveNoPersonRef.current = 0
         }
       } catch {}
     }, 15000)
@@ -230,6 +229,11 @@ export default function TestTake() {
   const handleFinish = useCallback(async () => {
     if (!attemptIdRef.current || isSubmitting) return
     setIsSubmitting(true)
+    // Ensure end photo is taken even if student finishes early (didn't reach 85% question)
+    if (requireWebcam && !photosTakenRef.current.has('end')) {
+      photosTakenRef.current.add('end')
+      sendPhoto('end')
+    }
     try {
       await finishAttempt(attemptIdRef.current)
     } catch {
@@ -415,6 +419,29 @@ export default function TestTake() {
     }, 1000)
     return () => clearTimeout(timer)
   }, [questionTimeLeft, handleNext])
+
+  if (isMobile) {
+    return (
+      <div className="fixed inset-0 bg-[#0F0A1E] flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 rounded-3xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mx-auto mb-6">
+          <svg className="w-10 h-10 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+              d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <h2 className="font-unbounded text-xl font-black text-white mb-3">МОБІЛЬНИЙ ПРИСТРІЙ</h2>
+        <p className="text-slate-400 max-w-xs text-sm leading-relaxed mb-6">
+          Проходження тестування з телефону або планшета недоступне. Відкрийте на комп'ютері.
+        </p>
+        <button
+          onClick={() => navigate('/student/dashboard')}
+          className="px-8 py-3 rounded-2xl bg-white/5 border border-white/10 text-white text-sm font-medium hover:bg-white/10 transition-all"
+        >
+          До кабінету
+        </button>
+      </div>
+    )
+  }
 
   if (!currentQuestion && !isFinished) {
     return (
@@ -682,7 +709,14 @@ export default function TestTake() {
 
       {/* Hidden webcam stream (used only for frame capture, not shown to student) */}
       {requireWebcam && (
-        <video ref={videoRef} autoPlay muted playsInline className="hidden" aria-hidden="true" />
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          playsInline
+          aria-hidden="true"
+          style={{ position: 'absolute', visibility: 'hidden', width: '1px', height: '1px', pointerEvents: 'none' }}
+        />
       )}
 
       <div className="flex-shrink-0 border-t border-white/5 bg-[#0D071F]/90 backdrop-blur-2xl px-6 py-6 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
