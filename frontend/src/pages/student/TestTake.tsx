@@ -76,11 +76,19 @@ export default function TestTake() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const [cameraError, setCameraError] = useState(false)
+  const [micReady, setMicReady] = useState(false)
   const photosTakenRef = useRef<Set<string>>(new Set())
   const attemptIdRef = useRef(attemptId)
   attemptIdRef.current = attemptId
   const detectorRef = useRef<ObjectDetection | null>(null)
   const consecutiveNoPersonRef = useRef(0)
+
+  // Audio monitoring state
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const analyserRef = useRef<AnalyserNode | null>(null)
+  const speechFramesRef = useRef(0)       // consecutive frames above speech threshold
+  const isRecordingRef = useRef(false)    // prevent overlapping recordings
+  const audioChunksRef = useRef<Blob[]>([])
 
   const isFullscreenSupported = !!(
     document.documentElement.requestFullscreen ||
@@ -89,20 +97,40 @@ export default function TestTake() {
     (document.documentElement as any).msRequestFullscreen
   );
 
-  // Initialize webcam and load COCO-SSD model for phone detection
+  // Initialize webcam + microphone and load COCO-SSD model for object detection
   useEffect(() => {
     if (!requireWebcam) return
 
-    navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } })
-      .then(stream => {
-        streamRef.current = stream
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream
-        }
-      })
-      .catch(() => {
-        setCameraError(true)
-      })
+    navigator.mediaDevices.getUserMedia({
+      video: { width: 640, height: 480, facingMode: 'user' },
+      audio: true,
+    }).then(stream => {
+      streamRef.current = stream
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+      }
+
+      // Set up audio analyser for speech detection
+      try {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
+        const ctx = new AudioCtx()
+        const source = ctx.createMediaStreamSource(stream)
+        const analyser = ctx.createAnalyser()
+        analyser.fftSize = 2048
+        source.connect(analyser)
+        audioContextRef.current = ctx
+        analyserRef.current = analyser
+        setMicReady(true)
+      } catch {}
+    }).catch(() => {
+      // Fallback: try video-only if mic denied
+      navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } })
+        .then(stream => {
+          streamRef.current = stream
+          if (videoRef.current) videoRef.current.srcObject = stream
+        })
+        .catch(() => setCameraError(true))
+    })
 
     // Load object detection model (lite variant — ~5 MB).
     // Explicit backend setup ensures Safari (WebGL) and Firefox (CPU fallback) both work.
@@ -111,7 +139,6 @@ export default function TestTake() {
         await tf.setBackend('webgl')
         await tf.ready()
       } catch {
-        // WebGL unavailable (e.g. some Linux configs) — fall back to CPU
         await tf.setBackend('cpu')
         await tf.ready()
       }
@@ -124,6 +151,9 @@ export default function TestTake() {
       streamRef.current?.getTracks().forEach(t => t.stop())
       streamRef.current = null
       detectorRef.current = null
+      audioContextRef.current?.close().catch(() => {})
+      audioContextRef.current = null
+      analyserRef.current = null
     }
   }, [requireWebcam])
 
@@ -147,6 +177,73 @@ export default function TestTake() {
       photoType: effectiveType,
     }).catch(() => {})
   }, [])
+
+  // Speech monitoring: sample audio every 100ms, trigger 10s recording after 2s of sustained speech.
+  // Uses MediaRecorder on the live stream — no audio is stored until speech threshold is exceeded.
+  useEffect(() => {
+    if (!requireWebcam) return
+    const bufferLength = 2048
+    const dataArray = new Uint8Array(bufferLength)
+
+    const getSupportedMimeType = () => {
+      const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4']
+      return types.find(t => MediaRecorder.isTypeSupported(t)) ?? ''
+    }
+
+    const startRecording = () => {
+      if (isRecordingRef.current || !streamRef.current || !attemptIdRef.current) return
+      const mimeType = getSupportedMimeType()
+      if (!mimeType) return
+      isRecordingRef.current = true
+      audioChunksRef.current = []
+      sendPhoto('speech_detected')
+
+      let recorder: MediaRecorder
+      try {
+        recorder = new MediaRecorder(streamRef.current, { mimeType })
+      } catch {
+        isRecordingRef.current = false
+        return
+      }
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data) }
+      recorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: mimeType })
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          const base64 = (reader.result as string).split(',')[1]
+          if (base64 && attemptIdRef.current) {
+            apiClient.post(`/attempts/${attemptIdRef.current}/speech-record`, { audioData: base64 }).catch(() => {})
+          }
+        }
+        reader.readAsDataURL(blob)
+        setTimeout(() => { isRecordingRef.current = false }, 30000)
+      }
+      recorder.start()
+      setTimeout(() => { if (recorder.state === 'recording') recorder.stop() }, 10000)
+    }
+
+    const interval = setInterval(() => {
+      if (!analyserRef.current || isFinished) return
+      analyserRef.current.getByteTimeDomainData(dataArray)
+      let sum = 0
+      for (let i = 0; i < bufferLength; i++) {
+        const norm = (dataArray[i] - 128) / 128
+        sum += norm * norm
+      }
+      const rms = Math.sqrt(sum / bufferLength)
+      if (rms > 0.015) {
+        speechFramesRef.current += 1
+        if (speechFramesRef.current >= 20 && !isRecordingRef.current) {
+          speechFramesRef.current = 0
+          startRecording()
+        }
+      } else {
+        speechFramesRef.current = Math.max(0, speechFramesRef.current - 1)
+      }
+    }, 100)
+
+    return () => clearInterval(interval)
+  }, [requireWebcam, isFinished, sendPhoto])
 
   // Schedule 3 photos: start (~q1), middle (~50%), near-end (~85%)
   useEffect(() => {
@@ -525,11 +622,19 @@ export default function TestTake() {
           </div>
 
           <div className="flex-shrink-0 flex items-center gap-3">
-            {/* Webcam indicator */}
+            {/* Webcam + mic indicator */}
             {requireWebcam && !cameraError && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
                 <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
                 <span className="text-cyan-400 text-[10px] font-bold uppercase tracking-widest">Cam</span>
+                {micReady && (
+                  <>
+                    <div className="w-px h-3 bg-cyan-500/30 mx-0.5" />
+                    <svg className="w-3 h-3 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    </svg>
+                  </>
+                )}
               </div>
             )}
 

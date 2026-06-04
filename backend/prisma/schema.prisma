@@ -259,6 +259,7 @@ model Attempt {
   attemptQuestions AttemptQuestion[]
   suspiciousEvents SuspiciousEvent[]
   webcamPhotos     WebcamPhoto[]
+  speechRecords    SpeechRecord[]
 
   @@index([studentId, testId])
   @@index([testId])
@@ -418,6 +419,17 @@ model WebcamPhoto {
   photoType   String   @default("scheduled")
 
   attempt     Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@index([attemptId])
+}
+
+model SpeechRecord {
+  id         String   @id @default(uuid())
+  attemptId  String
+  audioData  String   @db.LongText
+  recordedAt DateTime @default(now())
+
+  attempt    Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
 
   @@index([attemptId])
 }

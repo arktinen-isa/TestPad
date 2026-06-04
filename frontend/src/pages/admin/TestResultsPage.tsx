@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../../api/client'
-import { TestAttempt, Group, SuspiciousEvent, WebcamPhoto } from '../../types'
+import { TestAttempt, Group, SuspiciousEvent, WebcamPhoto, SpeechRecord } from '../../types'
 import { t } from '../../utils/i18n'
 
 interface ResultsResponse {
@@ -107,6 +107,14 @@ function WebcamPhotosModal({ attemptId, studentName, onClose }: { attemptId: str
     },
   })
 
+  const { data: speechRecords } = useQuery<SpeechRecord[]>({
+    queryKey: ['speech-records', attemptId],
+    queryFn: async () => {
+      const res = await apiClient.get(`/attempts/${attemptId}/speech-records`)
+      return res.data
+    },
+  })
+
   const getPhotoLabel = (type: string) => {
     if (type === 'start') return 'Початок тесту'
     if (type === 'middle') return 'Середина тесту'
@@ -114,11 +122,12 @@ function WebcamPhotosModal({ attemptId, studentName, onClose }: { attemptId: str
     if (type === 'phone_detected') return 'Виявлено телефон'
     if (type === 'camera_covered') return 'Камера закрита'
     if (type === 'no_person') return 'Людини немає в кадрі'
+    if (type === 'speech_detected') return 'Виявлено мовлення'
     return type
   }
 
   const isSuspiciousType = (type: string) =>
-    type === 'phone_detected' || type === 'camera_covered' || type === 'no_person'
+    type === 'phone_detected' || type === 'camera_covered' || type === 'no_person' || type === 'speech_detected'
 
   const getPhotoBadgeStyle = (type: string) => {
     if (isSuspiciousType(type)) return 'bg-red-500/20 border border-red-500/30 text-red-300'
@@ -221,6 +230,39 @@ function WebcamPhotosModal({ attemptId, studentName, onClose }: { attemptId: str
                 <span className="ml-2 text-red-400">• Виявлено підозрілу активність</span>
               )}
             </p>
+          </div>
+        )}
+
+        {speechRecords && speechRecords.length > 0 && (
+          <div className="mt-5 pt-5 border-t border-white/5">
+            <div className="flex items-center gap-2 mb-3">
+              <svg className="w-4 h-4 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
+              <span className="text-orange-300 text-xs font-bold uppercase tracking-widest">
+                Записи мовлення ({speechRecords.length})
+              </span>
+            </div>
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              {speechRecords.map((rec, i) => {
+                const mimeType = rec.audioData.startsWith('T2dn') ? 'audio/ogg' :
+                                 rec.audioData.startsWith('AAAAGG') ? 'audio/mp4' : 'audio/webm'
+                const src = `data:${mimeType};base64,${rec.audioData}`
+                return (
+                  <div key={rec.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-orange-500/5 border border-orange-500/15">
+                    <span className="text-orange-400 font-mono text-xs w-5 text-center flex-shrink-0">{i + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-orange-300 text-xs font-medium mb-1.5">
+                        {new Date(rec.recordedAt).toLocaleString('uk-UA', {
+                          day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'
+                        })}
+                      </p>
+                      <audio controls src={src} className="w-full h-8" style={{ colorScheme: 'dark' }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 
@@ -532,7 +574,8 @@ export default function TestResultsPage() {
                       <td className="px-5 py-4">
                         {(() => {
                           const types = a.webcamPhotoTypes ?? []
-                          const hasSuspicious = types.some(t => t === 'phone_detected' || t === 'camera_covered' || t === 'no_person')
+                          const hasSpeech = (a.speechRecordCount ?? 0) > 0
+                          const hasSuspicious = types.some(t => t === 'phone_detected' || t === 'camera_covered' || t === 'no_person') || hasSpeech
                           const hasPhotos = types.length > 0
                           return (
                             <button
@@ -550,6 +593,8 @@ export default function TestResultsPage() {
                                       types.includes('phone_detected') && 'Виявлено телефон',
                                       types.includes('camera_covered') && 'Камера закрита',
                                       types.includes('no_person') && 'Людини не було в кадрі',
+                                      types.includes('speech_detected') && 'Виявлено мовлення',
+                                      hasSpeech && `Аудіозаписи (${a.speechRecordCount})`,
                                     ].filter(Boolean).join(' • ')
                                   : hasPhotos
                                   ? 'Переглянути фото вебкамери'

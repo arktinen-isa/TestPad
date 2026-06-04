@@ -84,7 +84,11 @@ export default function TestStart() {
     setCameraStatus('requesting')
     let cancelled = false
 
-    navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } })
+    navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' }, audio: true })
+      .catch(() =>
+        // Fallback: video-only if mic denied (monitoring still works without mic)
+        navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } })
+      )
       .then(stream => {
         if (cancelled) {
           stream.getTracks().forEach(t => t.stop())
@@ -127,7 +131,10 @@ export default function TestStart() {
     setCameraStatus('requesting')
     setCameraError(null)
 
-    navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } })
+    navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' }, audio: true })
+      .catch(() =>
+        navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } })
+      )
       .then(stream => {
         streamRef.current = stream
         if (videoRef.current) {

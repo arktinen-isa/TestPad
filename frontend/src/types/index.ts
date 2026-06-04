@@ -130,6 +130,7 @@ export interface TestAttempt {
   test?: Test
   suspiciousEvents?: SuspiciousEvent[]
   webcamPhotoTypes?: string[]
+  speechRecordCount?: number
 }
 
 export interface SuspiciousEvent {
@@ -165,6 +166,13 @@ export interface WebcamPhoto {
   photoData: string
   takenAt: string
   photoType: string
+}
+
+export interface SpeechRecord {
+  id: string
+  attemptId: string
+  audioData: string
+  recordedAt: string
 }
 
 export interface DashboardStats {

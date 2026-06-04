@@ -490,6 +490,7 @@ router.get(
           },
           suspiciousEvents: { select: { id: true, eventType: true, occurredAt: true } },
           webcamPhotos: { select: { photoType: true } },
+          _count: { select: { speechRecords: true } },
         },
         orderBy: { startedAt: 'desc' },
       }),
@@ -515,6 +516,7 @@ router.get(
           : 0,
         suspiciousEvents: a.suspiciousEvents,
         webcamPhotoTypes: a.webcamPhotos.map((p: { photoType: string }) => p.photoType),
+        speechRecordCount: (a as any)._count?.speechRecords ?? 0,
       };
     });
 

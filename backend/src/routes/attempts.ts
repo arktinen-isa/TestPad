@@ -671,6 +671,53 @@ router.get(
   })
 );
 
+router.post(
+  '/:id/speech-record',
+  authorize('STUDENT'),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const userId = req.user!.userId;
+    const { audioData } = req.body;
+
+    if (!audioData || typeof audioData !== 'string') {
+      res.status(400).json({ error: 'Invalid audio data' });
+      return;
+    }
+
+    const attempt = await prisma.attempt.findUnique({
+      where: { id },
+      select: { studentId: true },
+    });
+
+    if (!attempt || attempt.studentId !== userId) {
+      res.status(404).json({ error: 'Attempt not found' });
+      return;
+    }
+
+    await prisma.speechRecord.create({
+      data: { attemptId: id, audioData },
+    });
+
+    res.status(201).json({ ok: true });
+  })
+);
+
+router.get(
+  '/:id/speech-records',
+  authorize('ADMIN', 'TEACHER'),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const records = await prisma.speechRecord.findMany({
+      where: { attemptId: id },
+      orderBy: { recordedAt: 'asc' },
+      select: { id: true, audioData: true, recordedAt: true },
+    });
+
+    res.json(records);
+  })
+);
+
 router.delete(
   '/:id',
   authorize('ADMIN'),

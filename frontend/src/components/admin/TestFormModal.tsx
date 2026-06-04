@@ -165,11 +165,10 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-all duration-200 ${
-                activeTab === tab.id
+              className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-all duration-200 ${activeTab === tab.id
                   ? 'bg-purple-accent text-white shadow-sm'
                   : 'text-slate-400 hover:text-white'
-              }`}
+                }`}
             >
               {tab.label}
             </button>
@@ -194,95 +193,94 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
           {activeTab === 'basic' && (
             <div className="space-y-4">
               <div>
-              <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Назва тесту</label>
-              <input
-                type="text"
-                required
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="glass-input"
-                placeholder="Наприклад: Основи JavaScript"
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Предмет</label>
+                <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Назва тесту</label>
                 <input
                   type="text"
-                  value={form.subject}
-                  onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                  required
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
                   className="glass-input"
-                  placeholder="Наприклад: Програмування"
+                  placeholder="Наприклад: Основи JavaScript"
                 />
               </div>
-              <div>
-                <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Брендування (URL логотипу)</label>
-                <input
-                  type="text"
-                  value={form.logoUrl}
-                  onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
-                  className="glass-input"
-                  placeholder="PNG без фону..."
-                />
-              </div>
-            </div>
 
-            <div className="flex items-center gap-3 p-4 bg-purple-accent/5 border border-purple-accent/20 rounded-2xl">
-              <input
-                type="checkbox"
-                id="allowCertificate"
-                checked={form.allowCertificate}
-                onChange={(e) => setForm({ ...form, allowCertificate: e.target.checked })}
-                className="w-5 h-5 rounded border-white/20 bg-white/5 text-purple-accent focus:ring-purple-500/50"
-              />
-              <label htmlFor="allowCertificate" className="flex-1 cursor-pointer">
-                <span className="block text-sm font-bold text-white">Дозволити видачу сертифікату</span>
-                <span className="block text-slate-400 text-[10px]">Стимулює студентів покращувати результати</span>
-              </label>
-            </div>
-
-            <div className="flex items-center gap-3 p-4 bg-cyan-500/5 border border-cyan-500/20 rounded-2xl">
-              <input
-                type="checkbox"
-                id="requireWebcam"
-                checked={form.requireWebcam}
-                onChange={(e) => setForm({ ...form, requireWebcam: e.target.checked })}
-                className="w-5 h-5 rounded border-white/20 bg-white/5 text-cyan-400 focus:ring-cyan-500/50"
-              />
-              <label htmlFor="requireWebcam" className="flex-1 cursor-pointer">
-                <div className="flex items-center gap-2">
-                  <span className="block text-sm font-bold text-white">Вимагати вебкамеру</span>
-                  <span className="px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-400 text-[9px] font-black uppercase tracking-wider">Анти-чит</span>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Предмет</label>
+                  <input
+                    type="text"
+                    value={form.subject}
+                    onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                    className="glass-input"
+                    placeholder="Наприклад: Програмування"
+                  />
                 </div>
-                <span className="block text-slate-400 text-[10px] mt-0.5">Тест доступний лише якщо камера активна. Система робить 3 фото під час тесту та виявляє телефони на камері</span>
-              </label>
-            </div>
+                <div>
+                  <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Брендування (URL логотипу)</label>
+                  <input
+                    type="text"
+                    value={form.logoUrl}
+                    onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
+                    className="glass-input"
+                    placeholder="PNG без фону..."
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-4 bg-purple-accent/5 border border-purple-accent/20 rounded-2xl">
+                <input
+                  type="checkbox"
+                  id="allowCertificate"
+                  checked={form.allowCertificate}
+                  onChange={(e) => setForm({ ...form, allowCertificate: e.target.checked })}
+                  className="w-5 h-5 rounded border-white/20 bg-white/5 text-purple-accent focus:ring-purple-500/50"
+                />
+                <label htmlFor="allowCertificate" className="flex-1 cursor-pointer">
+                  <span className="block text-sm font-bold text-white">Дозволити видачу сертифікату</span>
+                  <span className="block text-slate-400 text-[10px]">Стимулює студентів покращувати результати</span>
+                </label>
+              </div>
+
+              <div className="flex items-center gap-3 p-4 bg-cyan-500/5 border border-cyan-500/20 rounded-2xl">
+                <input
+                  type="checkbox"
+                  id="requireWebcam"
+                  checked={form.requireWebcam}
+                  onChange={(e) => setForm({ ...form, requireWebcam: e.target.checked })}
+                  className="w-5 h-5 rounded border-white/20 bg-white/5 text-cyan-400 focus:ring-cyan-500/50"
+                />
+                <label htmlFor="requireWebcam" className="flex-1 cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <span className="block text-sm font-bold text-white">Вимагати вебкамеру</span>
+                    <span className="px-1.5 py-0.5 rounded-md bg-cyan-500/20 text-cyan-400 text-[9px] font-black uppercase tracking-wider">Анти-чит</span>
+                  </div>
+                  <span className="block text-slate-400 text-[10px] mt-0.5">Тест доступний лише якщо камера і мікрофон активні. Система робить аналіз аідіо-/відео- знімків під час тесту та виявляє порушення академічної доброчесності</span>
+                </label>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">Групи</label>
                 <div className="flex flex-wrap gap-2">
-                    {groups?.map((g) => {
-                      const isSelected = form.groupIds.includes(g.id)
-                      return (
-                        <button
-                          key={g.id}
-                          type="button"
-                          onClick={() => toggleGroup(g.id)}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all border ${
-                            isSelected
-                              ? 'bg-purple-accent text-white border-purple-accent shadow-[0_0_15px_rgba(168,85,247,0.4)]'
-                              : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10 hover:text-slate-300'
+                  {groups?.map((g) => {
+                    const isSelected = form.groupIds.includes(g.id)
+                    return (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => toggleGroup(g.id)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all border ${isSelected
+                            ? 'bg-purple-accent text-white border-purple-accent shadow-[0_0_15px_rgba(168,85,247,0.4)]'
+                            : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10 hover:text-slate-300'
                           }`}
-                        >
-                          {isSelected && (
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                            </svg>
-                          )}
-                          {g.name}
-                        </button>
-                      )
-                    })}
+                      >
+                        {isSelected && (
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                        {g.name}
+                      </button>
+                    )
+                  })}
                   {(!groups || groups.length === 0) && (
                     <p className="text-slate-500 text-sm">Груп не знайдено</p>
                   )}
@@ -400,11 +398,10 @@ export default function TestFormModal({ initial, onClose, onSave }: TestFormModa
                     { value: 'FROM_BANK', label: 'З усього банку', desc: 'Рандомні питання з активних' },
                     { value: 'BY_CATEGORY', label: 'За категоріями', desc: 'Задати кількість з кожної категорії' },
                   ].map((opt) => (
-                    <label key={opt.value} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                      form.samplingMode === opt.value
+                    <label key={opt.value} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${form.samplingMode === opt.value
                         ? 'bg-purple-accent/10 border-purple-accent/40'
                         : 'bg-white/5 border-white/10 hover:bg-white/10'
-                    }`}>
+                      }`}>
                       <input
                         type="radio" name="samplingMode" value={opt.value}
                         checked={form.samplingMode === opt.value}
