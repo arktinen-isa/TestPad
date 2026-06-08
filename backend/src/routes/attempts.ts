@@ -677,7 +677,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const { id } = req.params;
     const userId = req.user!.userId;
-    const { audioData } = req.body;
+    const { audioData, mimeType = 'audio/webm' } = req.body;
 
     if (!audioData || typeof audioData !== 'string') {
       res.status(400).json({ error: 'Invalid audio data' });
@@ -695,7 +695,7 @@ router.post(
     }
 
     await prisma.speechRecord.create({
-      data: { attemptId: id, audioData },
+      data: { attemptId: id, audioData, mimeType },
     });
 
     res.status(201).json({ ok: true });
@@ -711,7 +711,7 @@ router.get(
     const records = await prisma.speechRecord.findMany({
       where: { attemptId: id },
       orderBy: { recordedAt: 'asc' },
-      select: { id: true, audioData: true, recordedAt: true },
+      select: { id: true, audioData: true, mimeType: true, recordedAt: true },
     });
 
     res.json(records);

@@ -245,9 +245,7 @@ function WebcamPhotosModal({ attemptId, studentName, onClose }: { attemptId: str
             </div>
             <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
               {speechRecords.map((rec, i) => {
-                const mimeType = rec.audioData.startsWith('T2dn') ? 'audio/ogg' :
-                                 rec.audioData.startsWith('AAAAGG') ? 'audio/mp4' : 'audio/webm'
-                const src = `data:${mimeType};base64,${rec.audioData}`
+                const src = `data:${rec.mimeType};base64,${rec.audioData}`
                 return (
                   <div key={rec.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-orange-500/5 border border-orange-500/15">
                     <span className="text-orange-400 font-mono text-xs w-5 text-center flex-shrink-0">{i + 1}</span>

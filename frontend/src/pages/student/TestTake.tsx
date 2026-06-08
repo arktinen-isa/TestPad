@@ -212,7 +212,7 @@ export default function TestTake() {
         reader.onloadend = () => {
           const base64 = (reader.result as string).split(',')[1]
           if (base64 && attemptIdRef.current) {
-            apiClient.post(`/attempts/${attemptIdRef.current}/speech-record`, { audioData: base64 }).catch(() => {})
+            apiClient.post(`/attempts/${attemptIdRef.current}/speech-record`, { audioData: base64, mimeType }).catch(() => {})
           }
         }
         reader.readAsDataURL(blob)

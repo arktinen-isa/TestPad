@@ -172,6 +172,7 @@ export interface SpeechRecord {
   id: string
   attemptId: string
   audioData: string
+  mimeType: string
   recordedAt: string
 }
 

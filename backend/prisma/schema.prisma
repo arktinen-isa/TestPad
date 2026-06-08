@@ -427,6 +427,7 @@ model SpeechRecord {
   id         String   @id @default(uuid())
   attemptId  String
   audioData  String   @db.LongText
+  mimeType   String   @default("audio/webm")
   recordedAt DateTime @default(now())
 
   attempt    Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
