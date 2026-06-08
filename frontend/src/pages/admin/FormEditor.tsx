@@ -6,6 +6,7 @@ import { Form, FormFieldType, TestStatus, Group } from '../../types'
 import * as XLSX from 'xlsx'
 
 interface FieldInput {
+  id?: string
   label: string
   type: FormFieldType
   required: boolean
@@ -55,6 +56,7 @@ export default function FormEditor() {
       setOpenFrom(form.openFrom ? form.openFrom.substring(0, 16) : '')
       setOpenUntil(form.openUntil ? form.openUntil.substring(0, 16) : '')
       setFields(form.fields?.map(f => ({
+        id: f.id,
         label: f.label,
         type: f.type,
         required: f.required,

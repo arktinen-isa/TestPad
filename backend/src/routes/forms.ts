@@ -32,6 +32,7 @@ function escapeHtml(str: string): string {
 }
 
 const formFieldSchema = z.object({
+  id: z.string().uuid().optional(),
   label: z.string().min(1).max(500),
   type: z.enum(['TEXT', 'BOOLEAN', 'INTEGER', 'FLOAT']),
   required: z.boolean().default(true),
@@ -194,7 +195,55 @@ router.patch(
     }
 
     if (fields !== undefined) {
-      await prisma.formField.deleteMany({ where: { formId: id } });
+      await prisma.$transaction(async (tx) => {
+        // Get existing fields in database for this form
+        const existingFields = await tx.formField.findMany({
+          where: { formId: id },
+          select: { id: true }
+        });
+        const existingFieldIds = existingFields.map(f => f.id);
+
+        // Separate payload fields into update/create lists
+        const keepIds = fields
+          .map(f => f.id)
+          .filter((fid): fid is string => !!fid && existingFieldIds.includes(fid));
+
+        // Delete fields that are NOT in the payload fields list
+        await tx.formField.deleteMany({
+          where: {
+            formId: id,
+            id: { notIn: keepIds }
+          }
+        });
+
+        // Update remaining fields and create new ones
+        for (let i = 0; i < fields.length; i++) {
+          const f = fields[i];
+          if (f.id && existingFieldIds.includes(f.id)) {
+            await tx.formField.update({
+              where: { id: f.id },
+              data: {
+                label: f.label,
+                type: f.type,
+                required: f.required,
+                correctAnswer: f.correctAnswer && f.correctAnswer.trim() !== '' ? f.correctAnswer.trim() : null,
+                order: i
+              }
+            });
+          } else {
+            await tx.formField.create({
+              data: {
+                formId: id,
+                label: f.label,
+                type: f.type,
+                required: f.required,
+                correctAnswer: f.correctAnswer && f.correctAnswer.trim() !== '' ? f.correctAnswer.trim() : null,
+                order: i
+              }
+            });
+          }
+        }
+      });
     }
 
     const form = await prisma.form.update({
@@ -207,15 +256,6 @@ router.patch(
         openUntil: openUntil !== undefined ? (openUntil ? new Date(openUntil) : null) : undefined,
         groups: groupIds !== undefined ? {
           create: groupIds.map((groupId) => ({ groupId })),
-        } : undefined,
-        fields: fields ? {
-          create: fields.map((f, i) => ({
-            label: f.label,
-            type: f.type,
-            required: f.required,
-            correctAnswer: f.correctAnswer && f.correctAnswer.trim() !== '' ? f.correctAnswer.trim() : null,
-            order: i,
-          })),
         } : undefined,
       },
       include: { fields: true, groups: { include: { group: { select: { id: true, name: true } } } } },
